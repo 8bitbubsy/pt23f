@@ -1,0 +1,27 @@
+Undocumented features in ProTracker 2.1A (up to 2.3D):
+
+1) PT2.2A and newer:
+   Type "lock" on the keyboard to lock PT, it asks for a password up to 8 chars
+   (press ENTER for a password less than 8 chars), then PT is locked until you
+   type the password again. This locks mouse/keyboard input.
+   Handy when being AFK at demo parties!
+
+2) PT2.1A and newer (removed in PT2.3E):
+   Type "noxious" on keyboard, it will show "not implemented".
+   Was probably meant to show an easter egg or some info, but wasn't finished.
+
+3) PT2.2A and newer:
+   Press both left and right mouse buttons on the little dot next to the
+   Disk Op. path gadget. This will list all available disk drives and let
+   you select one of them.
+	 
+4) PT2.1A and newer:
+   Press CTRL + ALT + SHIFT + LEFT-AMIGA + DEL.
+   Prepares a pattern for the infamous "backwards play" trick by inverting data.
+
+5) PT1.0B and newer:
+   Press the empty button next to the <> key.
+   Kills all playing voices!
+   
+
+ - 8bitbubsy
