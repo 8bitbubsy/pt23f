@@ -1,0 +1,59 @@
+All graphics are stored as 2-bit bitplane data. Either RLE compressed (.pak) or raw (.raw).
+I recommend using IFFMaster v1.0 for Amiga to convert the files to/from .iff. This free program can
+be somewhat hard to find on the internet, but be patient and you will find it.
+
+There is unfortunately no simple method of editing the graphics, but I will explain the difficult
+process for Windows users... Other users will need to compile ptpack.c/ptunpack.c for their OS.
+
+---- EDITING COMPRESSED FILES (.PAK) ----
+
+To edit f.ex. ptaboutbox.pak in Windows, do the following:
+ 1) Go to the "pak" directory
+ 2) Run "ptunpack.exe ptaboutbox.pak" from a command prompt (this will spit out ptaboutbox.raw)
+ 3) Open IFFMaster on Amiga, go to Project->Load Picture and select our new ptaboutbox.raw
+ 4) Here comes the difficult part. You have to know the dimensions for the image!
+    In this case it's 200x55. Enter 200 in the width box and 55 in the height box.
+    Press enter in each edit box to confirm the inputted values. Press 2 on the keyb
+    to select 2 bitplanes mode. Press "Load!".
+ 5) Go to Project->Save Picture->as IFF/ILBM
+ 6) Open the newly saved .iff file from IFFMaster in f.ex. Photoshop, do the edits you need
+    (do NOT introduce new colors!) then save the file (not "Save As"). Don't worry about the colors
+    being off, they will be right in PT.
+ 7) Now open the newly saved .iff in IFFMaster. Press 2 on the keyboard after load to set to 2-bit
+    bitplanes mode, and save as ptaboutbox.raw (Project->Save Picture->as raw data).
+ 8) Make sure ptaboutbox.raw is now in the "pak" folder, and that it overwrote the old file
+ 9) Run "ptpack.exe ptaboutbox.raw" (this will spit out and overwrite ptaboutbox.pak)
+10) Some graphics have a specificed byte length in the PT source code and needs updating. In this case,
+    you need to update AboutBoxSize to have the correct filesize for the new file (f.ex. 1730).
+    Search for ";---- Graphics Data ----" (without the quotes) with a text editor and you fill find
+    the section.
+
+
+---- EDITING RAW FILES (.RAW) ----
+
+To edit f.ex. ptmainscreen.raw in Windows, do the following:
+ 1) Go to the "raw" directory
+ 2) Open IFFMaster on Amiga, go to Project->Load Picture and select ptmainscreen.raw
+ 4) Here comes the difficult part. You have to know the dimensions for the image!
+    In this case it's 320x256. Enter 320 in the width box and 256 in the height box.
+    Press enter in each edit box to confirm the inputted values. Press 2 on the keyb
+    to select 2 bitplanes mode. Press "Load!".
+ 5) Go to Project->Save Picture->as IFF/ILBM
+ 6) Open the newly saved .iff file from IFFMaster in f.ex. Photoshop, do the edits you need
+    (do NOT introduce new colors!) then save the file (not "Save As"). Don't worry about the colors
+    being off, they will be right in PT.
+ 7) Now open the newly saved .iff in IFFMaster. Press 2 on the keyboard after load to set to 2-bit
+    bitplanes mode, and save as ptmainscreen.raw (Project->Save Picture->as raw data).
+ 8) Make sure ptmainscreen.raw is now in the "raw" folder, and that it overwrote the old file
+ 9) Some graphics has a specificed byte length in the PT source code. In this case, you don't
+    need to change anything for ptmainscreen.raw. Read line 10) above!
+   
+
+Sorry for not writing down the dimensions for all the graphics files, I have simply forgotten most of
+them...
+- Olav "8bitbubsy" Sørensen
+
+PS: If you know a simpler method for editing the graphics, let me know!
+    You can contact me through the email address found at the bottom of 16-bits.org
+
+EOF
