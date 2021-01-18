@@ -1,6 +1,6 @@
          ProTracker v2.3F final version
          ==============================
-               14th of July, 2020
+              18th of January, 2021
             
  If you find any bugs, please email me at olav.sorensen@live.no
  or go to #protracker @ IRCnet (server: open.ircnet.net port 6667)
@@ -32,6 +32,10 @@
 
  -- PT2.3F changelog: --
  
+ == Update 18.01.2021 ===============================================
+ - Fix >64kB bugs in the parallel port sampling code
+ ====================================================================
+
  == Update 14.07.2020 ===============================================
  - Bugfix for 68000: Pasting to an empty sample would cause a crash
  ====================================================================

@@ -26072,7 +26072,7 @@ monilop3
 	BEQ.B	samaok
 	CLR.L	124(A0,D1.W)
 	JSR	FreeMemPadded
-samaok	MOVE.L	#$FFFE,D6		; try 128k
+samaok	MOVE.L	#$1FFFE,D6		; try 128k ($FFFE -> $1FFFE, 128K fix)
 samalclop
 	MOVE.L	D6,D0
 	MOVE.L	#MEMF_CHIP!MEMF_CLEAR,D1
@@ -26115,8 +26115,8 @@ samploop
 	MOVE.B	D0,(A5)
 	MOVE.B	D0,(A6)
 	MOVE.B	D0,(A1)+
-	ADDQ.W	#1,D5
-	CMP.W	D4,D5
+	ADDQ.L	#1,D5		; .W -> .L (128K fix)
+	CMP.L	D4,D5		; .W -> .L (128K fix)
 	BEQ.B	sampend
 	BTST	D6,-$0100(A3)
 	BNE.B	samploop
