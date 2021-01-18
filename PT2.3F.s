@@ -10031,7 +10031,7 @@ shacskp	MOVEQ	#1,D0
 	JSR	ShowText3
 	BRA	RedrawPattern
 
-AccidentalText	dc.b '#¡'
+AccidentalText	dc.b '#Â¡'
 
 Return5
 	RTS
@@ -10942,7 +10942,7 @@ PrintNote
 	ADD.L	NoteNamesPtr,D0
 	MOVE.L	D0,A0
 	MOVE.L	(A0),(A5)+
-	CMP.B	#'¡',-3(A5)
+	CMP.B	#'Â¡',-3(A5)
 	BNE.B	prnoxyz
 	MOVE.B	#'b',-3(A5)
 prnoxyz	ADDQ	#1,A5
@@ -25607,9 +25607,9 @@ NoteNames1
 SpcNoteText
 	dc.b	'--- '
 NoteNames2
-	dc.b	'C-1 D¡1 D-1 E¡1 E-1 F-1 G¡1 G-1 A¡1 A-1 B¡1 B-1 '
-	dc.b	'C-2 D¡2 D-2 E¡2 E-2 F-2 G¡2 G-2 A¡2 A-2 B¡2 B-2 '
-	dc.b	'C-3 D¡3 D-3 E¡3 E-3 F-3 G¡3 G-3 A¡3 A-3 B¡3 B-3 '
+	dc.b	'C-1 DÂ¡1 D-1 EÂ¡1 E-1 F-1 GÂ¡1 G-1 AÂ¡1 A-1 BÂ¡1 B-1 '
+	dc.b	'C-2 DÂ¡2 D-2 EÂ¡2 E-2 F-2 GÂ¡2 G-2 AÂ¡2 A-2 BÂ¡2 B-2 '
+	dc.b	'C-3 DÂ¡3 D-3 EÂ¡3 E-3 F-3 GÂ¡3 G-3 AÂ¡3 A-3 BÂ¡3 B-3 '
 	dc.b	'--- '
 	
 PeriodTable
@@ -26072,7 +26072,9 @@ monilop3
 	BEQ.B	samaok
 	CLR.L	124(A0,D1.W)
 	JSR	FreeMemPadded
-samaok	MOVE.L	#$1FFFE,D6		; try 128k
+
+samaok	MOVE.L	#$1FFFE,D6		; try 128k ($FFFE -> $1FFFE, 128K fix)
+
 samalclop
 	MOVE.L	D6,D0
 	MOVE.L	#MEMF_CHIP!MEMF_CLEAR,D1
@@ -26115,8 +26117,8 @@ samploop
 	MOVE.B	D0,(A5)
 	MOVE.B	D0,(A6)
 	MOVE.B	D0,(A1)+
-	ADDQ.L	#1,D5
-	CMP.L	D4,D5
+	ADDQ.L	#1,D5		; .W -> .L (128K fix)
+	CMP.L	D4,D5		; .W -> .L (128K fix)
 	BEQ.B	sampend
 	BTST	D6,-$0100(A3)
 	BNE.B	samploop
