@@ -26143,8 +26143,8 @@ sampend	MOVE.W	SamDMASave(PC),D0
 	NEG.L	D1
 	AND.L	#$FFFFFFF8,D1
 	NEG.L	D1
-	MOVE.L	InsNum(PC),D0
-	ASL.L	#2,D0
+	MOVE.W	InsNum(PC),D0
+	ASL.W	#2,D0
 	LEA	SamplePtrs(PC),A0
 	CMP.L	124(A0,D0.W),D1
 	BGE.B	sampexit
