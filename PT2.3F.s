@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;      14th of July, 2020
+;     20th of January, 2021
 ;
 ; If you find any bugs, please email me at olav.sorensen@live.no
 ; or go to #protracker @ IRCnet (server: open.ircnet.net port 6667)
@@ -26138,11 +26138,13 @@ sampend	MOVE.W	SamDMASave(PC),D0
 	MOVE.W	#$0040,(A0)+
 	CLR.W	(A0)+
 	MOVE.W	#1,(A0)
-	
+
+	; If we didn't fill up the whole sampling buffer,
+	; free the memory we didn't use (this is hackish)	
 	MOVE.L	SamInfoLen(PC),D1
 	NEG.L	D1
 	AND.L	#$FFFFFFF8,D1
-	NEG.L	D1
+	NEG.L	D1			; D1 is now a multiple of 8 (for FreeMem)
 	MOVE.W	InsNum(PC),D0
 	ASL.W	#2,D0
 	LEA	SamplePtrs(PC),A0
@@ -26153,8 +26155,8 @@ sampend	MOVE.W	SamDMASave(PC),D0
 	SUB.L	D1,D2
 	MOVE.L	(A0,D0.W),A1
 	MOVE.L	124(A0,D0.W),D0
-	ADD.L	D0,A1
-	MOVE.L	D2,D0
+	ADD.L	D0,A1			; A1 points to the area we didn't use in our alloc
+	MOVE.L	D2,D0			; D0 = size of memory we didn't use
 	JSR	PTFreeMem
 sampexit
 	MOVE.W	SamIntSave(PC),D0
