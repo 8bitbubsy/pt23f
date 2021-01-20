@@ -2201,6 +2201,7 @@ sdsk1
 	MOVEQ	#5-1,D2
 	
 	; --PT2.3D bug fix: scope loop fix
+	MOVE.L	ns_endptr(A2),A4	; sample end
 	TST.L	ns_repeatptr(A2)	; loop enabled?
 	BEQ.B	sdlp1			; no, let's use the old scope routine
 	TST.B	ns_oneshotflag(A2)	; oneshot cycle?
@@ -2240,6 +2241,10 @@ sWrapLoop
 sdlp1
 	MOVEQ	#8-1,D3			; we do 8 pixels per bitplane byte
 sdlp2
+	MOVEQ	#0,D0
+	CMP.L	A4,A0			; did we reach sample end yet?
+	BHS.B	.drawit			; yes, draw empty sample
+	; -----------------------------
 	MOVE.B	(A0)+,D0		; get byte from sample data
 	EXT.W	D0			; extend to word
 	NEG.W	D0			; invert
@@ -2250,7 +2255,7 @@ sdlp2
 	ASL.W	#5,D0			; * 32
 	ASL.W	#3,D1			; * 8
 	ADD.W	D1,D0			; (32+8) = * 40
-	BSET	D3,(A1,D0.W)		; set the current bitplane bit
+.drawit	BSET	D3,(A1,D0.W)		; set the current bitplane bit
 	DBRA	D3,sdlp2
 	ADDQ	#1,A1			; we have done 8 bits now, increase bitplane ptr
 	DBRA	D2,sdlp1
