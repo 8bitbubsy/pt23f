@@ -662,9 +662,8 @@ chkredr	CMP.L	#'patp',RunMode
 	MOVE.L	PattRfshNum,PatternNumber
 	JMP	RedrawPattern
 	
-ALLOCMEM_PAD	EQU 40	; just enough for protecting buggy (but fast) quadrascopes
 ; ----------------------------------------------------------------------------
-; Allocates a block of memory (with small padding for out-of-bounds protection)
+; Allocates a block of memory
 ;
 ; Input:
 ;  D0 - byteSize
@@ -673,26 +672,22 @@ ALLOCMEM_PAD	EQU 40	; just enough for protecting buggy (but fast) quadrascopes
 ; Output:
 ;  D0 - memoryBlock (0 if alloc failed)
 ; ----------------------------------------------------------------------------
-AllocMemPadded
+PTAllocMem
 	MOVEM.L	D1/A6,-(SP)
-	ADD.L	#ALLOCMEM_PAD,D0
 	MOVE.L	4.W,A6
 	JSR	_LVOAllocMem(A6)
 	MOVEM.L	(SP)+,D1/A6
 	RTS
 
 ; ----------------------------------------------------------------------------
-; Frees (padded) block of memory
-;
-; NOTE: ONLY use with memory allocated with AllocMemPadded!
+; Frees a block of memory
 ;
 ; Input:
-;  A0 - memoryBlock
+;  A1 - memoryBlock
 ;  D0 - byteSize
 ; ----------------------------------------------------------------------------
-FreeMemPadded
+PTFreeMem
 	MOVEM.L	D0/D1/A6,-(SP)
-	ADD.L	#ALLOCMEM_PAD,D0
 	MOVE.L	4.W,A6
 	JSR	_LVOFreeMem(A6)	
 	MOVEM.L	(SP)+,D0/D1/A6
@@ -731,12 +726,12 @@ exex1
 	BEQ.B	exex2
 	MOVE.L	D1,A1
 	MOVE.L	#27760,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 exex2	MOVE.L	SongDataPtr,D1
 	BEQ.B	exex3
 	MOVE.L	D1,A1
 	MOVE.L	SongAllocSize,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 exex3	BSR.W	FreeDirMem
 	BSR.W	GiveBackInstrMem
 	JSR	FreePLST
@@ -785,7 +780,7 @@ OpenLotsOfThings
 	
 	MOVE.L	#27760,D0		; Alloc 27k CHIP textbpl
 	MOVE.L	#MEMF_CHIP!MEMF_CLEAR,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,TextBplPtr
 	BEQ.W	errorexit1
 	MOVE.W	D0,NoteBplptrLow	; set low word
@@ -794,7 +789,7 @@ OpenLotsOfThings
 	
 	MOVE.L	SongAllocSize,D0
 	MOVE.L	#MEMF_PUBLIC!MEMF_CLEAR,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,SongDataPtr
 	BEQ.W	errorexit1
 	
@@ -866,13 +861,13 @@ alotskip
 	BEQ.B	alotskip2
 	MOVE.L	D1,A1
 	MOVE.L	SongAllocSize,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 alotskip2
 	MOVE.L	#SongSize100Patt,SongAllocSize
 	MOVE.L	#99,MaxPatterns
 	MOVE.L	SongAllocSize,D0
 	MOVE.L	#MEMF_CLEAR!MEMF_PUBLIC,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,SongDataPtr
 	BEQ.W	errorexit1
 	; --PT2.3D bug fix: set all "loop lengths" to 1 in 100 patt mode
@@ -4190,7 +4185,7 @@ WritePakSample
 	MOVE.L	DiskDataLength,D0
 	ADD.L	#104,D0
 	MOVE.L	#MEMF_CLEAR!MEMF_PUBLIC,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,CrunchBufferPtr
 	BNE.B	wpsskip
 	JSR	OutOfMemErr
@@ -4313,7 +4308,7 @@ sccskip
 	MOVE.L	D1,A1
 	MOVE.L	DiskDataLength,D0
 	ADD.L	#104,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 sccskip2
 	BSR.W	SetNormalPtrCol
 	JSR	ShowAllRight
@@ -4340,7 +4335,7 @@ SampleCrunchOutOfMemory
 	MOVE.L	D1,A1
 	MOVE.L	DiskDataLength,D0
 	ADD.L	#104,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 scoomskip
 	MOVE.L	FileHandle,D1
 	MOVE.L	DOSBase,A6
@@ -5002,7 +4997,7 @@ AllocDirMem
 	MOVE.L	DirAllocSize(PC),D6
 	MOVE.L	D0,DirAllocSize
 	MOVE.L	#MEMF_CLEAR,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,D7
 	BEQ.B	baehsj
 	
@@ -5019,7 +5014,7 @@ admloop	MOVE.B	(A0)+,(A1)+
 	SUBQ.L	#1,D6
 	BNE.B	admloop
 	MOVE.L	D1,A1
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	RTS
 
 FreeDirMem
@@ -5027,7 +5022,7 @@ FreeDirMem
 	BEQ.W	Return1
 	MOVE.L	D1,A1
 	MOVE.L	DirAllocSize(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	FileNamesPtr
 	CLR.W	DirAllocSize
 	CLR.W	DirEntries
@@ -8936,7 +8931,7 @@ DiskFormat
 	BNE.W	df_skip2
 	MOVE.L	#5632,D0
 	MOVEQ	#MEMF_CHIP,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,FormatDataPtr
 	BEQ.W	df_memerr
 	BSR.W	DoShowFreeMem
@@ -9110,7 +9105,7 @@ df_cleanup
 	JSR	_LVORemPort(A6)
 	MOVE.L	FormatDataPtr,A1
 	MOVE.L	#5632,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CMP.W	#160,CylinderNumber
 	BNE.W	df_skip2
 	CMP.W	#'00',DiskNumText1
@@ -9519,7 +9514,7 @@ gbimloop
 	CLR.L	(A0,D2.W)
 	CLR.L	124(A0,D2.W)
 	MOVE.L	D1,A1
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 gbimskip
 	ADDQ.W	#1,D7
 	CMP.W	#32,D7
@@ -9593,7 +9588,7 @@ ShowSetupScreen
 SaveMainPic
 	MOVE.L	#8000,D0
 	MOVEQ	#0,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,SetupMemPtr
 	BEQ.W	OutOfMemErr
 	MOVE.L	D0,A1
@@ -9625,7 +9620,7 @@ ssxfree
 	MOVE.L	SetupMemPtr(PC),A1
 	CLR.L	SetupMemPtr
 	MOVE.L	#8000,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 ssxexit	RTS
 
 	cnop 0,4
@@ -11329,7 +11324,7 @@ t100ploop
 	BEQ.B	t100pskip
 	MOVE.L	D1,A1
 	MOVE.L	SongAllocSize(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 t100pskip
 	BSR.W	ClrSampleInfo
 	EOR.B	#1,OneHundredPattFlag
@@ -11342,7 +11337,7 @@ t100pskip
 t100pskip2
 	MOVE.L	SongAllocSize(PC),D0
 	MOVE.L	#MEMF_CLEAR!MEMF_PUBLIC,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,SongDataPtr
 	BNE.B	t100pskip3
 	BSR.W	OutOfMemErr
@@ -11859,7 +11854,7 @@ Decompact
 	MOVE.L	(A0),D0
 	MOVE.L	D0,DecompMemSize
 	MOVEQ	#0,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,DecompMemPtr
 	BEQ.W	OutOfMemErr
 	MOVE.L	D0,A1
@@ -11895,7 +11890,7 @@ FreeDecompMem
 	BEQ.W	Return2
 	MOVE.L	D0,A1
 	MOVE.L	DecompMemSize,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	DecompMemPtr
 	RTS
 
@@ -12881,7 +12876,7 @@ ItsTooMuch
 	ADD.L	D0,D0
 	MOVE.L	D0,SamAllocLen
 	MOVE.L	#MEMF_CHIP!MEMF_CLEAR,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,SamAllocPtr
 	BEQ.B	RestoreLength
 	MOVE.L	D0,A1
@@ -12896,7 +12891,7 @@ cpsalop	MOVE.B	(A2)+,(A1)+
 	DBRA	D1,cpsalop
 	MOVE.L	(A0),A1
 	MOVE.L	124(A0),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 nosamth	MOVE.L	RealSamPtr(PC),A0
 	MOVE.L	SamAllocPtr(PC),(A0)
 	MOVE.L	SamAllocLen(PC),124(A0)
@@ -13573,7 +13568,7 @@ exalloc	LEA	SongDataPtr,A4
 	MOVE.L	D0,124(A4)
 	MOVE.L	D0,DiskDataLength
 	MOVE.L	#MEMF_CHIP!MEMF_CLEAR,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,DiskDataPtr
 	MOVE.L	D0,(A4)
 	BEQ.W	OutOfMemErr
@@ -13793,7 +13788,7 @@ loprerr	BSR.W	StorePtrCol
 AllocSample
 	MOVE.L	D0,-(SP)
 	MOVE.L	#MEMF_CHIP!MEMF_CLEAR,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,DiskDataPtr
 	LEA	SamplePtrs,A0
 	MOVE.W	InsNum,D1
@@ -13815,7 +13810,7 @@ FreeSample
 	MOVE.L	124(A0),D0
 	CLR.L	124(A0)
 	MOVE.L	D1,A1
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	RTS
 
 NotSampleNull
@@ -13979,7 +13974,7 @@ lbC00B6C2	MOVE.L	SongDataPtr,D1
 	BEQ.B	lbC00B6DC
 	MOVE.L	D1,A1
 	MOVE.L	SongAllocSize(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 lbC00B6DC	EOR.B	#1,OneHundredPattFlag
 	MOVE.L	#SongSize64Patt,SongAllocSize
 	MOVE.L	#63,MaxPatterns
@@ -13989,7 +13984,7 @@ lbC00B6DC	EOR.B	#1,OneHundredPattFlag
 	MOVE.L	#99,MaxPatterns
 lbC00B714	MOVE.L	SongAllocSize(PC),D0
 	MOVE.L	#MEMF_CLEAR!MEMF_PUBLIC,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,SongDataPtr
 	BNE.B	lbC00B742
 	BSR.W	OutOfMemErr
@@ -14026,7 +14021,7 @@ lbC00B7BC	MOVE.L	SongDataPtr,D1
 	BEQ.B	lbC00B7D6
 	MOVE.L	D1,A1
 	MOVE.L	SongAllocSize(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 lbC00B7D6	EOR.B	#1,OneHundredPattFlag
 	MOVE.L	#SongSize64Patt,SongAllocSize
 	MOVE.L	#63,MaxPatterns
@@ -14036,7 +14031,7 @@ lbC00B7D6	EOR.B	#1,OneHundredPattFlag
 	MOVE.L	#99,MaxPatterns
 lbC00B80E	MOVE.L	SongAllocSize(PC),D0
 	MOVE.L	#MEMF_CLEAR!MEMF_PUBLIC,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,SongDataPtr
 	BNE.B	lbC00B83C
 	BSR.W	OutOfMemErr
@@ -14915,7 +14910,7 @@ CopySamples
 	BEQ.W	ErrorRestoreCol
 	MOVE.L	124(A3),D0
 	MOVEQ	#2,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	TST.L	D0
 	BEQ.W	OutOfMemErr
 	MOVE.L	D0,A5
@@ -15746,7 +15741,7 @@ mixnswp	TST.L	D1
 	AND.L	#$1FFFE,D0
 	MOVE.L	D0,MixLength
 	MOVE.L	#MEMF_CHIP!MEMF_CLEAR,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,MixPtr
 	BEQ.W	SamMemError ; No memory for new sample...
 	
@@ -15935,7 +15930,7 @@ AllocBuffer	; fixed in PT2.3E to be 128kB compatible
 	MOVE.L	D2,D0
 	MOVE.L	D2,BufMemSize
 	MOVE.L	#MEMF_CLEAR,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,BufMemPtr
 	BEQ.W	OutOfMemErr
 	MOVE.L	D7,A0
@@ -15955,7 +15950,7 @@ FreeBuffer
 	BEQ.W	Return3
 	MOVE.L	D0,A1
 	MOVE.L	BufMemSize(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	BufMemPtr
 	RTS
 
@@ -16183,7 +16178,7 @@ Upsample
 	BCLR	#0,D3	; even'ify
 	MOVE.L	D3,D0
 	MOVEQ	#MEMF_CHIP,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	TST.L	D0
 	BEQ.B	upserro
 	MOVE.L	D0,A3
@@ -16195,7 +16190,7 @@ upsloop	MOVE.B	(A2)+,(A3)+
 	DBRA	D3,upsloop
 	MOVE.L	A4,A1
 	MOVE.L	D4,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	MOVE.W	InsNum,D0
 	LSL.W	#2,D0
 	LEA	SongDataPtr,A0
@@ -16250,7 +16245,7 @@ DownSample	; fixed in PT2.3E to be 128kB compatible
 	MOVE.L	#$1FFFE,D0
 dnsskip	MOVE.L	D0,BufMemSize
 	MOVEQ	#MEMF_CHIP,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,BufMemPtr
 	BEQ.W	SamMemError
 	MOVE.L	si_pointer,A1
@@ -17183,7 +17178,7 @@ lbC00E1C8
 	AND.L	#$1FFFF,D0
 	MOVE.L	D0,MixLength
 	MOVE.L	#MEMF_CLEAR!MEMF_CHIP,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,MixPtr
 	BEQ.W	cmOutOfMem
 	MOVE.L	lbL00E6DC(PC),A1
@@ -17197,11 +17192,11 @@ lbC00E1C8
 	MOVE.L	MixLength(PC),lbL00E704
 	MOVE.L	lbL00E6DC(PC),A1
 	MOVE.L	lbL00E6EC(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	lbL00E6DC
 	MOVE.L	lbL00E6E0(PC),A1
 	MOVE.L	lbL00E6F0(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	lbL00E6E0
 	CMP.W	#36,ChordNote3
 	BEQ.W	lbC00E3B4
@@ -17222,7 +17217,7 @@ lbC00E29A
 	AND.L	#$1FFFF,D0
 	MOVE.L	D0,MixLength
 	MOVE.L	#MEMF_CLEAR!MEMF_CHIP,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,MixPtr
 	BEQ.W	cmOutOfMem
 	MOVE.L	lbL00E6E4(PC),A1
@@ -17236,11 +17231,11 @@ lbC00E29A
 	MOVE.L	MixLength(PC),lbL00E708
 	MOVE.L	lbL00E6E4(PC),A1
 	MOVE.L	lbL00E6F4(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	lbL00E6E4
 	MOVE.L	lbL00E6E8(PC),A1
 	MOVE.L	lbL00E6F8(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	lbL00E6E8
 lbC00E328
 	MOVE.L	lbL00E704(PC),D0
@@ -17252,7 +17247,7 @@ lbC00E33A
 	AND.L	#$1FFFF,D0
 	MOVE.L	D0,MixLength
 	MOVE.L	#MEMF_CLEAR!MEMF_CHIP,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,MixPtr
 	BEQ.W	cmOutOfMem
 	MOVE.L	lbL00E6FC(PC),A1
@@ -17262,11 +17257,11 @@ lbC00E33A
 	BSR.W	StartMixing
 	MOVE.L	lbL00E6FC(PC),A1
 	MOVE.L	lbL00E704(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	lbL00E6FC
 	MOVE.L	lbL00E700(PC),A1
 	MOVE.L	lbL00E708(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	lbL00E700
 lbC00E3B4
 	SF	ChordMixFlag
@@ -17291,7 +17286,7 @@ lbC00E3FE
 	LEA	(A0,D0.W),A2
 	MOVE.L	(A2),A1
 	MOVE.L	124(A2),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	MOVE.L	MixPtr(PC),(A2)
 	MOVE.L	MixLength(PC),124(A2)
 	MOVEQ	#0,D0
@@ -17299,7 +17294,7 @@ lbC00E3FE
 	;LSL.L	#1,D0
 	ADD.L	D0,D0
 	MOVE.L	#MEMF_CLEAR!MEMF_CHIP,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,(A2)
 	BEQ.W	OutOfMemErr
 	MOVE.L	D0,A1
@@ -17315,7 +17310,7 @@ lbC00E45C
 	BNE.B	lbC00E45C
 	MOVE.L	MixPtr(PC),A1
 	MOVE.L	MixLength(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	MixPtr
 	MOVE.W	InsNum(PC),D0
 	BNE.B	lbC00E48C
@@ -17355,7 +17350,7 @@ fnssloop
 	JSR	ErrorRestoreCol
 	MOVE.L	MixPtr(PC),A1
 	MOVE.L	MixLength(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	MixPtr
 	BRA.B	ChordMakeDone
 fnssskip
@@ -17367,7 +17362,7 @@ fnssskip
 	;LSL.L	#1,D0
 	ADD.L	D0,D0
 	MOVE.L	#MEMF_CLEAR!MEMF_CHIP,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,(A2)
 	BEQ.W	OutOfMemErr
 	MOVE.L	D0,A1
@@ -17383,7 +17378,7 @@ fnssloop2
 	BNE.B	fnssloop2
 	MOVE.L	MixPtr(PC),A1
 	MOVE.L	MixLength(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	MixPtr
 	MOVE.L	SongDataPtr(PC),A0
 	MOVE.W	D2,D1
@@ -17424,43 +17419,43 @@ cmOutOfMem
 	BEQ.B	oomfree1
 	MOVE.L	D0,A1
 	MOVE.L	lbL00E6EC(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 oomfree1
 	MOVE.L	lbL00E6E0(PC),D0
 	BEQ.B	oomfree2
 	MOVE.L	D0,A1
 	MOVE.L	lbL00E6F0(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 oomfree2
 	MOVE.L	lbL00E6E4(PC),D0
 	BEQ.B	oomfree3
 	MOVE.L	D0,A1
 	MOVE.L	lbL00E6F4(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 oomfree3
 	MOVE.L	lbL00E6E8(PC),D0
 	BEQ.B	oomfree4
 	MOVE.L	D0,A1
 	MOVE.L	lbL00E6F8(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 oomfree4
 	MOVE.L	lbL00E6FC(PC),D0
 	BEQ.B	oomfree5
 	MOVE.L	D0,A1
 	MOVE.L	lbL00E704(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 oomfree5
 	MOVE.L	lbL00E700(PC),D0
 	BEQ.B	oomfree6
 	MOVE.L	D0,A1
 	MOVE.L	lbL00E708(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 oomfree6
 	MOVE.L	MixPtr(PC),D0
 	BEQ.B	oomskip
 	MOVE.L	D0,A1
 	MOVE.L	MixLength(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 oomskip
 	JMP	ErrorRestoreCol
 
@@ -17507,7 +17502,7 @@ lbC00E72C
 	BEQ.B	xErrorRestoreCol
 	MOVE.L	124(A3),D0
 	MOVEQ	#2,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	TST.L	D0
 	BEQ.W	OutOfMemErr
 	MOVE.L	D0,A2
@@ -17959,7 +17954,7 @@ lbC00EC9A
 	BEQ.B	lbC00ECB4
 	MOVE.L	D1,A1
 	MOVE.L	SongAllocSize(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 lbC00ECB4
 	EOR.B	#1,OneHundredPattFlag
 	MOVE.L	#SongSize64Patt,SongAllocSize
@@ -17971,7 +17966,7 @@ lbC00ECB4
 lbC00ECEC
 	MOVE.L	SongAllocSize(PC),D0
 	MOVE.L	#MEMF_CLEAR!MEMF_PUBLIC,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,SongDataPtr
 	BNE.B	lbC00ED1A
 	BSR.W	OutOfMemErr
@@ -18048,7 +18043,7 @@ lbC00EDC8
 	BEQ.B	lbC00EE2C
 	MOVE.L	D4,D0
 	MOVE.L	#MEMF_CLEAR!MEMF_PUBLIC,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,D2
 	BEQ.B	lbC00EE2C
 	MOVE.L	D0,D7
@@ -18060,7 +18055,7 @@ lbC00EDC8
 	BEQ.B	lbC00EE2C
 	MOVE.L	D1,A1
 	MOVE.L	D4,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 lbC00EE2C
 	CLR.L	PatternNumber
 	CLR.L	CurrPos
@@ -18094,7 +18089,7 @@ readinstrloop
 	ADD.L	D0,D0
 	MOVE.L	#MEMF_CHIP!MEMF_CLEAR,D1
 	MOVE.L	D0,-(SP)
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	(SP)+,D6
 	TST.L	D0
 	BNE.B	ReadModInstrument
@@ -18661,7 +18656,7 @@ DoModCrunch
 	CLR.L	CrunchInfoPtr
 	MOVE.L	TuneMemory,D0
 	MOVE.L	#MEMF_CLEAR!MEMF_PUBLIC,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,CrunchBufferPtr
 	BNE.B	casmskip
 	BSR.W	OutOfMemErr
@@ -18808,7 +18803,7 @@ mccskip
 	BEQ.B	mccskip2
 	MOVE.L	D1,A1
 	MOVE.L	TuneMemory,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 mccskip2
 	JSR	SetNormalPtrCol
 	BSR.W	ShowAllRight
@@ -18834,7 +18829,7 @@ ModCrunchOutOfMemory
 	BEQ.B	mcoomskip
 	MOVE.L	D1,A1
 	MOVE.L	TuneMemory,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 mcoomskip
 	BRA.W	ShowModCrunchBox
 	
@@ -19083,7 +19078,7 @@ AllocPLST
 	MULU.W	#30,D0
 	MOVE.L	D0,PLSTAllocSize
 	MOVE.L	#MEMF_CLEAR,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,PLSTmem
 	MOVE.W	MaxPLSTEntries,MaxPLSTEntries2
 	RTS
@@ -19096,7 +19091,7 @@ FreePLST
 	BEQ.W	Return3
 	MOVE.L	D0,A1
 	MOVE.L	PLSTAllocSize(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	PLSTmem
 	RTS
 
@@ -21527,7 +21522,7 @@ OpenMIDI
 	BNE.B	omidisk
 	MOVE.L	#256,D0
 	MOVE.L	#MEMF_PUBLIC!MEMF_CLEAR,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,MIDIinBuffer
 	BEQ.W	Return3
 omidisk	CLR.B	MIDIinTo
@@ -21592,7 +21587,7 @@ CloseMIDI
 	BEQ.B	clmskip
 	MOVE.L	D0,A1
 	MOVE.L	#256,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	MIDIinBuffer
 clmskip
 	TST.L	MiscResBase
@@ -22000,7 +21995,7 @@ FreeDecompMem2
 	MOVE.L	D0,A1
 	MOVE.L	SamMemSize(PC),D0
 	CLR.L	SamMemPtr
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	RTS
 
 Decompact2
@@ -22011,7 +22006,7 @@ Decompact2
 	MOVE.L	(A0),D0
 	MOVE.L	D0,SamMemSize
 	MOVEQ	#1,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,SamMemPtr
 	BEQ.W	OutOfMemErr
 	MOVE.L	D0,A1
@@ -22594,7 +22589,7 @@ resamok
 	; allocate memory for new sample
 	MOVE.L	D7,D0
 	MOVE.L	#MEMF_CHIP!MEMF_CLEAR,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	TST.L	D0
 	BEQ.W	SamMemError
 	MOVE.L	D0,A1
@@ -22659,7 +22654,7 @@ resamskip2
 	; free memory
 	MOVE.L	A2,A1
 	MOVE.L	D6,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	
 	TST.B	ChordResampleFlag
 	BNE.W	Return3	; we came from the sample chord editor, go back
@@ -22740,7 +22735,7 @@ samsome	ADD.L	D0,A4	; mark end
 sacoklen
 	MOVE.L	D0,D3
 	MOVEQ	#2,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,D4
 	BEQ.W	OutOfMemErr ; No memory
 	
@@ -22763,7 +22758,7 @@ sacskp2
 	BPL.B	smclop2
 
 sacfree	MOVE.L	D2,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	
 	MOVE.W	InsNum(PC),D1
 	LSL.W	#2,D1
@@ -22845,7 +22840,7 @@ csamsom	ADD.L	D0,A4
 	ADDQ.L	#1,D0
 	MOVE.L	D0,CopyBufSize
 	MOVEQ	#MEMF_CHIP,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	MOVE.L	D0,CopyBufPtr
 	BEQ.W	OutOfMemErr ; No memory
 	MOVE.L	D0,A5
@@ -22861,7 +22856,7 @@ FreeCopyBuf
 	BEQ.W	Return3
 	MOVE.L	D0,A1
 	MOVE.L	CopyBufSize(PC),D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 	CLR.L	CopyBufPtr
 	RTS
 
@@ -22899,7 +22894,7 @@ sepaskip
 	MOVE.L	#$1FFFE,D4	; 128kb patch
 sapaok	MOVE.L	D4,D0
 	MOVE.L	#MEMF_CHIP!MEMF_CLEAR,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	TST.L	D0
 	BEQ.W	OutOfMemErr
 	MOVE.L	D0,A4
@@ -22948,7 +22943,7 @@ sapalp3	MOVE.B	(A2)+,(A4)+ ; copy last part
 	
 sapaski	MOVE.L	D1,D0
 	BEQ.B	.skip
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 .skip	MOVE.W	InsNum(PC),D1
 	LSL.W	#2,D1
 	LEA	SongDataPtr(PC),A0
@@ -26076,12 +26071,12 @@ monilop3
 	MOVE.L	124(A0,D1.W),D0
 	BEQ.B	samaok
 	CLR.L	124(A0,D1.W)
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 samaok	MOVE.L	#$1FFFE,D6		; try 128k ($FFFE -> $1FFFE, 128K fix)
 samalclop
 	MOVE.L	D6,D0
 	MOVE.L	#MEMF_CHIP!MEMF_CLEAR,D1
-	JSR	AllocMemPadded
+	JSR	PTAllocMem
 	TST.L	D0
 	BNE.B	samalcok
 	SUB.L	#2048,D6	; try 2k less
@@ -26160,7 +26155,7 @@ sampend	MOVE.W	SamDMASave(PC),D0
 	MOVE.L	124(A0,D0.W),D0
 	ADD.L	D0,A1
 	MOVE.L	D2,D0
-	JSR	FreeMemPadded
+	JSR	PTFreeMem
 sampexit
 	MOVE.W	SamIntSave(PC),D0
 	BSET	#15,D0
