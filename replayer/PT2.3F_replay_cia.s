@@ -2,6 +2,8 @@
 ;*  ----- ProTracker V2.3F Replay Routine -----  *
 ;*************************************************
 
+; 04.10.2021: Fixed crucial bug in mt_init. Thanks to insane/Rabenauge^tSCc!
+
 ; CIA Version:
 ; Call SetCIAInt to install the interrupt server. Then call mt_init
 ; to initialize the song. Playback starts when the mt_enable flag
@@ -240,10 +242,10 @@ mtloop2	MOVE.B	(A1)+,D1
 	MOVE.L	D2,A2		; A2 is now the address of first sample's data
 	MOVEQ	#31-1,D0	; handle 31 samples
 mtloop3
-	MOVE.W  28(A0),D3	; get replen
+	MOVE.W  48(A0),D3	; get replen
 	TST.W   D3		; replen is zero?
 	BNE.S   mtskip		; no
-	MOVE.W  #1,28(A0)	; yes, set to 1 (fixes lock-up)
+	MOVE.W  #1,48(A0)	; yes, set to 1 (fixes lock-up)
 mtskip
 	CMP.W   #1,D3		; loop enabled?
 	BHI.S   mtskip2		; yes
