@@ -3,6 +3,7 @@
 ;*************************************************
 
 ; 04.10.2021: Fixed crucial bug in mt_init. Thanks to insane/Rabenauge^tSCc!
+; 05.10.2021: Fixed LUT bug in arpeggio routine. Thanks again to insane!
 
 ; CIA Version:
 ; Call SetCIAInt to install the interrupt server. Then call mt_init
@@ -613,7 +614,7 @@ mt_ArpeggioFind
 	ADD.W	D0,D0
 	MOVEQ	#0,D1
 	MOVE.B	n_finetune(A6),D1
-	MULU	#36*2,D1
+	MULU	#37*2,D1
 	LEA	mt_PeriodTable(PC),A0
 	ADD.L	D1,A0
 	MOVEQ	#0,D1
