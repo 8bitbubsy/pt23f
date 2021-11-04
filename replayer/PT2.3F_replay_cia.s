@@ -13,10 +13,11 @@
 ; - 04.11.2021: 1) Rewritten again to match PT2.3F's internal replayer
 ;               2) Removed MULUs/DIVUs, as part of optimizing
 ;               3) dword alignment, as part of optimizing
-;               4) Fixed tremolo effect & sample-num + volume slide
-;               5) Set back old LED status on exit
-;               6) Set default BPM on mt_init
-;               7) Clear more replayer variables on mt_init
+;               4) Long CMP+BEQ chains replaced with jump tables
+;               5) Fixed tremolo effect & sample-num + volume slide
+;               6) Set back old LED status on exit
+;               7) Set default BPM on mt_init
+;               8) Clear more replayer variables on mt_init
 ;
 ; CIA Version:
 ; Call SetCIAInt to install the interrupt server. Then call mt_init
