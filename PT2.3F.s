@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;     20th of January, 2021
+;     3rd of March, 2022
 ;
 ; If you find any bugs, please email me at olav.sorensen@live.no
 ; or go to #protracker @ IRCnet (server: open.ircnet.net port 6667)
@@ -20,67 +20,6 @@
 ;
 ; I did the rest of the 128kB compatibility patching.
 ;
-; Recommended CPU speed for PT2.3E/PT2.3F: 14MHz+ (the scopes can flicker at
-; 7MHz)
-; For optimal *big* module tracking, have 2MB chipmem + at least 1MB of fastmem
-;
-; (Incomplete) List of changes from PT2.3D to PT2.3F:
-; - Don't wait as long while the red busy cursor is shown
-; - Mask finetune to $0f in PlayVoice (replayer)
-; - LED filter is now reset on module load (deactivated)
-; - "DMAWait" removed, using 7 scanline waits instead (Thanks PhotonSCX!)
-; - Channel muting now works like it should (instant and restores vol on unmute)
-; - VU-meters are now bug free at high BPMs
-; - Added a "real" VU-meter mode (toggle @ Setup Screen #2, uses config file)
-; - Sample edit routines are now 128kB compatible
-; - Support loading 128kB samples
-; - Removed program argument (CLI) handler, as it didn't work anyways
-; - You can now toggle channels by right clicking on the quadrascope
-; - Marking sample data now flickers *WAY* less
-; - Micro optimizations (SUBQ/ADDQ/MOVEQ, LEA, PC addressing, etc)
-; - Show "A LOT..." in Disk Op. if free spaces have more than 8 digits
-; - Show ">9999K" instead of a bugged number if free public RAM is too big
-; - After pressing ENTER on changing Disk Op. path, automatically refresh list
-; - Load/Save: Clear first two bytes of non-looping samples (prevent beep!)
-; - Scopes/analyzer never triggered if note delay was used
-; - Scopes/VU-meters didn't retrig on note retrig (E9x)
-; - When exiting "about screen", scope/analyzer mode is remembered
-; - Throw error when trying to zoom in on an empty sample
-; - The repeat delay for UP/DOWN on some gadgets was way too short on fast CPUs
-; - Hide loop pins and sampler playline if "volume tool box" is open
-; - You can now hide the "volume tool box" by pressing the VOLUME button
-; - The very top color index of the VU-meters were never shown
-; - Added ALT+P (toggle Pos Ed. Screen)
-; - CTRL+O (Contract Track) didn't work at all
-; - Don't display red mouse twice when canceling some ask dialogs
-; - Draw dotted center line in sample data in sampler screen
-; - CTRL+X/C/V and DEL now acts as data edit keys in sampler screen
-; - The "print 6 digits" routine messed up the print value on >65535 values
-; - All sample replens weren't initialized to 2 in "100 patterns" mode
-; - Show red cursor when trying to filter/boost an empty sample
-; - When trying to paste data to an empty sample, don't ask for mark pos first
-; - The '.'/':' char in the sample chord editor would overwrite bitplane data
-; - The scope waveforms now show arpeggio, vibrato, tremolo and sample offset
-; - The scope delta calculation is more accurate on lower notes
-; - Don't exit sampler volbox if editing a vol% and pressing right mouse button
-; - Limit speed setting in setup screen to $1F (31)
-; - Sample loop lengths of 0 or 1 are set to 2 on MOD load (prevents PT freeze)
-; - When number-editing in the GUI, the text cursor was one pixel off in y pos
-; - E8x (Karplus-Strong) could read/write to a NULL pointer and crash PT
-; - EFx (Invert Loop) could read/write to an uninitialized pointer
-; - Limit sample volume to $40 in several places
-; - The major7 chord in the sample chord editor was not ideal (changed 4th note)
-; - Pos-Ed was not updated when number editing 'song length'
-; - Pos-Ed could mess ups the screen bitplane data when ran on a fresh start
-; - Pos-Ed would mess up the Yes/No dialog data if shown while Pos-Ed is open
-; - Pos-Ed could even lead to a system crash!
-; - Pos-Ed could overflow if scrolling down while holding right mouse button
-; - When number editing 'song length', clamp to 127 instead of 128
-; - Quite some pixels in the graphical datas were wrong
-; + more that I forgot to list here.
-;
-; Most fixes/changes has the string "; --PT2.3D " in the code
-; 25.10.2019: Not really, there are plenty of fixes without!
 
 SongSize100Patt		EQU 1084+(1024*100)
 SongSize64Patt		EQU 1084+(1024*64)
@@ -98,42 +37,43 @@ sd_mahokakt		EQU 1080
 sd_patterndata		EQU 1084
 
 ; audXtemp offsets
-n_note			EQU 0  ; W
-n_cmd			EQU 2  ; W
+n_note			EQU 0  ; W (MUST be first!)
+n_cmd			EQU 2  ; W (MUST be second!)
 n_cmdlo			EQU 3  ; B (lower byte of cmd)
-n_start			EQU 4  ; L (should be aligned to blocks of 4)
-n_wavestart		EQU 8  ; L -
-n_loopstart		EQU 12 ; L -
-n_oldstart		EQU 16 ; L -
-n_dmabit		EQU 20 ; W (this one must be aligned to blocks of 4)
-n_length		EQU 22 ; W (the rest must be aligned to blocks of 2)
-n_replen		EQU 24 ; W
-n_period		EQU 26 ; W
-n_wantedperiod		EQU 28 ; W
-n_oldlength		EQU 30 ; W
-n_periodout		EQU 32 ; W
-n_finetune		EQU 34 ; B
-n_volume		EQU 35 ; B
-n_toneportdirec		EQU 36 ; B
-n_toneportspeed		EQU 37 ; B
-n_vibratocmd		EQU 38 ; B
-n_vibratopos		EQU 39 ; B
-n_tremolocmd		EQU 40 ; B
-n_tremolopos		EQU 41 ; B
-n_wavecontrol		EQU 42 ; B
-n_glissfunk		EQU 43 ; B
-n_sampleoffset		EQU 44 ; B
-n_pattpos		EQU 45 ; B
-n_loopcount		EQU 46 ; B
-n_funkoffset		EQU 47 ; B
-n_trigger		EQU 48 ; B
-n_samplenum		EQU 49 ; B
-n_volumeout 		EQU 50 ; B
-n_sampleoffset2		EQU 51 ; B
-n_muted			EQU 52 ; B
-n_repeat		EQU 54 ; W
+n_start			EQU 4  ; L (aligned)
+n_wavestart		EQU 8  ; L
+n_loopstart		EQU 12 ; L
+n_oldstart		EQU 16 ; L
+n_peroffset		EQU 20 ; L (offset to finetuned period-LUT section)
+n_dmabit		EQU 24 ; W (aligned)
+n_length		EQU 26 ; W
+n_replen		EQU 28 ; W
+n_period		EQU 30 ; W
+n_wantedperiod		EQU 32 ; W
+n_oldlength		EQU 34 ; W
+n_periodout		EQU 36 ; W
+n_repeat		EQU 38 ; W
+n_finetune		EQU 40 ; B
+n_volume		EQU 41 ; B
+n_toneportdirec		EQU 42 ; B
+n_toneportspeed		EQU 43 ; B
+n_vibratocmd		EQU 44 ; B
+n_vibratopos		EQU 45 ; B
+n_tremolocmd		EQU 46 ; B
+n_tremolopos		EQU 47 ; B
+n_wavecontrol		EQU 48 ; B
+n_glissfunk		EQU 49 ; B
+n_sampleoffset		EQU 50 ; B
+n_pattpos		EQU 51 ; B
+n_loopcount		EQU 52 ; B
+n_funkoffset		EQU 53 ; B
+n_trigger		EQU 54 ; B
+n_samplenum		EQU 55 ; B
+n_volumeout 		EQU 56 ; B
+n_sampleoffset2		EQU 57 ; B
+n_muted			EQU 58 ; B
 
-ChanStructSize		EQU 56 ; (should be a multiple of 4!)
+ChanStructSize		EQU 60 ; (must be a multiple of 4!)
 
 ; Exec Library Offsets
 _LVOFindTask		EQU -294
@@ -1015,11 +955,6 @@ ResetVBInt
 	MOVE.L	4.W,A6
 	JSR	_LVORemIntServer(A6)
 	RTS
-	
-rvumint		; scopes need to be ran first in real vumeters mode
-	BSR.W	Scope
-	BSR.W	RealVUMeters
-	BRA.B	vbint2
 
 vbint
 	TST.B	ShowRasterbar
@@ -1029,13 +964,14 @@ vbint
 	MOVEM.L	D0-D7/A0-A6,-(SP)
 	BSR.W	CheckIfProgramIsActive
 	BEQ.W	vbiend
+	BSR.W	Scope ; draw scopes ASAP to prevent flicker from scanline racing
 	BSR.W	UpdatePointerPos
 	TST.B	RealVUMetersFlag
-	BNE.B	rvumint
-	BSR.W	VUMeters
-	BSR.W	Scope
-vbint2
-	BSR.W	SpecAnaInt
+	BEQ.B	.skip2
+	BSR.W	RealVUMeters
+	BRA.B	vbint2
+.skip2	BSR.W	VUMeters
+vbint2	BSR.W	SpecAnaInt
 	BSR.W	ArrowKeys
 	BSR.W	CheckKeyRepeat
 	MOVE.L	SongPosition,CurrPos
@@ -1823,7 +1759,6 @@ SpecAnaInt
 	BNE.W	Return1
 	TST.B	DisableAnalyzer
 	BNE.W	Return1
-.loop
 	TST.B	AnaDrawFlag
 	BNE.W	Return1
 	ST	AnaDrawFlag
@@ -1967,8 +1902,8 @@ ns_posfrac	= 20 ; W
 
 ScopeInfoSize	= 24 ; should be a multiple of 4!
 
-ScopeMaxPeriod	EQU 936	; C-1 finetune -8 + vibrato w/ max depth
-ScopeMinPeriod	EQU 113
+SC_MAX_PER	EQU 936	; C-1 finetune -8 + vibrato w/ max depth
+SC_MIN_PER	EQU 113
 
 Scope
 	LEA	audchan1temp,A0
@@ -1976,12 +1911,10 @@ Scope
 	LEA	ScopeInfo,A2
 	LEA	BlankSample,A3
 	LEA	ScopeDeltaTab,A5
-	MOVEQ	#4-1,D6			; do four channels
+	MOVEQ	#4-1,D6			; do 4 channels
 ScoLoop
-	MOVE.W	(A0),D0
-	AND.W	#$0FFF,D0
-	OR.W	n_periodout(A0),D0
-	BEQ.W	ScoSampleEnd		; end if no note & no period
+	MOVE.W	n_period(A0),D0
+	BEQ.W	ScoSampleEnd		; end if no period
 	
 	MOVE.W	n_periodout(A0),ns_period(A2)
 	MOVE.B	n_volumeout(A0),ns_volume(A2)
@@ -2008,11 +1941,11 @@ ScoRetrig
 	BRA.B	ScoChk
 
 scopePerLow
-	MOVE.W	#ScopeMinPeriod,D1
+	CLR.W	D1
 	BRA.B	ScoAdd
 
 scopePerHi
-	MOVE.W	#ScopeMaxPeriod,D1
+	MOVE.W	#(SC_MAX_PER-SC_MIN_PER)*4,D1
 	BRA.B	ScoAdd
 	
 ScoContinue
@@ -2029,13 +1962,13 @@ ScoContinue
 	;ADD.L	D2,D0
 	
 	; --PT2.3D change: use rounded fixed-point LUT (also prevents DIV)
-	CMP.W	#ScopeMaxPeriod,D1	; period is normally within 113..936
+	CMP.W	#SC_MAX_PER,D1		; period is normally within 113..936
 	BHI.B	scopePerHi
-	CMP.W	#ScopeMinPeriod,D1
+	CMP.W	#SC_MIN_PER,D1
 	BLO.B	scopePerLow
-ScoAdd	SUB.W	#ScopeMinPeriod,D1	; D1 = 0..823
+	SUB.W	#SC_MIN_PER,D1		; D1 = 0..823
 	LSL.W	#2,D1			; *4 for longword LUT
-	MOVE.L	(A5,D1.W),D1		; A5 = ScopeDeltaTab
+ScoAdd	MOVE.L	(A5,D1.W),D1		; A5 = ScopeDeltaTab
 					; D1 = delta (16.16 fixed-point)
 	ADD.W	D1,ns_posfrac(A2) 	; add delta fraction
 	CLR.W	D1
@@ -2118,7 +2051,7 @@ ScoNClr	MOVEQ	#0,D7
 	BNE.B	ScoSkp1
 	TST.W	(A4)
 	BEQ.B	ScoSkp1
-	BTST	#0,D6
+	BTST	#0,D6		; voice #1 active?
 	BEQ.B	ScoSkp1
 	LEA	ScopeInfo+(ScopeInfoSize*0),A2
 	MOVE.B	ns_volume(A2),D5
@@ -2134,7 +2067,7 @@ ScoSkp1	BSR.W	ScoDraw
 	BNE.B	ScoSkp2
 	TST.W	(A4)
 	BEQ.B	ScoSkp2
-	BTST	#1,D6
+	BTST	#1,D6		; voice #2 active?
 	BEQ.B	ScoSkp2
 	LEA	ScopeInfo+(ScopeInfoSize*1),A2
 	MOVE.B	ns_volume(A2),D5
@@ -2150,7 +2083,7 @@ ScoSkp2	BSR.B	ScoDraw
 	BNE.B	ScoSkp3
 	TST.W	(A4)
 	BEQ.B	ScoSkp3
-	BTST	#2,D6
+	BTST	#2,D6		; voice #3 active?
 	BEQ.B	ScoSkp3
 	LEA	ScopeInfo+(ScopeInfoSize*2),A2
 	MOVE.B	ns_volume(A2),D5
@@ -2166,7 +2099,7 @@ ScoSkp3	BSR.B	ScoDraw
 	BNE.B	ScoSkp4
 	TST.W	(A4)
 	BEQ.B	ScoSkp4
-	BTST	#3,D6
+	BTST	#3,D6		; voice #4 active?
 	BEQ.B	ScoSkp4
 	LEA	ScopeInfo+(ScopeInfoSize*3),A2
 	MOVE.B	ns_volume(A2),D5
@@ -2190,7 +2123,10 @@ ScoDraw
 	CMP.B	#64,D5
 	BLS.B	sdsk1
 	MOVEQ	#64,D5
-sdsk1
+sdsk1	EXT.W	D5
+	LSL.W	#7,D5
+	NEG.W	D5
+	
 	MOVE.L	ns_sampleptr(A2),A0
 	;ADD.L	TextBplPtr,A1
 	MOVEQ	#5-1,D2
@@ -2213,13 +2149,11 @@ sdlp2LOOP
 sdlnowrap
 	MOVE.B	(A0)+,D0		; get byte from sample data	
 	EXT.W	D0			; extend to word
-	NEG.W	D0			; invert
 	MULS.W	D5,D0			; multiply by volume
-	ASR.W	#8,D0			; shift down
-	ASR.B	#1,D0
+	SWAP	D0			; D0.W = -15..16
 	MOVE.W	D0,D1
-	ASL.W	#5,D0			; * 32
-	ASL.W	#3,D1			; * 8
+	LSL.W	#5,D0			; * 32
+	LSL.W	#3,D1			; * 8
 	ADD.W	D1,D0			; (32+8) = * 40
 	BSET	D3,(A1,D0.W)		; set the current bitplane bit
 	DBRA	D3,sdlp2LOOP
@@ -2242,13 +2176,11 @@ sdlp2
 	; -----------------------------
 	MOVE.B	(A0)+,D0		; get byte from sample data
 	EXT.W	D0			; extend to word
-	NEG.W	D0			; invert
 	MULS.W	D5,D0			; multiply by volume
-	ASR.W	#8,D0			; shift down
-	ASR.B	#1,D0
+	SWAP	D0			; D0.W = -15..16
 	MOVE.W	D0,D1
-	ASL.W	#5,D0			; * 32
-	ASL.W	#3,D1			; * 8
+	LSL.W	#5,D0			; * 32
+	LSL.W	#3,D1			; * 8
 	ADD.W	D1,D0			; (32+8) = * 40
 .drawit	BSET	D3,(A1,D0.W)		; set the current bitplane bit
 	DBRA	D3,sdlp2
@@ -2379,6 +2311,7 @@ sconorep
 
 rScoDraw
 	MOVE.L	D7,-(SP)
+	MOVE.L	D4,-(SP)
 	SF	D7			; do not draw scopes
 	TST.B	ScopeEnable
 	BEQ.W	rsdkip
@@ -2391,7 +2324,9 @@ rsdkip
 	CMP.B	#64,D5
 	BLS.B	rsdsk1
 	MOVEQ	#64,D5
-rsdsk1
+rsdsk1	EXT.W	D5
+	NEG.W	D5
+	
 	MOVE.L	ns_sampleptr(A2),A0
 	;ADD.L	TextBplPtr,A1
 	MOVEQ	#4,D2
@@ -2406,7 +2341,6 @@ rsdsk1
 	BNE.B	rsdlp1			; yes, let's use the original scope routine first
 		
 	; ---- new scope routine for looped samples ----
-	MOVE.L	D4,-(SP)
 	MOVE.L	ns_rependptr(A2),D4	; sample loop end
 	MOVE.L	ns_repeatptr(A2),A3	; sample loop start
 rsdlp1LOOP
@@ -2417,7 +2351,6 @@ rsdlp2LOOP
 rsdlnowrap
 	MOVE.B	(A0)+,D0		; get byte from sample data
 	EXT.W	D0			; extend to word
-	NEG.W	D0			; invert
 	MULS.W	D5,D0			; multiply by volume
 	
 	MOVE.W	D0,D1			; D1 = amplitude
@@ -2461,7 +2394,6 @@ rsdlp2
 	
 	MOVE.B	(A0)+,D0		; get byte from sample data
 	EXT.W	D0			; extend to word
-	NEG.W	D0			; invert
 	MULS.W	D5,D0			; multiply by volume
 	
 	MOVE.W	D0,D1			; D1 = amplitude
@@ -2486,6 +2418,7 @@ rsdlskip2
 	DBRA	D3,rsdlp2
 	ADDQ	#1,A1			; we have done 8 bits now, increase bitplane ptr
 	DBRA	D2,rsdlp1
+	MOVE.L	(SP)+,D4
 	MOVE.L	(SP)+,D7
 	SUBQ	#6,A4
 	BRA.W	sdlpos
@@ -5196,9 +5129,9 @@ nde4skip
 	RTS
 
 RedrawFileNames
-	MOVE.W	D0,-(SP)
+	MOVE.L	D0,-(SP)
 	BSR.W	ShowDirPath
-	MOVE.W	(SP)+,D0
+	MOVE.L	(SP)+,D0
 	MOVE.W	D0,FileNameScrollPos
 	TST.W	16(A5)
 	BEQ.W	Return1
@@ -6260,6 +6193,7 @@ ToggleMetroFlag
 	BRA.W	Show_MS
 
 SetMetroChannel
+	MOVEQ	#0,D0
 	MOVE.W	PattCurPos,D0
 	DIVU.W	#6,D0
 	ADDQ.W	#1,D0
@@ -6362,6 +6296,7 @@ TabulateCursor
 	CLR.B	RawKeyCode
 	TST.W	ShiftKeyStatus
 	BNE.B	TabCurRight
+	MOVEQ	#0,D0
 	MOVE.W	PattCurPos,D0
 	DIVU.W	#6,D0
 	ADDQ.W	#1,D0
@@ -6373,6 +6308,7 @@ tacskip	MULU.W	#6,D0
 	BRA.W	UpdateCursorPos
 
 TabCurRight
+	MOVEQ	#0,D0
 	MOVE.W	PattCurPos,D0
 	ADDQ.W	#5,D0
 	DIVU.W	#6,D0
@@ -7064,6 +7000,7 @@ swtloop	BSR.W	GetHexKey
 	ADD.L	D1,A0
 	MOVE.L	A0,A1
 	ADD.L	D0,A0
+	MOVEQ	#0,D0
 	MOVE.W	PattCurPos,D0
 	DIVU.W	#6,D0
 	AND.L	#$F,D0
@@ -7874,6 +7811,7 @@ UpdateCommand
 	MOVEQ	#0,D0
 	MOVE.W	ScrPattPos,D0
 	MULU.W	#7*40,D0
+	MOVEQ	#0,D1
 	MOVE.W	PattCurPos,D1
 	DIVU.W	#6,D1
 	MULU.W	#9,D1
@@ -8129,9 +8067,12 @@ nkpskipit
 	ADD.L	D1,A0
 	MOVEQ	#0,D1
 	MOVE.B	(A0),D1 ; get finetune
-	MULU.W	#37*2,D1
-	ADD.L	D1,A1
+	AND.B	#$0F,D1
+	LSL.B	#2,D1
+	LEA	ftunePerTab,A4
+	MOVE.L	(A4,D1.W),A1
 	MOVE.W	(A1,D0.W),CurrentPlayNote
+	
 	TST.L	D2
 	BEQ.B	nkpnrml
 	CMP.B	#2,pnoteflag
@@ -8152,6 +8093,7 @@ AddNoteToPattern
 	LSL.W	#4,D0
 	EXT.L	D0
 	ADD.L	D0,A0	; Find current pos
+	MOVEQ	#0,D0
 	MOVE.W	PattCurPos,D0
 	DIVU.W	#6,D0
 	LSL.W	#2,D0
@@ -8218,11 +8160,11 @@ antpalt
 antpskip
 	; --PT2.3D bug fix: instant channel muting
 	LEA	audchan1toggle(PC),A0
+	MOVEQ	#0,D0
 	MOVE.W	PattCurPos,D0
 	DIVU.W	#6,D0
 	LSL.B	#3,D0
-	LEA	(A0,D0.W),A0
-	TST.W	(A0)
+	MOVE.W	(A0,D0.W),D0
 	BNE.B	antpskip3
 	RTS
 antpskip3
@@ -9953,6 +9895,7 @@ caspskip2
 
 SetSplit
 	LEA	SplitData,A2
+	AND.L	#$FFFF,D1
 	SUBQ.W	#1,D1
 	DIVU.W	#11,D1
 	SUBQ.W	#1,D1
@@ -10413,6 +10356,7 @@ GetColPos
 	MOVEQ	#0,D0
 	BRA.B	gcpskip
 gcpskp2 SUB.W	#26,D0
+	AND.L	#$FFFF,D0
 	DIVU.W	#3,D0
 	AND.L	#$FF,D0
 	CMP.W	#15,D0
@@ -10919,6 +10863,7 @@ PrintPattern
 pp_posloop
 	MOVEQ	#0,D7
 	MOVE.W	#2,TextLength
+	MOVEQ	#0,D1
 	MOVE.W	PPattPos,D1
 	LEA	PattPosText,A5
 	DIVU.W	#10,D1
@@ -14246,7 +14191,7 @@ TurnOffVoices
 	RTS
 
 DoStopIt
-	TST.W	TempPPFileFlag	; WTF? DoStopIt is probably called in PP load routines...
+	TST.W	TempPPFileFlag
 	BNE.B	dsiskip
 	BSR.W	SetNormalPtrCol
 dsiskip
@@ -16464,10 +16409,12 @@ cclskip5
 cclskip6
 	MULU.W	#30,D1
 	MOVEQ	#0,D0
-	MOVE.B	14(A0,D1.W),D0
-	MULU.W	#37*2,D0
-	LEA	PeriodTable(PC),A0
-	ADD.L	D0,A0
+	MOVE.B	14(A0,D1.W),D0	; finetune
+	AND.B	#$0F,D0
+	LSL.B	#2,D0
+	LEA	ftunePerTab(PC),A0
+	MOVE.L	(A0,D0.W),A0
+
 	MOVEQ	#0,D1
 	MOVE.W	ResampleNote,D1
 	;LSL.W	#1,D1
@@ -19547,10 +19494,10 @@ p6ddok	MOVE.W	#6,TextLength
 toobig	; number is >999999. divide by 1000, then display space + 4 digits + 'K' at end
 	CMP.L	#9999999,D0
 	BHI.B	toobigoverflow
-	MOVE.W	D0,-(SP)
+	MOVE.L	D0,-(SP)
 	MOVE.B	#' ',D0	; print space
 	BSR.B	printch
-	MOVE.W	(SP)+,D0
+	MOVE.L	(SP)+,D0
 	DIVU.W	#1000,D0
 	MOVE.W	D0,WordNumber
 	BSR	Print4DecDigits
@@ -19681,7 +19628,7 @@ ShowText2
 ShowText
 	MOVEM.L	A2-A4,-(SP)
 	LEA	TextTable(PC),A3
-	LEA	FontData(PC),A4
+	LEA	FontData,A4
 	MOVE.W	TextLength(PC),D0
 	MOVE.L	TextBplPtr(PC),A1
 	MOVE.W	TextOffset(PC),D1
@@ -21380,6 +21327,7 @@ PED_PsetHit
 	CMP.W	#119,D0
 	BHS.B	pedphend
 	SUB.W	#58,D0	; --PT2.3D bug fix: 58, not 59
+	AND.L	#$FFFF,D0
 	DIVU.W	#6,D0
 	MOVE.L	D0,D1
 	SWAP	D1
@@ -22203,19 +22151,26 @@ SamMenu4
 PlayWaveform
 	; --PT2.3D bug fix: instant channel muting
 	LEA	audchan1toggle,A0
+	MOVEQ	#0,D0
 	MOVE.W	PattCurPos(PC),D0
 	DIVU.W	#6,D0
 	LSL.B	#3,D0
-	LEA	(A0,D0.W),A0
-	TST.W	(A0)
-	BNE.B	pwskip
-	JMP	WaitForButtonUp
-pwskip
-	; ----------------------------------------
+	MOVE.W	(A0,D0.W),D0
+	BEQ.B	pwskip
 	JSR	PlayNote
-	JMP	WaitForButtonUp
-	
+pwskip	JMP	WaitForButtonUp
+
 PlayDisplay
+	; --PT2.3D bug fix: instant channel muting
+	LEA	audchan1toggle,A0
+	MOVEQ	#0,D0
+	MOVE.W	PattCurPos(PC),D0
+	DIVU.W	#6,D0
+	LSL.B	#3,D0
+	MOVE.W	(A0,D0.W),D0
+	BNE.B	pdskip
+	JMP	WaitForButtonUp
+pdskip	; ----------------------------------------
 	LEA	SampleInfo(PC),A0
 	MOVE.L	SamOffset(PC),StartOfs
 	MOVE.L	SamDisplay(PC),D0
@@ -22225,23 +22180,22 @@ PlayDisplay
 	MOVE.W	#1,6(A0)
 	MOVE.W	PlayInsNum(PC),-(SP)
 	CLR.W	PlayInsNum
-	; --PT2.3D bug fix: instant channel muting
-	LEA	audchan1toggle,A0
-	MOVE.W	PattCurPos(PC),D0
-	DIVU.W	#6,D0
-	LSL.B	#3,D0
-	LEA	(A0,D0.W),A0
-	TST.W	(A0)
-	BNE.B	pdskip
-	MOVE.W	(SP)+,PlayInsNum
-	JMP	WaitForButtonUp
-pdskip
-	; ----------------------------------------
 	JSR	PlayNote
 	MOVE.W	(SP)+,PlayInsNum
 	BSR.W	ShowSampleInfo
 	JMP	WaitForButtonUp
+
 PlayRange
+	; --PT2.3D bug fix: instant channel muting
+	LEA	audchan1toggle,A0
+	MOVEQ	#0,D0
+	MOVE.W	PattCurPos(PC),D0
+	DIVU.W	#6,D0
+	LSL.B	#3,D0
+	MOVE.W	(A0,D0.W),D0
+	BNE.B	prskip
+	JMP	WaitForButtonUp
+prskip	; ----------------------------------------
 	MOVE.L	MarkStartOfs(PC),D1
 	BMI.W	NoRangeError
 	MOVE.L	MarkEndOfs(PC),D0
@@ -22256,18 +22210,6 @@ PlayRange
 	MOVE.W	#1,6(A0)
 	MOVE.W	PlayInsNum(PC),-(SP)
 	CLR.W	PlayInsNum
-	; --PT2.3D bug fix: instant channel muting
-	LEA	audchan1toggle,A0
-	MOVE.W	PattCurPos(PC),D0
-	DIVU.W	#6,D0
-	LSL.B	#3,D0
-	LEA	(A0,D0.W),A0
-	TST.W	(A0)
-	BNE.B	prskip
-	MOVE.W	(SP)+,PlayInsNum
-	JMP	WaitForButtonUp
-prskip
-	; ----------------------------------------
 	JSR	PlayNote
 	MOVE.W	(SP)+,PlayInsNum
 	BSR.W	ShowSampleInfo
@@ -22545,9 +22487,10 @@ rssmpok
 	MOVEQ	#0,D0		
 	MOVE.B	12+2(A0,D1.W),D0 ; finetune
 	AND.B	#$0F,D0
-	MULU.W	#37*2,D0	; alignment
-	LEA	PeriodTable(PC),A0
-	ADD.L	D0,A0
+	LSL.B	#2,D0
+	LEA	ftunePerTab(PC),A0
+	MOVE.L	(A0,D0.W),A0
+	
 	MOVEQ	#0,D1
 	MOVE.W	ResampleNote(PC),D1
 	ADD.W	D1,D1 ;	alignment
@@ -23158,6 +23101,7 @@ OneSlider
 	MOVE.W	D4,D6
 	ADD.W	D4,D4
 	ADD.W	D6,D4
+	AND.L	#$FFFF,D4
 	DIVU.W	#10,D4
 	ADD.W	#105,D4
 	MOVEQ	#3-1,D6
@@ -23306,6 +23250,7 @@ TuningTone
 	TST.L	RunMode
 	BNE.W	ttrts
 	MOVE.W	#1,TToneFlag
+	MOVEQ	#0,D2
 	MOVE.W	PattCurPos(PC),D2
 	DIVU.W	#6,D2
 	ADDQ.W	#1,D2
@@ -23842,7 +23787,7 @@ rdsloop	MOVE.W	D4,D0
 	BSR.W	MoveTo
 	BRA.B	rdsupdt
 rdsdraw	BSR.W	DrawTo
-	nop
+	NOP	; XXX: Is this needed at all? Probably came from re-sourcing?
 rdsupdt	ADDQ.W	#1,D4
 
 	;MOVE.L	D4,D7
@@ -24181,10 +24126,22 @@ HideLoopSprites	; new PT2.3E routine
 ;---- Playroutine ----
 
 	cnop 0,4
-audchan1temp	dc.l 0,0,0,0,0,$00010000,0,0,0,0,0,0,0,0
-audchan2temp	dc.l 0,0,0,0,0,$00020000,0,0,0,0,0,0,0,0
-audchan3temp	dc.l 0,0,0,0,0,$00040000,0,0,0,0,0,0,0,0
-audchan4temp	dc.l 0,0,0,0,0,$00080000,0,0,0,0,0,0,0,0
+audchan1temp
+	dcb.b 24
+	dc.w $0001	; voice #1 DMA bit
+	dcb.b 34
+audchan2temp
+	dcb.b 24
+	dc.w $0002	; voice #2 DMA bit
+	dcb.b 34
+audchan3temp
+	dcb.b 24
+	dc.w $0004	; voice #3 DMA bit
+	dcb.b 34
+audchan4temp
+	dcb.b 24
+	dc.w $0008	; voice #4 DMA bit
+	dcb.b 34
 
 IntMusic
 	MOVEM.L	D0-D7/A0-A6,-(SP)
@@ -24236,9 +24193,9 @@ GetNewNote
 	CMP.L	#'patt',RunMode
 	BNE.B	.l1
 	MOVE.L	PatternNumber(PC),D1
-.l1	ASL.L	#8,D1
+.l1	LSL.L	#8,D1
 
-	ASL.L	#2,D1
+	LSL.L	#2,D1
 	ADD.L	PatternPosition(PC),D1
 	MOVE.L	D1,PatternPtr
 	CLR.W	DMACONtemp
@@ -24343,7 +24300,17 @@ plvskip	MOVE.L	(A0,D1.L),(A6)	; Read note from pattern
 	MOVE.L	(A1,D2.L),n_start(A6)
 	MOVE.L	n_start(A6),n_oldstart(A6)	; for scopes
 	MOVE.W	(A3,D4.L),n_length(A6)
-	MOVE.B	2(A3,D4.L),n_finetune(A6)
+	
+	MOVEQ	#0,D0
+	MOVE.B	2(A3,D4.L),D0
+	AND.B	#$0F,D0
+	MOVE.B	D0,n_finetune(A6)
+	; ----------------------------------
+	LSL.B	#2,D0 ; update n_peroffset
+	LEA	ftunePerTab(PC),A4
+	MOVE.L	(A4,D0.W),n_peroffset(A6)
+	; ----------------------------------	
+	
 	AND.B	#$0F,n_finetune(A6)		; --PT2.3D bug fix: mask finetune...
 	MOVE.B	3(A3,D4.L),n_volume(A6)
 	MOVE.W	4(A3,D4.L),D3			; Get repeat
@@ -24407,13 +24374,10 @@ SetPeriod
 	MOVEQ	#$24,D7
 ftuloop	CMP.W	(A1,D0.W),D1
 	BHS.B	ftufound
-	ADDQ.L	#2,D0
+	ADDQ.W	#2,D0
 	DBRA	D7,ftuloop
 ftufound
-	MOVEQ	#0,D1
-	MOVE.B	n_finetune(A6),D1
-	MULU.W	#37*2,D1
-	ADD.L	D1,A1
+	MOVE.L	n_peroffset(A6),A1
 	MOVE.W	(A1,D0.W),n_period(A6)
 	MOVEM.L	(SP)+,D0/D1/A0/A1
 	
@@ -24517,6 +24481,7 @@ waiteol4
 	OR.W	#$8000,D0	; Set bits
 	MOVE.W	D0,$DFF096
 	
+	; scanline-wait (wait for Paula DMA to latch)
 	MOVE.W	WaitRasterLines1,D1
 lineloop5
 	MOVE.B	(A0),D0
@@ -24618,28 +24583,38 @@ CheckEffects
 	MOVE.B	D0,n_volumeout(A6)	; Set scope volume
 ceend	RTS
 
+	CNOP 0,4
+JumpList1
+	dc.l Arpeggio			; 0xy (Arpeggio)
+	dc.l PortaUp			; 1xx (Portamento Up)
+	dc.l PortaDown			; 2xx (Portamento Down)
+	dc.l TonePortamento		; 3xx (Tone Portamento)
+	dc.l Vibrato			; 4xy (Vibrato)
+	dc.l TonePlusVolSlide		; 5xy (Tone Portamento + Volume Slide)
+	dc.l VibratoPlusVolSlide	; 6xy (Vibrato + Volume Slide)
+	dc.l SetBack			; 7 - not used here
+	dc.l SetBack			; 8 - unused!
+	dc.l SetBack			; 9 - not used here
+	dc.l SetBack			; A - not used here
+	dc.l SetBack			; B - not used here
+	dc.l SetBack			; C - not used here
+	dc.l SetBack			; D - not used here
+	dc.l E_Commands			; Exy (Extended Commands)
+	dc.l SetBack			; F - not used here
+
 chkefx2
 	BSR.W	UpdateFunk
 	MOVE.W	n_cmd(A6),D0
 	AND.W	#$0FFF,D0
 	BEQ.B	Return3
+	MOVEQ	#0,D0
 	MOVE.B	n_cmd(A6),D0
 	AND.B	#$0F,D0
-	BEQ.B	Arpeggio
-	CMP.B	#1,D0
-	BEQ.W	PortaUp
-	CMP.B	#2,D0
-	BEQ.W	PortaDown
-	CMP.B	#3,D0
-	BEQ.W	TonePortamento
-	CMP.B	#4,D0
-	BEQ.W	Vibrato
-	CMP.B	#5,D0
-	BEQ.W	TonePlusVolSlide
-	CMP.B	#6,D0
-	BEQ.W	VibratoPlusVolSlide
-	CMP.B	#$E,D0
-	BEQ.W	E_Commands
+	MOVE.W	D0,D1
+	LSL.B	#2,D1
+	MOVE.L	JumpList1(PC,D1.W),A4
+	JMP	(A4) ; every efx has RTS at the end, this is safe
+	
 SetBack	MOVE.W	n_period(A6),6(A5)
 	MOVE.W	n_period(A6),n_periodout(A6)	; Set scope period
 	CMP.B	#7,D0
@@ -24651,15 +24626,22 @@ Return3	RTS
 PerNop	MOVE.W	n_period(A6),6(A5)
 	MOVE.W	n_period(A6),n_periodout(A6)	; Set scope period
 	RTS
+	
+	; DIV -> LUT optimization. DIVU is 140+ cycles on a 68000.
+ArpTab
+	dc.b 0,1,2,0,1,2,0,1
+	dc.b 2,0,1,2,0,1,2,0
+	dc.b 1,2,0,1,2,0,1,2
+	dc.b 0,1,2,0,1,2,0,1
 
 Arpeggio
 	MOVEQ	#0,D0
 	MOVE.L	Counter(PC),D0
-	DIVS.W	#3,D0
-	SWAP	D0
-	CMP.W	#1,D0
+	AND.B	#$1F,D0			; just in case
+	MOVE.B	ArpTab(PC,D0.W),D0
+	CMP.B	#1,D0
 	BEQ.B	Arpeggio1
-	CMP.W	#2,D0
+	CMP.B	#2,D0
 	BEQ.B	Arpeggio2
 Arpeggio0
 	MOVE.W	n_period(A6),D2
@@ -24678,11 +24660,7 @@ Arpeggio2
 ArpeggioFind
 	;ASL.W	#1,D0
 	ADD.W	D0,D0
-	MOVEQ	#0,D1
-	MOVE.B	n_finetune(A6),D1
-	MULU.W	#37*2,D1
-	LEA	PeriodTable(PC),A0
-	ADD.L	D1,A0
+	MOVE.L	n_peroffset(A6),A0
 	MOVEQ	#0,D1
 	MOVE.W	n_period(A6),D1
 	MOVEQ	#$24,D7
@@ -24700,7 +24678,7 @@ ArpeggioSet
 
 FinePortaUp
 	TST.L	Counter
-	BNE.B	Return3
+	BNE.W	Return3
 	MOVE.B	#$0F,LowMask
 PortaUp	MOVEQ	#0,D0
 	MOVE.B	n_cmdlo(A6),D0
@@ -24713,7 +24691,8 @@ PortaUp	MOVEQ	#0,D0
 	BPL.B	PortaUskip
 	AND.W	#$F000,n_period(A6)
 	OR.W	#$0071,n_period(A6)
-PortaUskip	MOVE.W	n_period(A6),D0
+PortaUskip
+	MOVE.W	n_period(A6),D0
 	AND.W	#$0FFF,D0
 	MOVE.W	D0,6(A5)
 	MOVE.W	D0,n_periodout(A6)	; Set scope period
@@ -24735,23 +24714,19 @@ PortaDown
 	BMI.B	PortaDskip
 	AND.W	#$F000,n_period(A6)
 	OR.W	#$0358,n_period(A6)
-PortaDskip	MOVE.W	n_period(A6),D0
+PortaDskip
+	MOVE.W	n_period(A6),D0
 	AND.W	#$0FFF,D0
 	MOVE.W	D0,6(A5)
 	MOVE.W	D0,n_periodout(A6)	; Set scope period
 	RTS
 
 SetTonePorta
-	MOVE.L	A0,-(SP)
 	MOVE.W	(A6),D2
 	AND.W	#$0FFF,D2
+	MOVE.L	n_peroffset(A6),A4
 	MOVEQ	#0,D0
-	MOVE.B	n_finetune(A6),D0
-	MULU.W	#37*2,D0
-	LEA	PeriodTable(PC),A0
-	ADD.L	D0,A0
-	MOVEQ	#0,D0
-StpLoop	CMP.W	(A0,D0.W),D2
+StpLoop	CMP.W	(A4,D0.W),D2
 	BHS.B	StpFound
 	ADDQ.W	#2,D0
 	CMP.W	#37*2,D0
@@ -24764,8 +24739,7 @@ StpFound
 	TST.W	D0
 	BEQ.B	StpGoss
 	SUBQ.W	#2,D0
-StpGoss	MOVE.W	(A0,D0.W),D2
-	MOVE.L	(SP)+,A0
+StpGoss	MOVE.W	(A4,D0.W),D2
 	MOVE.W	D2,n_wantedperiod(A6)
 	MOVE.W	n_period(A6),D0
 	CLR.B	n_toneportdirec(A6)
@@ -24813,11 +24787,7 @@ TonePortaSetPer
 	MOVE.B	n_glissfunk(A6),D0
 	AND.B	#$0F,D0
 	BEQ.B	GlissSkip
-	MOVEQ	#0,D0
-	MOVE.B	n_finetune(A6),D0
-	MULU.W	#37*2,D0
-	LEA	PeriodTable(PC),A0
-	ADD.L	D0,A0
+	MOVE.L	n_peroffset(A6),A0
 	MOVEQ	#0,D0
 GlissLoop
 	CMP.W	(A0,D0.W),D2
@@ -25075,62 +25045,60 @@ SpeedNull
 	CLR.L	RunMode
 	JSR	SetNormalPtrCol
 	RTS
+	
+	CNOP 0,4
+JumpList2
+	dc.l PerNop		; 0 - not used
+	dc.l PerNop		; 1 - not used
+	dc.l PerNop		; 2 - not used
+	dc.l PerNop		; 3 - not used
+	dc.l PerNop		; 4 - not used
+	dc.l PerNop		; 5 - not used
+	dc.l PerNop		; 6 - not used
+	dc.l PerNop		; 7 - not used
+	dc.l PerNop		; 8 - not used
+	dc.l SampleOffset	; 9xx (Set Sample Offset)
+	dc.l PerNop		; A - not used
+	dc.l PositionJump	; Bxx (Position Jump)
+	dc.l VolumeChange	; Cxx (Set Volume)
+	dc.l PatternBreak	; Dxx (Pattern Break)
+	dc.l E_Commands		; Exy (Extended Commands)
+	dc.l SetSpeed		; Fxx (Set Speed)
 
 CheckMoreEffects
+	MOVEQ	#0,D0
 	MOVE.B	2(A6),D0
 	AND.B	#$0F,D0
-	CMP.B	#$9,D0
-	BEQ.W	SampleOffset
-	CMP.B	#$B,D0
-	BEQ.W	PositionJump
-	CMP.B	#$D,D0
-	BEQ.W	PatternBreak
-	CMP.B	#$E,D0
-	BEQ.B	E_Commands
-	CMP.B	#$F,D0
-	BEQ.W	SetSpeed
-	CMP.B	#$C,D0
-	BEQ.W	VolumeChange
-	BRA.W	PerNop
+	LSL.B	#2,D0
+	MOVE.L	JumpList2(PC,D0.W),A4
+	JMP	(A4) ; every efx has RTS at the end, this is safe
+	
+	CNOP 0,4
+E_JumpList
+	dc.l FilterOnOff	; E0x (Set LED Filter)
+	dc.l FinePortaUp	; E1x (Fine Portamento Up)
+	dc.l FinePortaDown	; E2x (Fine Portamento Down)
+	dc.l SetGlissControl	; E3x (Glissando/Funk Control)
+	dc.l SetVibratoControl	; E4x (Vibrato Control)
+	dc.l SetFineTune	; E5x (Set Finetune)
+	dc.l JumpLoop		; E6x (Pattern Loop)
+	dc.l SetTremoloControl	; E7x (Tremolo Control)
+	dc.l KarplusStrong	; E8x (Karplus-Strong)
+	dc.l RetrigNote		; E9x (Retrig Note)
+	dc.l VolumeFineUp	; EAx (Fine Volume-Slide Up)
+	dc.l VolumeFineDown	; EBx (Fine Volume-Slide Down)
+	dc.l NoteCut		; ECx (Note Cut)
+	dc.l NoteDelay		; EDx (Note Delay)
+	dc.l PatternDelay	; EEx (Pattern Delay)
+	dc.l FunkIt		; EFx (Invert Loop)
 
 E_Commands
+	MOVEQ	#0,D0
 	MOVE.B	n_cmdlo(A6),D0
 	AND.B	#$F0,D0
-	LSR.B	#4,D0
-	BEQ.W	FilterOnOff
-	CMP.B	#1,D0
-	BEQ.W	FinePortaUp
-	CMP.B	#2,D0
-	BEQ.W	FinePortaDown
-	CMP.B	#3,D0
-	BEQ.W	SetGlissControl
-	CMP.B	#4,D0
-	BEQ.W	SetVibratoControl
-	CMP.B	#5,D0
-	BEQ.W	SetFineTune
-	CMP.B	#6,D0
-	BEQ.W	JumpLoop
-	CMP.B	#7,D0
-	BEQ.W	SetTremoloControl
-	CMP.B	#8,D0
-	BEQ.W	KarplusStrong
-	CMP.B	#$E,D0
-	BEQ.W	PatternDelay
-	;TST.W	(A4)
-	;BEQ.W	Return2
-	CMP.B	#9,D0
-	BEQ.W	RetrigNote
-	CMP.B	#$A,D0
-	BEQ.W	VolumeFineUp
-	CMP.B	#$B,D0
-	BEQ.W	VolumeFineDown
-	CMP.B	#$C,D0
-	BEQ.W	NoteCut
-	CMP.B	#$D,D0
-	BEQ.W	NoteDelay
-	CMP.B	#$F,D0
-	BEQ.W	FunkIt
-	RTS
+	LSR.B	#4-2,D0
+	MOVE.L	E_JumpList(PC,D0.W),A4
+	JMP	(A4) ; every E-efx has RTS at the end, this is safe
 
 FilterOnOff
 	MOVE.B	n_cmdlo(A6),D0
@@ -25156,9 +25124,15 @@ SetVibratoControl
 	RTS
 
 SetFineTune
+	MOVEQ	#0,D0
 	MOVE.B	n_cmdlo(A6),D0
 	AND.B	#$0F,D0
 	MOVE.B	D0,n_finetune(A6)
+	; ----------------------------------
+	LSL.B	#2,D0	; update n_peroffset
+	LEA	ftunePerTab(PC),A4
+	MOVE.L	(A4,D0.W),n_peroffset(A6)
+	; ----------------------------------
 	RTS
 
 JumpLoop
@@ -25196,7 +25170,7 @@ KarplusStrong
 	MOVEM.L	D1/D2/A0/A1,-(SP)
 	MOVE.L	n_loopstart(A6),A0
 	; --PT2.3D bug fix: E8x null pointer--
-	CMPA.W	#0,A0
+	CMP.W	#0,A0
 	BEQ.B	karplend
 	; --END OF FIX------------------------
 	MOVE.L	A0,A1
@@ -25234,9 +25208,11 @@ RetrigNote
 	AND.W	#$0FFF,D1
 	BNE.B	rtnend
 	MOVE.L	Counter(PC),D1
-rtnskp	DIVU.W	D0,D1
-	SWAP	D1
-	TST.W	D1
+rtnskp	AND.B	#$1F,D1	; just in case
+	LSL.W	#5,D0
+	ADD.W	D0,D1
+	LEA	RetrigTab(PC),A0
+	MOVE.B	(A0,D1.W),D0
 	BNE.B	rtnend
 DoRetrg	MOVE.W	n_dmabit(A6),$DFF096		; Channel DMA off
 	MOVE.L	n_start(A6),(A5)		; Set sampledata pointer
@@ -25387,6 +25363,26 @@ VibratoTable
 	dc.b 180,197,212,224,235,244,250,253
 	dc.b 255,253,250,244,235,224,212,197
 	dc.b 180,161,141,120, 97, 74, 49, 24
+	
+	; DIV -> LUT optimization. Maybe a bit extreme, but DIVU is 140+
+	; cycles on a 68000.
+RetrigTab
+	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	dc.b 0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1
+	dc.b 0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1
+	dc.b 0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1
+	dc.b 0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1
+	dc.b 0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1
+	dc.b 0,1,1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1
+	dc.b 0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1
+	dc.b 0,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1,1,1,1
+	dc.b 0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0,1
+	dc.b 0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1
+	dc.b 0,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1
+	dc.b 0,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1
+	dc.b 0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1
+	dc.b 0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1
 	
 AllRightText	dc.b	'All right',0
 PLSTFullText	dc.b	'Plst is full!',0
@@ -25617,71 +25613,95 @@ NoteNames2
 	dc.b	'C-3 D¡3 D-3 E¡3 E-3 F-3 G¡3 G-3 A¡3 A-3 B¡3 B-3 '
 	dc.b	'--- '
 	
+	; this LUT prevents MULU for getting correct period section
+	CNOP 0,4
+ftunePerTab
+	dc.l ftune0,ftune1,ftune2,ftune3
+	dc.l ftune4,ftune5,ftune6,ftune7
+	dc.l ftune8,ftune9,ftuneA,ftuneB
+	dc.l ftuneC,ftuneD,ftuneE,ftuneF
+
 PeriodTable
-; Tuning 0
-	dc.w	856,808,762,720,678,640,604,570,538,508,480,453
-	dc.w	428,404,381,360,339,320,302,285,269,254,240,226
-	dc.w	214,202,190,180,170,160,151,143,135,127,120,113,0
+; Tuning 0, Normal
+ftune0
+	dc.w 856,808,762,720,678,640,604,570,538,508,480,453
+	dc.w 428,404,381,360,339,320,302,285,269,254,240,226
+	dc.w 214,202,190,180,170,160,151,143,135,127,120,113,0
 ; Tuning 1
-	dc.w	850,802,757,715,674,637,601,567,535,505,477,450
-	dc.w	425,401,379,357,337,318,300,284,268,253,239,225
-	dc.w	213,201,189,179,169,159,150,142,134,126,119,113,0
+ftune1
+	dc.w 850,802,757,715,674,637,601,567,535,505,477,450
+	dc.w 425,401,379,357,337,318,300,284,268,253,239,225
+	dc.w 213,201,189,179,169,159,150,142,134,126,119,113,0
 ; Tuning 2
-	dc.w	844,796,752,709,670,632,597,563,532,502,474,447
-	dc.w	422,398,376,355,335,316,298,282,266,251,237,224
-	dc.w	211,199,188,177,167,158,149,141,133,125,118,112,0
+ftune2
+	dc.w 844,796,752,709,670,632,597,563,532,502,474,447
+	dc.w 422,398,376,355,335,316,298,282,266,251,237,224
+	dc.w 211,199,188,177,167,158,149,141,133,125,118,112,0
 ; Tuning 3
-	dc.w	838,791,746,704,665,628,592,559,528,498,470,444
-	dc.w	419,395,373,352,332,314,296,280,264,249,235,222
-	dc.w	209,198,187,176,166,157,148,140,132,125,118,111,0
+ftune3
+	dc.w 838,791,746,704,665,628,592,559,528,498,470,444
+	dc.w 419,395,373,352,332,314,296,280,264,249,235,222
+	dc.w 209,198,187,176,166,157,148,140,132,125,118,111,0
 ; Tuning 4
-	dc.w	832,785,741,699,660,623,588,555,524,495,467,441
-	dc.w	416,392,370,350,330,312,294,278,262,247,233,220
-	dc.w	208,196,185,175,165,156,147,139,131,124,117,110,0
+ftune4
+	dc.w 832,785,741,699,660,623,588,555,524,495,467,441
+	dc.w 416,392,370,350,330,312,294,278,262,247,233,220
+	dc.w 208,196,185,175,165,156,147,139,131,124,117,110,0
 ; Tuning 5
-	dc.w	826,779,736,694,655,619,584,551,520,491,463,437
-	dc.w	413,390,368,347,328,309,292,276,260,245,232,219
-	dc.w	206,195,184,174,164,155,146,138,130,123,116,109,0
+ftune5
+	dc.w 826,779,736,694,655,619,584,551,520,491,463,437
+	dc.w 413,390,368,347,328,309,292,276,260,245,232,219
+	dc.w 206,195,184,174,164,155,146,138,130,123,116,109,0
 ; Tuning 6
-	dc.w	820,774,730,689,651,614,580,547,516,487,460,434
-	dc.w	410,387,365,345,325,307,290,274,258,244,230,217
-	dc.w	205,193,183,172,163,154,145,137,129,122,115,109,0
+ftune6
+	dc.w 820,774,730,689,651,614,580,547,516,487,460,434
+	dc.w 410,387,365,345,325,307,290,274,258,244,230,217
+	dc.w 205,193,183,172,163,154,145,137,129,122,115,109,0
 ; Tuning 7
-	dc.w	814,768,725,684,646,610,575,543,513,484,457,431
-	dc.w	407,384,363,342,323,305,288,272,256,242,228,216
-	dc.w	204,192,181,171,161,152,144,136,128,121,114,108,0
+ftune7
+	dc.w 814,768,725,684,646,610,575,543,513,484,457,431
+	dc.w 407,384,363,342,323,305,288,272,256,242,228,216
+	dc.w 204,192,181,171,161,152,144,136,128,121,114,108,0
 ; Tuning -8
-	dc.w	907,856,808,762,720,678,640,604,570,538,508,480
-	dc.w	453,428,404,381,360,339,320,302,285,269,254,240
-	dc.w	226,214,202,190,180,170,160,151,143,135,127,120,0
+ftune8
+	dc.w 907,856,808,762,720,678,640,604,570,538,508,480
+	dc.w 453,428,404,381,360,339,320,302,285,269,254,240
+	dc.w 226,214,202,190,180,170,160,151,143,135,127,120,0
 ; Tuning -7
-	dc.w	900,850,802,757,715,675,636,601,567,535,505,477
-	dc.w	450,425,401,379,357,337,318,300,284,268,253,238
-	dc.w	225,212,200,189,179,169,159,150,142,134,126,119,0
+ftune9
+	dc.w 900,850,802,757,715,675,636,601,567,535,505,477
+	dc.w 450,425,401,379,357,337,318,300,284,268,253,238
+	dc.w 225,212,200,189,179,169,159,150,142,134,126,119,0
 ; Tuning -6
-	dc.w	894,844,796,752,709,670,632,597,563,532,502,474
-	dc.w	447,422,398,376,355,335,316,298,282,266,251,237
-	dc.w	223,211,199,188,177,167,158,149,141,133,125,118,0
+ftuneA
+	dc.w 894,844,796,752,709,670,632,597,563,532,502,474
+	dc.w 447,422,398,376,355,335,316,298,282,266,251,237
+	dc.w 223,211,199,188,177,167,158,149,141,133,125,118,0
 ; Tuning -5
-	dc.w	887,838,791,746,704,665,628,592,559,528,498,470
-	dc.w	444,419,395,373,352,332,314,296,280,264,249,235
-	dc.w	222,209,198,187,176,166,157,148,140,132,125,118,0
+ftuneB
+	dc.w 887,838,791,746,704,665,628,592,559,528,498,470
+	dc.w 444,419,395,373,352,332,314,296,280,264,249,235
+	dc.w 222,209,198,187,176,166,157,148,140,132,125,118,0
 ; Tuning -4
-	dc.w	881,832,785,741,699,660,623,588,555,524,494,467
-	dc.w	441,416,392,370,350,330,312,294,278,262,247,233
-	dc.w	220,208,196,185,175,165,156,147,139,131,123,117,0
+ftuneC
+	dc.w 881,832,785,741,699,660,623,588,555,524,494,467
+	dc.w 441,416,392,370,350,330,312,294,278,262,247,233
+	dc.w 220,208,196,185,175,165,156,147,139,131,123,117,0
 ; Tuning -3
-	dc.w	875,826,779,736,694,655,619,584,551,520,491,463
-	dc.w	437,413,390,368,347,328,309,292,276,260,245,232
-	dc.w	219,206,195,184,174,164,155,146,138,130,123,116,0
+ftuneD
+	dc.w 875,826,779,736,694,655,619,584,551,520,491,463
+	dc.w 437,413,390,368,347,328,309,292,276,260,245,232
+	dc.w 219,206,195,184,174,164,155,146,138,130,123,116,0
 ; Tuning -2
-	dc.w	868,820,774,730,689,651,614,580,547,516,487,460
-	dc.w	434,410,387,365,345,325,307,290,274,258,244,230
-	dc.w	217,205,193,183,172,163,154,145,137,129,122,115,0
+ftuneE
+	dc.w 868,820,774,730,689,651,614,580,547,516,487,460
+	dc.w 434,410,387,365,345,325,307,290,274,258,244,230
+	dc.w 217,205,193,183,172,163,154,145,137,129,122,115,0
 ; Tuning -1
-	dc.w	862,814,768,725,684,646,610,575,543,513,484,457
-	dc.w	431,407,384,363,342,323,305,288,272,256,242,228
-	dc.w	216,203,192,181,171,161,152,144,136,128,121,114,0
+ftuneF
+	dc.w 862,814,768,725,684,646,610,575,543,513,484,457
+	dc.w 431,407,384,363,342,323,305,288,272,256,242,228
+	dc.w 216,203,192,181,171,161,152,144,136,128,121,114,0
 	
 CursorPosTable
 	dc.b	3,6,7,8,9,10,12

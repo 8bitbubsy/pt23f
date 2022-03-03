@@ -1,10 +1,8 @@
-         ProTracker v2.3F final version
+                ProTracker v2.3F 
          ==============================
-              18th of January, 2021
+               3rd of March, 2022
             
  If you find any bugs, please email me at olav.sorensen@live.no
- or go to #protracker @ IRCnet (server: open.ircnet.net port 6667)
-
  Based on a disassembly of PT2.3D.
  
  NOTE:
@@ -31,6 +29,20 @@
 
 
  -- PT2.3F changelog: --
+ 
+ == Update 03.03.2022 ===============================================
+ - Miscellaneous bug fixes ("Play Waveform", "Play Range", + more)
+ - Fixed quadrascope period clamping bug 
+ - Fixed sample playback line not showing when using "real" VU-meters
+ ====================================================================
+
+ == Update 20.01.2021 ===============================================
+ - Fixed a bug where ending a parallel port sample session before
+   filling the whole buffer, would render the tracker unstable.
+ - The quadrascope shouldn't read out-of-bounds anymore on
+   non-looping samples.
+ - Another minor quadrascope fix
+ ====================================================================
  
  == Update 18.01.2021 ===============================================
  - Fix >64kB bugs in the parallel port sampling code
