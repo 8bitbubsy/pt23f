@@ -25197,6 +25197,7 @@ karplend
 	RTS
 
 RetrigNote
+	MOVE.L	A0,-(SP)
 	MOVE.L	D1,-(SP)
 	MOVEQ	#0,D0
 	MOVE.B	n_cmdlo(A6),D0
@@ -25225,7 +25226,6 @@ DoRetrg	MOVE.W	n_dmabit(A6),$DFF096		; Channel DMA off
 	BSR.W	SetVUMeterHeight		; Set VU-meter height
 	; ---------------------------------------------------------
 
-	MOVE.L	A0,-(SP)
 	LEA	$DFF006,A0
 	MOVE.W	WaitRasterLines1,D1
 lineloop6
@@ -25246,11 +25246,11 @@ waiteol7
 	CMP.B	(A0),D0
 	BEQ.B	waiteol7
 	DBRA	D1,lineloop7
-	MOVE.L	(SP)+,A0
 
 	MOVE.L	n_loopstart(A6),(A5)
 	MOVE.L	n_replen(A6),4(A5)
 rtnend	MOVE.L	(SP)+,D1
+	MOVE.L	(SP)+,A0
 	RTS
 
 VolumeFineUp
