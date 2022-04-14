@@ -30,6 +30,10 @@
 
  -- PT2.3F changelog: --
  
+  == Update 14.04.2022 ===============================================
+ - Fixed severely broken E9x command from 03.03.2022 version (sorry!)
+ ====================================================================
+ 
  == Update 03.03.2022 ===============================================
  - Miscellaneous bug fixes ("Play Waveform", "Play Range", + more)
  - Fixed quadrascope period clamping bug 
