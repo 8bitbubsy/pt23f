@@ -1,16 +1,16 @@
                 ProTracker v2.3F 
          ==============================
-               3rd of March, 2022
-            
+               14th of April, 2022
+
  If you find any bugs, please email me at olav.sorensen@live.no
  Based on a disassembly of PT2.3D.
- 
+
  NOTE:
   This specific version is fully 128kB sample compliant, so
   if you use loop points above the 64kB barrier, then the
   module will fail to play correctly on most ProTracker
   versions except some 3.x ones.
-      
+
  PT2.3D by:
  - Peter "CRAYON" Hanning
  - Lars "ZAP" Hamre
@@ -29,11 +29,11 @@
 
 
  -- PT2.3F changelog: --
- 
+
   == Update 14.04.2022 ===============================================
  - Fixed severely broken E9x command from 03.03.2022 version (sorry!)
  ====================================================================
- 
+
  == Update 03.03.2022 ===============================================
  - Miscellaneous bug fixes ("Play Waveform", "Play Range", + more)
  - Fixed quadrascope period clamping bug 
@@ -47,7 +47,7 @@
    non-looping samples.
  - Another minor quadrascope fix
  ====================================================================
- 
+
  == Update 18.01.2021 ===============================================
  - Fix >64kB bugs in the parallel port sampling code
  ====================================================================
@@ -55,7 +55,7 @@
  == Update 14.07.2020 ===============================================
  - Bugfix for 68000: Pasting to an empty sample would cause a crash
  ====================================================================
- 
+
  == Update 30.05.2020 ===============================================
  - Fixed: The scopes would show a blank waveform when using 9xx
    (set sample offset) on a non-looping sample
@@ -78,7 +78,7 @@
  - Bugfix: Moving the right loop pin (SAMPLER screen) could behave
    strange on samples bigger than $FFFE/65534.
  ====================================================================
- 
+
  == Update 15.02.2020 ===============================================
  - Fixed crashes when loading samples (accidental typo in a stealth
    update that was not listed here).
@@ -92,7 +92,7 @@
  == Update 01.11.2019 ===============================================
  - More quadrascope fixes, of course, what did you expect? ;)
  ====================================================================
- 
+
  == Update 28.10.2019 ===============================================
  - Yet again some more quadrascope bugfixes. This time the scopes will properly
    render on loops where start=0 and end<len. Also fixed a small mistake done
@@ -103,7 +103,7 @@
  - Quadrascope now uses 16.16 fixed-point rates to not accumulate big errors
    over time when playing a long sample. Also fixed some other scope rate bugs.
  ====================================================================
- 
+
  == Update 25.10.2019 ===============================================
  - Fixed a problem with selecting the palette color with the mouse in
    the setup screen (on certain Amiga configurations only).
@@ -111,7 +111,7 @@
    when you toggle between "VU-MTR" and "ANALYZ".
  - All fixes after the first PT2.3E final version has now been merged to
    PT2.3F. This ought to happen to begin with, but it never did. Sorry!
- 
+
  == Update 24.10.2019 ===============================================
  - The "ALL" option in the "CLEAR" dialog didn't properly reset some stuff
  - Replaced all calls to _LVOAllocMem/_LVOFreeMem with custom routines
@@ -125,7 +125,7 @@
  == Update 26.08.2019 ===============================================
  - Fixed scopes not working on high sample numbers (stupid bug I made)
  ====================================================================
- 
+
  == Update 15.08.2019 ===============================================
  - Added a program icon
  - Fix config load error when ran from WB icon (thanks to ross @ abime!)
@@ -145,11 +145,11 @@
  == Update 22.09.2018 ===============================================
  - Fixed crash when trying to copy a sample to itself (Edit Op. #2)
  ====================================================================
- 
+
  == Update 22.09.2018 ===============================================
  - Fixed crash when trying to copy a sample to itself (Edit Op. #2)
  ====================================================================
- 
+
  == Update 24.08.2018 ===============================================
  - Fix: The "song length up" gadget clamped to 127 instead of 128
  - Add more delay to POSED. up/down gadgets (or keyboard)
@@ -173,9 +173,9 @@
  == Update 29.11.2017 =============================================
  - 15 sample .MODs (UST/NST) now load properly, it was a bug I made
  ==================================================================
- 
+
  == Update 10.11.2017 ============================
  - The VU-Meters would act choppy on slower Amigas
  =================================================
- 
+
  I forgot to write changelogs before these, but there were *a ton* of bugfixes!
