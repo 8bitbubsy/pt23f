@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;     3rd of March, 2022
+;      30th of May, 2022
 ;
 ; If you find any bugs, please email me at olav.sorensen@live.no
 ; or go to #protracker @ IRCnet (server: open.ircnet.net port 6667)
@@ -25291,6 +25291,7 @@ NoteDelay
 	ST	n_trigger(A6)		; Trigger scope
 	BSR.W	SetVUMeterHeight	; Set VU-meter height
 	; -------------------------------------------------------
+	MOVE.L	A0,-(SP)
 	MOVE.L	D1,-(SP)
 	BRA.W	DoRetrg
 

@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-               14th of April, 2022
+                30th of May, 2022
 
  If you find any bugs, please email me at olav.sorensen@live.no
  Based on a disassembly of PT2.3D.
@@ -30,7 +30,12 @@
 
  -- PT2.3F changelog: --
 
-  == Update 14.04.2022 ===============================================
+ == Update 30.05.2022 ===============================================
+ - Fixed EDx command causing a guru in 14.04.2022 version.
+   Sorry again! This was a stupid mistake.
+ ====================================================================
+
+ == Update 14.04.2022 ===============================================
  - Fixed severely broken E9x command from 03.03.2022 version (sorry!)
  ====================================================================
 
