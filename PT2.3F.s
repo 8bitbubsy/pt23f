@@ -100,6 +100,9 @@ _LVOOpenResource	EQU -498
 _LVOSetIntVector	EQU -162
 _LVORemDevice		EQU -438
 _LVOOldOpenLibrary	EQU -408
+_LVOSetSignal		EQU -306
+_LVOWait		EQU -318
+_LVOSignal		EQU -324
 
 ; CIA Resource Offsets
 _AddICRVector		EQU -6
@@ -207,7 +210,6 @@ rb_HunkStart
 
 _from_wb:
 	; Get startup message if we started from Workbench
-
 	lea pr_MsgPort(a3),a0
 	jsr _LVOWaitPort(a6)    ; wait for a message
 	lea pr_MsgPort(a3),a0
@@ -219,18 +221,15 @@ _from_wb:
 	bsr.s   _common
 
 	; Reply to the startup message
-
 	jsr _LVOForbid(a6)      ; it prohibits WB to unloadseg me
 	lea (a3),a1
 	jmp _LVOReplyMsg(a6)    ; reply to WB message and exit
 
 _from_cli:
 	; Get FileLock via command name if we started from CLI
-
 	link    a3,#-256
 
 	; Copy BCPL string to C-style string
-
 	lea (sp),a1
 	lsl.l   #2,d6
 	movea.l d6,a0
@@ -238,14 +237,12 @@ _from_cli:
 	adda.l  a0,a0
 	adda.l  a0,a0
 	move.b  (a0)+,d0
-
 .c	move.b  (a0)+,(a1)+
 	subq.b  #1,d0
 	bne.b   .c
 	clr.b   (a1)
 
 	; Get a lock on the program and its parent
-
 	exg a5,a6               ; _dos
 	move.l  sp,d1           ; d1 = STRPTR name (command string)
 	moveq   #SHARED_LOCK,d2 ; d2 = accessMode
@@ -257,14 +254,12 @@ _from_cli:
 	move.l  d0,d6           ; d6 = Lock on CLI program dir
 	move.l  d0,d5           ; d5 = common Lock
 	jsr _LVOUnLock(a6)
-
 	unlk    a3
 
 _common:
 	move.l  d5,d1
 	jsr	_LVODupLock(a6)
 	move.l	d0,rb_CurrentDir
-
 	move.l	#rb_Progname,d1
 	moveq	#0,d2
 	move.b	9(a3),d2	; priority
@@ -274,10 +269,8 @@ _common:
 	moveq	#$40,d4
 	lsl.w	#8,d4		; stack=$4000
 	jsr	_LVOCreateProc(a6)
-
 	move.l  d6,d1           ; UnLock program dir or zero (from WB)
 	jsr _LVOUnLock(a6)
-
 	lea (a6),a1
 	lea (a5),a6
 	jsr _LVOCloseLibrary(a6)
@@ -290,7 +283,7 @@ _common:
 
 	SECTION ptcode,CODE
 
-START	
+PTStart
 	MOVE.L	4.W,A6
 	SUB.L	A1,A1	; zero out A1
 	JSR	_LVOFindTask(A6)
@@ -305,7 +298,7 @@ START
 	MOVE.L	DOSBase,A6
 	MOVE.L	rb_CurrentDir(PC),D1
 	JSR	_LVOUnLock(A6)
-	LEA	START-4(PC),A0
+	LEA	PTStart-4(PC),A0
 	MOVE.L	A0,D1
 	LSR.L	#2,D1
 	JSR	_LVOUnLoadSeg(A6)
@@ -325,8 +318,7 @@ Main
 not68000
 	MOVE.W	#RasterWait1_020,WaitRasterLines1
 	MOVE.W	#RasterWait2_020,WaitRasterLines2
-srwskip
-	
+srwskip	
 	BSR.W	OpenLotsOfThings
 	BSR.W	SetVBInt
 	BSR.W	SetMusicInt
@@ -349,12 +341,11 @@ srwskip
 	
 	LEA	VersionText(PC),A0
 	JSR	ShowStatusText
-	
+
 	; --PT2.3D bug fix: fix Pos-Ed bug
 	MOVE.L	SongDataPtr,A0
 	MOVE.B	#1,sd_numofpatt(A0)	
 	; --END OF FIX--------------------
-	
 	
 	BSR.W	DisplayMainScreen
 
@@ -408,13 +399,11 @@ CheckToggleRasterbarKeys
 	EOR.B	#1,ShowRasterbar
 	RTS
 
-; Main Loop
-
 MainLoop
 	JSR	CheckMIDIin
 	BSR.W	DoKeyBuffer
 	BSR.B	CheckToggleRasterbarKeys
-	BSR.W	lbC005DDC	; CTRL + ALT + SHIFT + LEFT-AMIGA + DEL, strange thing!
+	BSR.W	CheckPatternInvertKeys
 	BSR.W	CheckTransKeys
 	BSR.W	CheckCtrlKeys
 	BSR.W	CheckAltKeys
@@ -432,28 +421,19 @@ MainLoop
 	JSR	CheckSampleLength	; test if we need to alloc more mem
 	BSR.W	CheckRedraw
 	TST.B	SetSignalFlag
-	BNE.B	mlskip
+	BNE.B	.skip
 	MOVE.L	4.W,A6
-	MOVEQ	#0,D0	
-	; set signal
-	; MOVE.L	#$30000000,D1
-	MOVEQ	#3,D1
-	ROR.L	#4,D1
-	JSR	-306(A6)	
-	; wait
-	; MOVE.L	#$70000000,D0
-	MOVEQ	#7,D0
-	ROR.L	#4,D0
-	JSR	-318(A6)
-	;----
+	MOVEQ	#0,D0
+	MOVE.L	#$30000000,D1
+	JSR	_LVOSetSignal(A6)	
+	MOVE.L	#$70000000,D0
+	JSR	_LVOWait(A6)
 	AND.L	#$10000000,D0
-	BNE.B	mlskip2
-mlskip
-	SF	SetSignalFlag
+	BNE.B	.skip2
+.skip	SF	SetSignalFlag
 	BTST	#6,$BFE001	; left mouse button
 	BNE.W	StopInputLoop
-mlskip2
-	BSR.W	ArrowKeys	
+.skip2	BSR.W	ArrowKeys	
 	BRA.W	CheckGadgets
 	
 	cnop 0,4
@@ -997,19 +977,15 @@ vbiskip
 vbiskip2
 	MOVE.L	4.W,A6
 	MOVE.L	PTProcess(PC),A1
-	; MOVE.L	#$20000000,D0
-	MOVEQ	#2,D0
-	ROR.L	#4,D0
-	JSR	-324(A6)
+	MOVE.L	#$20000000,D0
+	JSR	_LVOSignal(A6)
 vbiskip3
 	BTST	#6,$BFE001	; left mouse button
 	BNE.B	vbiskip4
 	MOVE.L	4.W,A6
 	MOVE.L	PTProcess(PC),A1
-	; MOVE.L	#$10000000,D0
-	MOVEQ	#1,D0
-	ROR.L	#4,D0
-	JSR	-324(A6)
+	MOVE.L	#$10000000,D0
+	JSR	_LVOSignal(A6)
 vbiskip4
 	; bit of a kludge to get scope muting working
 	TST.B	RightMouseButtonHeld
@@ -1161,10 +1137,9 @@ ptstfskip
 WorkbenchToFront
 	MOVEM.L	D1/A0-A1/A6,-(SP)
 	MOVE.L	IntuitionBase,A6
-	;MOVE.L	PTScreenHandle(PC),A0		No.
 	JSR	_LVOWBenchToFront(A6)
 	MOVEM.L	(SP)+,D1/A0-A1/A6
-	RTS
+	RTS	
 
 	cnop 0,4
 PTScreenStruct	
@@ -1433,8 +1408,7 @@ CIAAaddr	dc.l 0
 SetInputHandler
 	LEA	InpEvPort,A0
 	MOVE.B	#4,8(A0)
-	;MOVE.B	#0,14(A0)
-	SF	14(A0)
+	SF	14(A0)			; MOVE.B	#0,14(A0)
 	MOVE.B	#$1F,15(A0)
 	MOVE.L	PTProcess(PC),16(A0)
 	LEA	20(A0),A1
@@ -1709,7 +1683,7 @@ RepDown
 	MOVE.L	4.W,A6
 	MOVE.L	PTProcess(PC),A1
 	MOVE.L	#$20000000,D0
-	JSR	-324(A6)
+	JSR	_LVOSignal(A6)
 	RTS
 
 ;---- Update Mousepointer Position ----
@@ -1792,8 +1766,7 @@ spanloop
 
 span_r2	SUB.W	D1,D0
 	SUBQ.W	#1,D0
-	;LSL.W	#1,D1
-	ADD.W	D1,D1
+	ADD.W	D1,D1		; LSL.W	#1,D1
 	MOVE.W	0(A2,D1.W),D1
 spanloop2	MOVE.B	D6,0(A3,D1.W)
 	SUB.W	D5,D1
@@ -1840,18 +1813,20 @@ SpecAna2
 	TST.B	AnaDrawFlag
 	BNE.B	ohno
 	ST	AnaDrawFlag
-	TST.B	D2			; channel muted ?
+	TST.B	D2		; volume zero ?
 	BEQ.B	saend		; yes, don't do
-	LSL.W	#8,D2
-	DIVU.W	#682,D2
+	MULU.W	#24576,D2	; 24576 = 2^16 / (64 / 24)
+	SWAP	D2		; D2 /= 2.6666666667 (0..64 -> 0..24)
+	;LSL.W	#8,D2
+	;DIVU.W	#682,D2
 	MOVE.W	D2,D3
 	LSR.W	#1,D3
 	LEA	AnalyzerHeights,A0
-	SUB.W	#113,D0	; Subtract 113 (highest rate)
+	SUB.W	#113,D0		; Subtract 113 (highest rate)
 	MOVE.W	#743,D1
-	SUB.W	D0,D1	; Invert range 0-743
-	MULU.W	D1,D1	; 0 - 743^2
-	DIVU.W	#25093,D1
+	SUB.W	D0,D1		; Invert range 0-743
+	MULU.W	D1,D1		; 0 - 743^2
+	DIVU.W	#25093,D1	; 0 - 743^2 -> 0..22
 	MOVE.W	D1,D0
 	CMP.W	#46,D0
 	BLO.B	saskip
@@ -2649,8 +2624,8 @@ TogCh
 	CLR.B	RawKeyCode
 	EOR.W	#1,(A0)
 	BSR.B	RedrawToggles
-	TST.B	D6							; did we come from the keyboard keys?
-	BEQ.B	tcskip					; yes, don't wait for mouse button up
+	TST.B	D6			; did we come from the keyboard keys?
+	BEQ.B	tcskip			; yes, don't wait for mouse button up
 	BSR.W	WaitForButtonUp
 tcskip	
 	;JSR	Wait_4000	; unneeded, makes muting more laggy
@@ -4165,7 +4140,7 @@ wpsskip4
 	MOVE.L	CrunchSpeed,D0
 	MOVE.L	CrunchBufferMode,D1
 	LEA	CrunchInterrupt,A0
-	SUBA.L	A1,A1
+	SUB.L	A1,A1
 	MOVE.L	PPLibBase,A6
 	JSR	_LVOppAllocCrunchInfo(A6)
 	MOVE.L	D0,CrunchInfoPtr
@@ -7249,10 +7224,9 @@ clbllop	MOVE.L	D2,(A0,D0.W)
 	BRA.B	clbllop
 clblend	JSR	ShowAllRight
 	JMP	RedrawPattern
-	
-; Not sure what this is. CTRL + ALT + SHIFT + LEFT-AMIGA + DEL.
-; It does something to all the patterns.
-lbC005DDC
+
+	; inverts the pattern data (prepares it for backwards play hack)
+CheckPatternInvertKeys
 	TST.W	CtrlKeyStatus
 	BEQ.W	Return1
 	TST.W	AltKeyStatus
@@ -7269,25 +7243,22 @@ lbC005DDC
 	MOVE.L	PatternNumber,D3
 	MOVE.W	PattCurPos,D4
 	MOVE.L	#0,PatternNumber
-lbC005E32
-	CLR.W	PattCurPos
-lbC005E38
-	MOVE.W	PattCurPos,D0
+.loop1	CLR.W	PattCurPos
+.loop2	MOVE.W	PattCurPos,D0
 	BSR.W	GetPositionPtr
 	CLR.W	D0
 	MOVE.W	#$3F0,D1
 	BSR.W	babllop
 	ADDQ.W	#6,PattCurPos
 	CMP.W	#24,PattCurPos
-	BNE.B	lbC005E38
+	BNE.B	.loop2
 	TST.W	NumPatterns
-	BEQ.B	lbC005E7E
+	BEQ.B	.skip
 	ADDQ.L	#1,PatternNumber
 	MOVE.L	PatternNumber,D0
 	CMP.W	NumPatterns,D0
-	BNE.B	lbC005E32
-lbC005E7E
-	BSR.W	RestorePtrCol
+	BNE.B	.loop1
+.skip	BSR.W	RestorePtrCol
 	MOVE.L	D3,PatternNumber
 	MOVE.W	D4,PattCurPos
 	JSR	RedrawPattern
@@ -11907,7 +11878,7 @@ rpedskip
 	NEG.L	D7
 	ADDQ.L	#4,D7
 rpedloop1
-	LEA	240(A5),A5	; ADDA.W	#240,A5
+	LEA	240(A5),A5	; ADD.W	#240,A5
 	SUBQ.L	#1,D6
 	SUBQ.L	#1,D5
 	DBRA	D7,rpedloop1
@@ -17073,7 +17044,7 @@ lbC00E082
 	MOVE.L	D0,A2
 	MOVE.L	lbL00E6EC(PC),D6
 	MOVE.W	ChordNote1(PC),ResampleNote
-	SUBA.L	A3,A3
+	SUB.L	A3,A3
 	BSR.W	DoResample
 	CMPA.W	#0,A3
 	BEQ.W	cmOutOfMem
@@ -17085,7 +17056,7 @@ lbC00E0E0
 	MOVE.L	D0,A2
 	MOVE.L	lbL00E6F0(PC),D6
 	MOVE.W	ChordNote2(PC),ResampleNote
-	SUBA.L	A3,A3	; MOVE.L	#0,A3
+	SUB.L	A3,A3	; MOVE.L	#0,A3
 	BSR.W	DoResample
 	CMPA.W	#0,A3
 	BEQ.W	cmOutOfMem
@@ -17097,7 +17068,7 @@ lbC00E11C
 	MOVE.L	D0,A2
 	MOVE.L	lbL00E6F4(PC),D6
 	MOVE.W	ChordNote3(PC),ResampleNote
-	SUBA.L	A3,A3
+	SUB.L	A3,A3
 	BSR.W	DoResample
 	CMPA.W	#0,A3
 	BEQ.W	cmOutOfMem
@@ -17109,7 +17080,7 @@ lbC00E158
 	MOVE.L	D0,A2
 	MOVE.L	lbL00E6F8(PC),D6
 	MOVE.W	ChordNote4(PC),ResampleNote
-	SUBA.L	A3,A3
+	SUB.L	A3,A3
 	BSR.W	DoResample
 	CMPA.W	#0,A3
 	BEQ.W	cmOutOfMem
@@ -18669,7 +18640,7 @@ casmskip4
 	MOVE.L	CrunchSpeed(PC),D0
 	MOVE.L	CrunchBufferMode(PC),D1
 	LEA	CrunchInterrupt(PC),A0
-	SUBA.L	A1,A1	; MOVE.L	#0,A1
+	SUB.L	A1,A1	; MOVE.L	#0,A1
 	MOVE.L	PPLibBase(PC),A6
 	JSR	_LVOppAllocCrunchInfo(A6)
 	MOVE.L	D0,CrunchInfoPtr
@@ -21589,7 +21560,7 @@ MIDIInIntHandler
 	MOVE.B	D2,4(A1); MIDIinTo
 	MOVE.L	#$40000000,D0
 	MOVE.L	PTProcess,A1
-	JSR	-324(A6)
+	JSR	_LVOSignal(A6)
 gmiexit
 	;MOVEM.L	(SP)+,D1/D2
 	MOVE.L	(SP)+,D2
@@ -23395,23 +23366,20 @@ InvertRange ; taken from PT315.s and changed a bit
 	CMP.W	D0,D2
 	BPL.B	ivok
 	EXG.L	D0,D2
-ivok
-	ADDQ.W	#1,D2		; this is needed for the new invertrange routine
+ivok	ADDQ.W	#1,D2		; this is needed for the new invertrange routine
 	CMP.W	#317,D2		; -
-	BLS.B	ivok2			; -
-  MOVE.W	#317,D2	; -
-ivok2
-  MOVEQ	#0,D1
-  MOVEQ	#64,D3
-  MOVE.L	A4,-(SP)
-  MOVE.L	A5,-(SP)
+	BLS.B	ivok2		; -
+	MOVE.W	#317,D2		; -
+ivok2	MOVEQ	#0,D1
+	MOVEQ	#64,D3
+	MOVE.L	A4,-(SP)
+	MOVE.L	A5,-(SP)
 	MOVE.L	GfxBase(PC),A6
 	JSR	_LVOOwnBlitter(A6)
 	JSR	_LVOWaitBlit(A6)
 	MOVE.L	LineScreenPtr(PC),A4
-  LEA	$DFF000,A6
-ivwait1
-  BTST	#6,2(A6)
+	LEA	$DFF000,A6
+ivwait1	BTST	#6,2(A6)
 	BNE.B	ivwait1
 	MOVE.L	A4,A5
 	ADD.W	#16,D2
@@ -23453,8 +23421,7 @@ ivwait1
 	LSR.W	#1,D2
 	ADD.W	D2,D3
 	MOVE.W	D3,$58(A6)
-ivwait2
-  BTST	#6,2(A6)
+ivwait2	BTST	#6,2(A6)
 	BNE.B	ivwait2
 	MOVE.L	GfxBase(PC),A6
 	JSR	_LVODisownBlitter(A6)
