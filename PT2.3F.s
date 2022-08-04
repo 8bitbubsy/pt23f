@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;      30th of May, 2022
+;     4th of August, 2022
 ;
 ; If you find any bugs, please email me at olav.sorensen@live.no
 ; or go to #protracker @ IRCnet (server: open.ircnet.net port 6667)
@@ -22375,6 +22375,10 @@ LoopToggle
 	MOVE.L	SongDataPtr(PC),A0
 	MULU.W	#30,D1
 	LEA	12(A0,D1.W),A0
+	
+	TST.W	(A0)		; 8bitbubsy: sample length == 0?
+	BEQ.B	LTSmpEmpty	; yup, don't allow loop toggle...
+		
 	TST.W	LoopOnOffFlag
 	BEQ.B	loopton
 	MOVE.L	4(A0),SavSamInf
@@ -22390,6 +22394,8 @@ loopton	BSR.W	TurnOffVoices
 	MOVE.W	(A0),D0
 loopto2	MOVE.L	D0,4(A0)
 	BRA.B	looptlo
+
+LTSmpEmpty	RTS
 
 ShowLoopToggle
 	LEA	ToggleOFFText,A0
