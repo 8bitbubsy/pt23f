@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-               4th of August, 2022
+              27th of October, 2022
 
  If you find any bugs, please email me at olav.sorensen@live.no
  Based on a disassembly of PT2.3D.
@@ -29,6 +29,13 @@
 
 
  -- PT2.3F changelog: --
+
+ == Update 27.10.2022 ===============================================
+ - "Sample exchange" on sample 31/$1F would cause severe instability
+ - Loading IFF samples would result in junk after the sample data
+ - Some of the delay durations (setting edit skip, red mouse pointer
+   etc.) were too short in comparison to previous PT versions.
+ ====================================================================
 
  == Update 04.08.2022 ===============================================
  - Don't allow 'loop toggle' (sampler screen) on empty samples.
