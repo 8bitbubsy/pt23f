@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;     4th of August, 2022
+;    27th of October, 2022
 ;
 ; If you find any bugs, please email me at olav.sorensen@live.no
 ; or go to #protracker @ IRCnet (server: open.ircnet.net port 6667)
@@ -13409,6 +13409,17 @@ wiok	LSR.L	#1,D0
 	MOVE.W	22(A3),D1
 	SUB.W	D0,D1
 	MOVE.W	D0,22(A3)
+	; -------------------------------------------
+	; IFF bugfix: update internal length variable
+	MOVE.W	InsNum,D3
+	BEQ.B	wiskip
+	SUBQ.W	#1,D3
+	LSL.W	#2,D3
+	AND.L	#$FFFF,D0
+	ADD.L	D0,D0
+	LEA	SampleLengths,A2
+	MOVE.L	D0,(A2,D3.W)
+	; -------------------------------------------
 wiskip	LEA	SampleLengthAdd(PC),A3
 	MOVE.W	InsNum,D0
 	;LSL.W	#1,D0
