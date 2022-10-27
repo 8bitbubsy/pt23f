@@ -9233,7 +9233,7 @@ caloop2
 	LEA	30(A1),A1
 	DBRA	D0,caloop2
 	LEA	SampleLengthAdd(PC),A3
-	MOVEQ	#31,D0
+	MOVEQ	#31+1,D0
 	MOVEQ	#0,D1
 csilop2
 	;CLR.W	(A3)+
@@ -13458,7 +13458,7 @@ wDisL	MOVE.L	SampleInstrSave(PC),A3
 
 	cnop 0,4
 SampleInstrSave	dc.l 0
-SampleLengthAdd	dcb.w 32,0
+SampleLengthAdd	dcb.w 32+1,0
 
 ExamineAndAlloc	; fixed in PT2.3E to be 128kB compatible
 	MOVEQ	#-2,D2
