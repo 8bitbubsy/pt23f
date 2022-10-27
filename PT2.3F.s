@@ -5643,14 +5643,15 @@ WaitALittle
 	BNE.B	WaitD1
 	MOVEQ	#1,D1
 WaitD1
+	AND.L	#$FFFF,D1		; 8bb: just in case...
 	MOVEM.L	D0/A0-A1/A6,-(SP)
 	MOVE.L	DOSBase,A6
 	JSR	_LVODelay(A6)
 	MOVEM.L	(SP)+,D0/A0-A1/A6
-	MOVE.W	#25,WaitTime
+	MOVE.W	#50,WaitTime
 	RTS
 
-WaitTime	dc.w 25
+WaitTime	dc.w 50
 
 StorePtrCol
 	MOVE.L	A6,-(SP)
@@ -5943,7 +5944,7 @@ cckskip	MOVE.W	D0,EditMoveAdd
 	MOVE.B	D0,11(A0)
 	JSR	ShowStatusText
 	BSR.W	Show_MS
-	MOVE.W	#10,WaitTime
+	MOVE.W	#20,WaitTime
 	BSR.W	WaitALittle
 	JMP	ShowAllRight
 
@@ -5970,7 +5971,7 @@ trmShow
 	BNE.B	trmEnd
 	CMP.B	#2,EdScreen
 	BNE.B	trmEnd
-	BSR.W ShowRecordMode
+	BSR.W	ShowRecordMode
 trmEnd
 	BSR.W	WaitALittle
 	JSR	ShowAllRight
