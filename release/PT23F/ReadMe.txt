@@ -22,8 +22,8 @@
  -- PT2.3F changelog: --
 
  == Update 11.01.2023 ===============================================
- - Some specific errors (e.g. "dir. not found") could cause a messed
-   up Workbench screen on exit.
+ - Some specific errors (e.g. "CAN'T FIND DIR !") could cause a
+   messed up Workbench screen on exit.
  - Allow CTRL+Fn (Record From) keys while the sampler screen is open
    (hi Per Arne).
  ====================================================================
