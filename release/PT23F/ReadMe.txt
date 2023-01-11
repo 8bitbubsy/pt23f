@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-              27th of October, 2022
+              11th of January, 2023
 
  If you find any bugs, please email me at olav.sorensen@live.no
  Based on a disassembly of PT2.3D.
@@ -19,16 +19,14 @@
  PT2.3E/PT2.3F by:
  - Olav "8bitbubsy" Sorensen
 
- Recommended CPU speed for PT2.3E/PT2.3F:
- - 14MHz+
-
- For *optimal* tracker performance, have:
- - 2MB chipmem
- - At least 1MB of fastmem
- - 68020 or better CPU
-
-
  -- PT2.3F changelog: --
+
+ == Update 11.01.2023 ===============================================
+ - Some specific errors (e.g. "dir. not found") could cause a messed
+   up Workbench screen on exit.
+ - Allow CTRL+Fn (Record From) keys while the sampler screen is open
+   (hi Per Arne).
+ ====================================================================
 
  == Update 27.10.2022 ===============================================
  - "Sample exchange" on sample 31/$1F would cause severe instability

@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;    27th of October, 2022
+;    11th of January, 2023
 ;
 ; If you find any bugs, please email me at olav.sorensen@live.no
 ; or go to #protracker @ IRCnet (server: open.ircnet.net port 6667)
@@ -4951,7 +4951,7 @@ DirEntries	dc.w	0
 
 DirDisk	BSR.B	FreeDirMem
 	BSR.W	AllocDirMem
-	BSR.W	LockAndGetInfo
+	BSR.W	LockAndGetInfo	; puts DOSBase into A6
 	BNE.W	Return1
 	MOVE.L	FileLock,D1
 	MOVE.L	#FileInfoBlock,D2
@@ -4993,7 +4993,7 @@ DirDiskError
 	BEQ.B	ddeskip
 	MOVE.L	FileLock,D1
 	JSR	_LVOUnLock(A6)
-ddeskip	BSR.W	PTScreenToFront
+ddeskip	;BSR.W	PTScreenToFront (8bitbubsy: this causes issues on exit!)
 	BSR.W	RestorePtrCol
 	LEA	CantFindDirText(PC),A0
 	JSR	ShowStatusText
@@ -5299,8 +5299,10 @@ wfbu2	BTST	#6,$BFE001	; left mouse button
 RecordPattern
 	MOVEQ	#0,D0
 RecordFrom
-	TST.W	SamScrEnable
-	BNE.W	Return1
+	; 8bitbubsy: allow CTRL+Fn (ALT+Fn is already allowed)
+	;TST.W	SamScrEnable
+	;BNE.W	Return1
+	;
 	BSR.W	StopIt
 	BTST	#2,$DFF016	; right mouse button
 	BNE.B	refr1
@@ -5698,8 +5700,8 @@ cpkskip
 	BEQ.W	EscPressed
 	CMP.B	#66,D0
 	BEQ.W	TabulateCursor
-	CMP.B	#127,D0
-	BEQ.W	GotoCLI
+	;CMP.B	#127,D0	(8bb: probably broke in PT2.3...)
+	;BEQ.W	GotoCLI
 	CMP.B	#48,D0
 	BEQ.W	TurnOffVoices
 	CMP.B	#42,D0
@@ -6481,7 +6483,7 @@ ShowHelpLine
 	JSR	ShowText
 shlskip	ADD.W	#240,D6
 	DBRA	D7,shploop
-	;BSR.W	Wait_4000
+	BSR.W	Wait_4000
 	BRA.W	Wait_4000
 
 HelpPage	dc.w	1
@@ -10168,7 +10170,7 @@ excolab	BTST	#2,$DFF016	; right mouse button
 	ADDQ.B	#1,ExtCmdNumber
 	AND.B	#7,ExtCmdNumber
 	BSR.B	ShowExtCommand
-	;BSR.W	Wait_4000
+	BSR.W	Wait_4000
 	BSR.W	Wait_4000
 	BRA.W	Wait_4000
 
@@ -10245,7 +10247,7 @@ musenul	TST.B	D0
 	BEQ.B	museabo
 	ADD.B	D0,musepos
 	AND.B	#3,musepos
-	;BSR.W	Wait_4000
+	BSR.W	Wait_4000
 	BSR.W	Wait_4000
 	BSR.W	Wait_4000
 	BRA.B	museset
@@ -12520,7 +12522,7 @@ pogskp2	CMP.L	#127,CurrPos
 pogskip	MOVE.L	CurrPos,SongPosition
 	BSR.W	ShowPosition
 	BSR.W	RefreshPosEd
-	;BSR.W	Wait_4000
+	BSR.W	Wait_4000
 	BSR.W	Wait_4000
 	BRA.W	Wait_4000
 
@@ -14954,7 +14956,7 @@ AbortStrFlag	dc.w 0
 
 GetDecByte
 	MOVE.W	#1,AbortDecFlag
-	BSR.W	StorePtrCol
+	JSR	StorePtrCol
 	JSR	SetWaitPtrCol
 	BSR.W	UpdateLineCurPos
 	BSR.W	GetKey0_9
@@ -18183,7 +18185,7 @@ uppfok
 	BEQ.B	uppfskip10
 	LEA	DiskErrorText(PC),A0
 	BSR.W	ShowStatusText
-	JSR	PTScreenToFront
+	;JSR	PTScreenToFront (8bitbubsy: this causes issues on exit!)
 	JSR	SetErrorPtrCol
 uppfskip10
 	MOVE.L	FileHandle(PC),D1
@@ -19727,7 +19729,7 @@ dlsend	CLR.L	FileHandle
 CantOpenFile
 	LEA	CantOpenFileText(PC),A0
 caopfil	BSR.W	ShowStatusText
-	JSR	PTScreenToFront
+	;JSR	PTScreenToFront (8bitbubsy: this causes issues on exit!)
 	JSR	SetErrorPtrCol
 	MOVEQ	#0,D0
 	RTS
