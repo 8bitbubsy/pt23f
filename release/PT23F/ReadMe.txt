@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-              11th of January, 2023
+              25th of January, 2023
 
  If you find any bugs, please email me at olav.sorensen@live.no
  Based on a disassembly of PT2.3D.
@@ -20,6 +20,11 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+ 
+ == Update 25.01.2023 ===============================================
+ - Fixed: Weird things would happen if you were in text/number edit
+   mode while efx F00 (stop song) got triggered (hi again Per Arne)
+ ====================================================================
 
  == Update 11.01.2023 ===============================================
  - Some specific errors (e.g. "CAN'T FIND DIR !") could cause a

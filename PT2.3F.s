@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;    11th of January, 2023
+;    25th of January, 2023
 ;
 ; If you find any bugs, please email me at olav.sorensen@live.no
 ; or go to #protracker @ IRCnet (server: open.ircnet.net port 6667)
@@ -199,65 +199,66 @@ SHARED_LOCK		EQU -2
 	SECTION ptrunback,CODE
 
 rb_HunkStart
-	movea.l $4.w,a6
-	lea DOSname,a1
-	jsr _LVOOldOpenLibrary(a6)
-	movea.l d0,a5           ; dosbase
+	move.l	4.w,a6
+	lea	DOSname,a1
+	jsr	_LVOOldOpenLibrary(a6)
+	move.l	d0,a5			
+	; dosbase
 
-	movea.l ThisTask(a6),a3
-	move.l  pr_CLI(a3),d6   ; d6 = CLI or WB (NULL)
-	bne.s   _from_cli
+	move.l	ThisTask(a6),a3
+	move.l	pr_CLI(a3),d6		; d6 = CLI or WB (NULL)
+	bne.b	_from_cli
 
 _from_wb:
 	; Get startup message if we started from Workbench
-	lea pr_MsgPort(a3),a0
-	jsr _LVOWaitPort(a6)    ; wait for a message
-	lea pr_MsgPort(a3),a0
-	jsr _LVOGetMsg(a6)      ; then get it
-	movea.l d0,a3           ; a3 = WBStartup message
-	movea.l sm_ArgList(a3),a0
-	move.l  (a0),d5         ; (wa_Lock) FileLock on program dir
-	exg a5,a6               ; _dos
-	bsr.s   _common
+	lea	pr_MsgPort(a3),a0
+	jsr	_LVOWaitPort(a6)	; wait for a message
+	lea	pr_MsgPort(a3),a0
+	jsr	_LVOGetMsg(a6)		; then get it
+	movea.l	d0,a3			; a3 = WBStartup message
+	movea.l	sm_ArgList(a3),a0
+	move.l	(a0),d5			; (wa_Lock) FileLock on program dir
+	exg	a5,a6			; _dos
+	bsr.b	_common
 
 	; Reply to the startup message
-	jsr _LVOForbid(a6)      ; it prohibits WB to unloadseg me
-	lea (a3),a1
-	jmp _LVOReplyMsg(a6)    ; reply to WB message and exit
+	jsr	_LVOForbid(a6)		; it prohibits WB to unloadseg me
+	lea	(a3),a1
+	jmp	_LVOReplyMsg(a6)	; reply to WB message and exit
 
 _from_cli:
 	; Get FileLock via command name if we started from CLI
-	link    a3,#-256
+	link	a3,#-256
 
 	; Copy BCPL string to C-style string
-	lea (sp),a1
-	lsl.l   #2,d6
-	movea.l d6,a0
-	move.l  cli_CommandName(a0),a0
-	adda.l  a0,a0
-	adda.l  a0,a0
-	move.b  (a0)+,d0
-.c	move.b  (a0)+,(a1)+
-	subq.b  #1,d0
-	bne.b   .c
-	clr.b   (a1)
+	lea	(sp),a1
+	lsl.l	#2,d6
+	movea.l	d6,a0
+	move.l	cli_CommandName(a0),a0
+	add.l	a0,a0
+	add.l	a0,a0
+	move.b	(a0)+,d0
+.c	move.b	(a0)+,(a1)+
+	subq.b	#1,d0
+	bne.b	.c
+	clr.b	(a1)
 
 	; Get a lock on the program and its parent
-	exg a5,a6               ; _dos
-	move.l  sp,d1           ; d1 = STRPTR name (command string)
-	moveq   #SHARED_LOCK,d2 ; d2 = accessMode
-	jsr _LVOLock(a6)
-	move.l  d0,d7
-	move.l  d0,d1
-	jsr _LVOParentDir(a6)
-	move.l  d7,d1
-	move.l  d0,d6           ; d6 = Lock on CLI program dir
-	move.l  d0,d5           ; d5 = common Lock
-	jsr _LVOUnLock(a6)
-	unlk    a3
+	exg	a5,a6		; _dos
+	move.l	sp,d1		; d1 = STRPTR name (command string)
+	moveq	#SHARED_LOCK,d2	; d2 = accessMode
+	jsr	_LVOLock(a6)
+	move.l	d0,d7
+	move.l	d0,d1
+	jsr	_LVOParentDir(a6)
+	move.l	d7,d1
+	move.l	d0,d6		; d6 = Lock on CLI program dir
+	move.l	d0,d5		; d5 = common Lock
+	jsr	_LVOUnLock(a6)
+	unlk	a3
 
 _common:
-	move.l  d5,d1
+	move.l	d5,d1
 	jsr	_LVODupLock(a6)
 	move.l	d0,rb_CurrentDir
 	move.l	#rb_Progname,d1
@@ -269,12 +270,12 @@ _common:
 	moveq	#$40,d4
 	lsl.w	#8,d4		; stack=$4000
 	jsr	_LVOCreateProc(a6)
-	move.l  d6,d1           ; UnLock program dir or zero (from WB)
-	jsr _LVOUnLock(a6)
-	lea (a6),a1
-	lea (a5),a6
-	jsr _LVOCloseLibrary(a6)
-	moveq   #0,d0
+	move.l	d6,d1		; UnLock program dir or zero (from WB)
+	jsr	_LVOUnLock(a6)
+	lea	(a6),a1
+	lea	(a5),a6
+	jsr	_LVOCloseLibrary(a6)
+	moveq	#0,d0
 	rts
 
 ; End of runback hunk
@@ -25031,6 +25032,12 @@ normspd	CLR.L	Counter
 SpeedNull
 	CLR.L	RunMode
 	JSR	SetNormalPtrCol
+	; PT2.3D fix: fixes for F00 while in string/number edit mode
+	JSR	StorePtrCol	; store idle pointer color in backup
+	TST.W	LineCurX	; are we editing a number or string?
+	BEQ.B	.end
+	JSR	SetWaitPtrCol	; we're editing, set edit pointer color
+.end	; ----------------------------------------------------------------
 	RTS
 	
 	CNOP 0,4
