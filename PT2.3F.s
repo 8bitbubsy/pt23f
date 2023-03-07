@@ -313,12 +313,14 @@ Main
 	MOVE.W	296(A6),D0
 	BTST	#1,D0
 	BNE.B	not68000
+	ST	CPUIs68000
 	MOVE.W	#RasterWait1_000,WaitRasterLines1
 	MOVE.W	#RasterWait2_000,WaitRasterLines2
 	BRA.B	srwskip
 not68000
 	MOVE.W	#RasterWait1_020,WaitRasterLines1
 	MOVE.W	#RasterWait2_020,WaitRasterLines2
+	SF	CPUIs68000
 srwskip	
 	BSR.W	OpenLotsOfThings
 	BSR.W	SetVBInt
@@ -22221,9 +22223,13 @@ StartOfs	dc.l 0
 	;
 	; Output:
 	;  D0.L = Quotient
-	;  D1.L = Remainder
 DIVU32
-	MOVEM.L	D2/D3,-(SP)
+	TST.B	CPUIs68000
+	BNE.B	SoftDiv32
+	DIVU.L	D1,D0
+	RTS
+SoftDiv32
+	MOVEM.L	D1/D2/D3,-(SP)
 	SWAP	D1
 	TST	D1
 	BNE.B	LB_5F8C
@@ -22238,8 +22244,6 @@ LB_5F7C	SWAP	D0
 	MOVE.W	D0,D3
 	DIVU.W	D1,D3
 	MOVE.W	D3,D0
-	SWAP	D3
-	MOVE.W	D3,D1
 	BRA.B	LB_END
 LB_5F8C	SWAP	D1
 	MOVEQ	#16-1,D3
@@ -22257,7 +22261,7 @@ LB_5FA0	ADD.L	D0,D0
 	SUB.L	D3,D1
 	ADDQ.L	#1,D0
 LB_5FAC	DBF	D2,LB_5FA0
-LB_END	MOVEM.L	(SP)+,D2/D3
+LB_END	MOVEM.L	(SP)+,D1/D2/D3
 	RTS
 
 SetSamPosDelta
@@ -25938,6 +25942,8 @@ PosEdNames	dcb.b 16*100,' '
 AskBoxShown	dc.b	0,0
 	CNOP 0,4
 LastAreYouSureTextPtr	dc.l	0
+CPUIs68000		dc.b	1
+	EVEN
 
 ;---- Setup Data ----
 
