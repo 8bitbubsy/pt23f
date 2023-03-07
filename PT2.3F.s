@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;    25th of January, 2023
+;      7th of March, 2023
 ;
 ; If you find any bugs, please email me at olav.sorensen@live.no
 ; or go to #protracker @ IRCnet (server: open.ircnet.net port 6667)
@@ -15,7 +15,7 @@
 ; would look different in many parts.
 ;
 ; Thanks to following persons for some assistance:
-; - Hoffman of Unstable Label (128kB sample support in some routines)
+; - h0ffman of Unstable Label (128kB sample support in some routines)
 ; - Miikka from #amycoders (128kB sample support in the resampler/chord maker)
 ;
 ; I did the rest of the 128kB compatibility patching.
@@ -671,6 +671,7 @@ Return1	RTS
 ;---- Open Lots Of Things ----
 
 OpenLotsOfThings
+	BSR.W	ScopeInitLUT
 	MOVE.B	$BFE001,LEDStatus
 	BSET	#1,$BFE001
 	JSR	TurnOffVoices
@@ -1878,15 +1879,28 @@ ns_posfrac	= 20 ; W
 
 ScopeInfoSize	= 24 ; should be a multiple of 4!
 
-SC_MAX_PER	EQU 936	; C-1 finetune -8 + vibrato w/ max depth
-SC_MIN_PER	EQU 113
+ScopeInitLUT
+	MOVE.W	#(32+1)*256,D7
+	LEA	ScopeLUT,A0
+	ADD.W	D7,A0
+	ADDQ.W	#1,A0
+.loop	MOVE.B	D7,D0
+	EXT.W	D0		; D0.W = -128..127 (sample value)
+	MOVE.W	D7,D1
+	LSR.W	#8,D1		; D1.W = 0..32 (volume)
+	NEG.W	D1
+	MULS.W	D1,D0	
+	ASR.W	#6,D0		; D0.B = -63..64 (bigger range for real VU-meter scan)
+	MOVE.B	D0,-(A0)
+	SUBQ.W	#1,D7
+	BPL.B	.loop	
+	RTS
 
 Scope
 	LEA	audchan1temp,A0
 	LEA	ScopeSamInfo,A1
 	LEA	ScopeInfo,A2
 	LEA	BlankSample,A3
-	LEA	ScopeDeltaTab,A5
 	MOVEQ	#4-1,D6			; do 4 channels
 ScoLoop
 	MOVE.W	n_period(A0),D0
@@ -1915,14 +1929,6 @@ ScoRetrig
 	CMP.L	A3,D0 ; at end of sample...
 	BEQ.B	ScoNextChan
 	BRA.B	ScoChk
-
-scopePerLow
-	CLR.W	D1
-	BRA.B	ScoAdd
-
-scopePerHi
-	MOVE.W	#(SC_MAX_PER-SC_MIN_PER)*4,D1
-	BRA.B	ScoAdd
 	
 ScoContinue
 	MOVE.L	ns_sampleptr(A2),D0
@@ -1931,24 +1937,26 @@ ScoContinue
 	MOVE.W	ns_period(A2),D1
 	BEQ.B	ScoNextChan
 	
+	; --PT2.3D change: better scope delta precision
+	
 	;LSR.W	#1,D1
 	;MOVE.L	#35469,D2
 	;DIVU.W	D1,D2
 	;EXT.L	D2
 	;ADD.L	D2,D0
 	
-	; --PT2.3D change: use rounded fixed-point LUT (also prevents DIV)
-	CMP.W	#SC_MAX_PER,D1		; period is normally within 113..936
-	BHI.B	scopePerHi
-	CMP.W	#SC_MIN_PER,D1
-	BLO.B	scopePerLow
-	SUB.W	#SC_MIN_PER,D1		; D1 = 0..823
-	LSL.W	#2,D1			; *4 for longword LUT
-ScoAdd	MOVE.L	(A5,D1.W),D1		; A5 = ScopeDeltaTab
-					; D1 = delta (16.16 fixed-point)
-	ADD.W	D1,ns_posfrac(A2) 	; add delta fraction
-	CLR.W	D1
-	SWAP	D1			; D1 = delta integer
+	CMP.W	#113,D1			; minimum Paula period in normal video modes
+	BHS.B	ScoOk			; (clamp also needed for DIVU.W)
+	MOVE.W	#113,D1
+ScoOk					; Paula clk   PAL Vblank Hz
+	MOVE.L	#71051*(1<<6),D2 	; 3546895.0 / 49.9204092835 = 71051.0 (exact)
+	DIVU.W	D1,D2
+	MOVEQ	#0,D1
+	MOVE.W	D2,D1
+	LSR.W	#6,D1			; D1.L = delta integer
+	AND.W	#(1<<6)-1,D2
+	ROR.W	#6,D2			; D2.W = delta frac (scaled to .16fp)	
+	ADD.W	D2,ns_posfrac(A2) 	; add delta fraction
 	ADDX.L	D1,D0			; add integer + fraction overflow bit (16.16 add)	
 	
 ScoChk	CMP.L	ns_endptr(A2),D0
@@ -2003,8 +2011,7 @@ ScoNextChan
 	MOVEQ	#0,D4
 	MOVEQ	#0,D5
 	MOVEQ	#0,D6
-clscop
-	MOVEM.L	D1-D6,(A0)
+clscop	MOVEM.L	D1-D6,(A0)
 	LEA	40(A0),A0
 	MOVEM.L	D1-D6,(A0)	
 	LEA	40(A0),A0
@@ -2096,13 +2103,15 @@ ScoDraw
 	BNE.W	sdlpos
 	TST.B	EdEnable
 	BNE.W	sdlpos
-	CMP.B	#64,D5
+	LSR.W	#1,D5		; D5 = 0..64 -> 0..32
+	CMP.B	#32,D5
 	BLS.B	sdsk1
-	MOVEQ	#64,D5
-sdsk1	EXT.W	D5
-	LSL.W	#7,D5
-	NEG.W	D5
-	
+	MOVEQ	#32,D5
+sdsk1	LSL.W	#8,D5
+	LEA	ScopeLUT,A5
+	ADD.W	D5,A5
+	MOVEQ	#0,D5
+
 	MOVE.L	ns_sampleptr(A2),A0
 	;ADD.L	TextBplPtr,A1
 	MOVEQ	#5-1,D2
@@ -2123,10 +2132,10 @@ sdlp2LOOP
 	CMP.L	A4,A0			; did we reach sample loop end yet?
 	BHS.B	sWrapLoop		; yes, wrap loop
 sdlnowrap
-	MOVE.B	(A0)+,D0		; get byte from sample data	
+	MOVE.B	(A0)+,D5		; get byte from sample data
+	MOVE.B	(A5,D5.W),D0
 	EXT.W	D0			; extend to word
-	MULS.W	D5,D0			; multiply by volume
-	SWAP	D0			; D0.W = -15..16
+	ASR.W	#2,D0			; -63..64 -> -15..16
 	MOVE.W	D0,D1
 	LSL.W	#5,D0			; * 32
 	LSL.W	#3,D1			; * 8
@@ -2150,10 +2159,10 @@ sdlp2
 	CMP.L	A4,A0			; did we reach sample end yet?
 	BHS.B	.drawit			; yes, draw empty sample
 	; -----------------------------
-	MOVE.B	(A0)+,D0		; get byte from sample data
+	MOVE.B	(A0)+,D5		; get byte from sample data
+	MOVE.B	(A5,D5.W),D0
 	EXT.W	D0			; extend to word
-	MULS.W	D5,D0			; multiply by volume
-	SWAP	D0			; D0.W = -15..16
+	ASR.W	#2,D0			; -63..64 -> -15..16
 	MOVE.W	D0,D1
 	LSL.W	#5,D0			; * 32
 	LSL.W	#3,D1			; * 8
@@ -2191,11 +2200,11 @@ sdlpos	; process sample play position (the blue line)
 	;BEQ.W	ScoRTS
 	;DIVU.W	D0,D1
 	
-	; 128kb sample patch by hoffman
-	ASR.L	#1,D1
+	; 128kb sample patch by h0ffman
+	LSR.L	#1,D1
 	MULU.W	#314,D1
 	MOVE.L	SamDisplay,D0
-	ASR.L	#1,D0
+	LSR.L	#1,D0
 	BEQ.W	ScoRTS
 	DIVU.W	D0,D1
 	AND.L	#$FFFF,D1
@@ -2295,14 +2304,16 @@ rScoDraw
 	BNE.W	rsdkip
 	TST.B	EdEnable
 	BNE.W	rsdkip
-	ST	D7			; do draw scopes
-rsdkip
-	CMP.B	#64,D5
+	ST	D7		; do draw scopes
+rsdkip	LSR.W	#1,D5		; D5 = 0..64 -> 0..32
+	CMP.B	#32,D5
 	BLS.B	rsdsk1
-	MOVEQ	#64,D5
-rsdsk1	EXT.W	D5
-	NEG.W	D5
-	
+	MOVEQ	#32,D5
+rsdsk1	LSL.W	#8,D5
+	LEA	ScopeLUT,A5
+	ADD.W	D5,A5
+	MOVEQ	#0,D5
+
 	MOVE.L	ns_sampleptr(A2),A0
 	;ADD.L	TextBplPtr,A1
 	MOVEQ	#4,D2
@@ -2325,9 +2336,9 @@ rsdlp2LOOP
 	CMP.L	D4,A0			; did we reach sample loop end yet?
 	BHS.B	rWrapLoop		; yes, wrap loop
 rsdlnowrap
-	MOVE.B	(A0)+,D0		; get byte from sample data
+	MOVE.B	(A0)+,D5		; get byte from sample data
+	MOVE.B	(A5,D5.W),D0
 	EXT.W	D0			; extend to word
-	MULS.W	D5,D0			; multiply by volume
 	
 	MOVE.W	D0,D1			; D1 = amplitude
 	BPL.B 	rnotSigned		; D1 >= 0?
@@ -2339,12 +2350,11 @@ rnotSigned
 rnoNewStore
 	TST.B	D7			; draw scopes or not?
 	BEQ.B	rsdlskip		; nope...
-	
-	ASR.W	#8,D0			; shift down
-	ASR.B	#1,D0
+
+	ASR.W	#2,D0			; -63..64 -> -15..16
 	MOVE.W	D0,D1
-	ASL.W	#5,D0			; * 32
-	ASL.W	#3,D1			; * 8
+	LSL.W	#5,D0			; * 32
+	LSL.W	#3,D1			; * 8
 	ADD.W	D1,D0			; (32+8) = * 40
 	BSET	D3,(A1,D0.W)		; set the current bitplane bit
 rsdlskip
@@ -2368,9 +2378,9 @@ rsdlp2
 	CMP.L	D4,A0			; did we reach sample end yet?
 	BHS.B	rnoNewStore2		; yes, draw empty sample
 	
-	MOVE.B	(A0)+,D0		; get byte from sample data
+	MOVE.B	(A0)+,D5		; get byte from sample data
+	MOVE.B	(A5,D5.W),D0
 	EXT.W	D0			; extend to word
-	MULS.W	D5,D0			; multiply by volume
 	
 	MOVE.W	D0,D1			; D1 = amplitude
 	BPL.B 	rnotSigned2		; D1 >= 0?
@@ -2382,12 +2392,11 @@ rnotSigned2
 rnoNewStore2
 	TST.B	D7			; draw scopes or not?
 	BEQ.B	rsdlskip2		; nope...
-	
-	ASR.W	#8,D0			; shift down
-	ASR.B	#1,D0
+
+	ASR.W	#2,D0			; -63..64 -> -15..16
 	MOVE.W	D0,D1
-	ASL.W	#5,D0			; * 32
-	ASL.W	#3,D1			; * 8
+	LSL.W	#5,D0			; * 32
+	LSL.W	#3,D1			; * 8
 	ADD.W	D1,D0			; (32+8) = * 40
 	BSET	D3,(A1,D0.W)		; set the current bitplane bit
 rsdlskip2
@@ -2691,20 +2700,28 @@ svum4	LEA	200(A0),A0	; A0 = VU #4 sprite
 	BEQ.B	svumend		; yes, don't sink
 	ADDQ.B	#1,(A0)		; sink
 svumend	RTS
+
+	; x = round[x * (47.0 / 64.0)]
+RealVULUT
+	dc.b  0, 1, 1, 2, 3, 4, 4, 5, 6, 7, 7, 8, 9,10,10,11
+	dc.b 12,12,13,14,15,15,16,17,18,18,19,20,21,21,22,23
+	dc.b 24,24,25,26,26,27,28,29,29,30,31,32,32,33,34,35
+	dc.b 35,36,37,37,38,39,40,40,41,42,43,43,44,45,46,46
+	dc.b 47
+	EVEN
 	
 RealVUMeters
 	LEA	VUSpriteData1,A0
 	LEA	6+audchan1toggle(PC),A1
+	LEA	RealVULUT(PC),A2
 	MOVEQ	#-23,D2		; initial sprite value (-23 = 233)
-	MOVE.W	#384,D4		; magical MUL value! ( 65536 / (8192/48) )
-	MOVE.W	#700,D5		; VU-Meter sink value (higher = faster sink)
-	MOVE.L	#65536/2,D6	; rounding bias
+	MOVEQ	#5,D5		; VU-Meter sink value (higher = faster sink)
 	; ------------------
 	MOVEQ	#4-1,D3
-rvuloop	MOVE.W	(A1),D0		; D0 = 0..8192 (average peak)
-	MULU.W	D4,D0		; D0 *= 384
-	ADD.L	D6,D0		; D0 += 32768
-	SWAP	D0		; D0 /= 65536 (0..48, sprite value)
+rvuloop	MOVE.W	(A1),D0		; D0 = 0..64 (average peak)
+	CMP.W	#64,D0
+	BHI.B	.rvuhi
+.skip0	MOVE.B	(A2,D0.W),D0	; D0 = 0..47, sprite value)
 	; ------------------
 	MOVE.B	D2,D1		; D1 = 233
 	SUB.B	D0,D1		; D1 -= D0
@@ -2718,11 +2735,15 @@ rvuloop	MOVE.W	(A1),D0		; D0 = 0..8192 (average peak)
 	LEA	200(A0),A0	; A0 = next VU-meter sprite value
 	DBRA	D3,rvuloop
 	RTS
+	
+.rvuhi	MOVEQ	#64,D0
+	BRA.B	.skip0
 
-audchan1toggle	dc.w	1,  78,$00,0
-audchan2toggle	dc.w	1, 518,$16,0
-audchan3toggle	dc.w	1, 958,$2C,0
-audchan4toggle	dc.w	1,1398,$42,0
+; last value = sample peak from scopes (0..128, for real VU-meters)
+audchan1toggle	dc.w 1,  78,$00,0
+audchan2toggle	dc.w 1, 518,$16,0
+audchan3toggle	dc.w 1, 958,$2C,0
+audchan4toggle	dc.w 1,1398,$42,0
 
 ;---- Disk Op. ----
 
@@ -4901,7 +4922,8 @@ sdsdecend
 	RTS
 	
 tooMuchText	dc.b "A LOT..."
-	
+	EVEN
+
 ;---- Get Disk Directory ----
 
 AllocDirMem
@@ -13226,7 +13248,7 @@ dobaloop
 	BNE.B	dobaloop
 	BSR.B	PosMoveLeft
 upwake	BSR.W	UpdateText
-	;BSR.W	Wait_4000
+	BSR.W	Wait_4000
 	BSR.W	Wait_4000
 	BSR.W	Wait_4000
 	BRA.W	WaitForKey
@@ -15294,7 +15316,7 @@ UpdateMod
 	ASR.L	#4,D1
 	MOVE.L	D1,D3
 	AND.W	#$1F,D1
-	LEA	VibratoTable(PC),A0
+	LEA	VibratoTable,A0
 	MOVEQ	#0,D0
 	MOVE.B	(A0,D1.W),D0
 	LSR.B	#2,D0
@@ -15598,7 +15620,7 @@ DisplayMix
 	MOVE.W	#1936,D1
 	MOVEQ	#22,D0
 	BSR.W	ShowText3
-	;BSR.W	Wait_4000
+	BSR.W	Wait_4000
 	BSR.W	Wait_4000
 	BRA.W	Wait_4000
 
@@ -19549,7 +19571,7 @@ phd2	MOVE.W	#1,TextLength
 
 BlankInsText	dc.b " ",0
 
-; this routine was coded by Hoffman and edited by 8bitbubsy
+; this routine was coded by h0ffman and edited by 8bitbubsy
 Print5HexDigits
 	MOVE.L	D1,-(SP)
 	MOVE.L	D7,-(SP)
@@ -22024,39 +22046,52 @@ clrsslp
 	RTS
 
 blnktxt	dc.b "    "
+	EVEN
 
+	; --PT2.3D change: heavily modified + some optimizations
 ClearSamArea
-	; --PT2.3D change: (clear) dotted line in sampler screen
-	MOVE.L	A1,-(SP)
-	
-	LEA	BitplaneData+6800,A0
-	LEA	BitplaneData+10240+6800,A1
-	
-	MOVEQ	#10-1,D0
-	MOVEQ	#0,D1
-clrsaloop
-	MOVE.L	D1,(A0)+
-	MOVE.L	D1,(A1)+
-	DBRA	D0,clrsaloop
-	
-	; fix trashed GUI pixels
-	MOVE.B	#%00000101,-1(A0)
-	MOVE.B	#%00000011,-1(A1)
-	MOVE.B	#%10100000,-40(A0)
-	MOVE.B	#%01100000,-40(A1)
-	
-	MOVE.L	(SP)+,A1
-	; ----------------------------------------------
+	MOVEM.L	ClearRegs(pc),D0-D7
 
-	MOVE.L	#64*10-1,D0
+	; clear scrollbar background
+	MOVE.L	TextBplPtr(PC),A0
+	LEA	$15B8+2760+(40*3)(A0),A0
+	MOVEM.L	D0-D7,-(A0)
+	MOVEM.L	D0-D7,-(A0)
+	MOVEM.L	D0-D7,-(A0)
+	MOVEM.L	D0-D7,-(A0)
+	MOVEM.L	D0-D7,-(A0)
+
+	; clear dotted center pattern (different bitplanes)
+	LEA	BitplaneData+6800+40,A0
+	LEA	BitplaneData+10240+6800+40,A1
+	MOVEM.L	D0-D4,-(A0)
+	MOVEM.L	D0-D4,-(A1)
+	MOVEM.L	D0-D4,-(A0)
+	MOVEM.L	D0-D4,-(A1)
+
+	; fix trashed frame pixels on left and right edge
+	MOVE.B	#%00000101,39(A0)
+	MOVE.B	#%00000011,39(A1)
+	MOVE.B	#%10100000,0(A0)
+	MOVE.B	#%01100000,0(A1)
+
+	; clear sample view
+	MOVE.W	#((64*10)/8)/4,ClearCounter
 	MOVE.L	TextBplPtr(PC),A0
 	LEA	$15B8(A0),A0
 	MOVE.L	A0,LineScreenPtr
-	;MOVEQ	#0,D1 (already wiped)
-clrsare
-	MOVE.L	D1,(A0)+
-	DBRA	D0,clrsare
+	ADD.W	#64*10*4,A0
+clrsare	MOVEM.L	D0-D7,-(A0)
+	MOVEM.L	D0-D7,-(A0)
+	MOVEM.L	D0-D7,-(A0)
+	MOVEM.L	D0-D7,-(A0)
+	SUBQ.W	#1,ClearCounter
+	BNE.W	clrsare
 	RTS
+
+	CNOP 0,4
+ClearRegs	DCB.L 8,0
+ClearCounter	DC.W 0
 
 CheckSamGadgets
 	MOVE.W	MouseX2(PC),D0
@@ -22208,6 +22243,62 @@ StartOfs	dc.l 0
 
 ;----
 
+	; Input:
+	;  D0.L = Dividend
+	;  D1.L = Divisor
+	;
+	; Output:
+	;  D0.L = Quotient
+	;  D1.L = Remainder
+DIVU32
+	MOVEM.L	D2/D3,-(SP)
+	SWAP	D1
+	TST	D1
+	BNE.B	LB_5F8C
+	SWAP	D1
+	MOVE.L	D1,D3
+	SWAP	D0
+	MOVE.W	D0,D3
+	BEQ.B	LB_5F7C
+	DIVU.W	D1,D3
+	MOVE.W	D3,D0
+LB_5F7C	SWAP	D0
+	MOVE.W	D0,D3
+	DIVU.W	D1,D3
+	MOVE.W	D3,D0
+	SWAP	D3
+	MOVE.W	D3,D1
+	BRA.B	LB_END
+LB_5F8C	SWAP	D1
+	MOVEQ	#16-1,D3
+	MOVE.W	D3,D2
+	MOVE.L	D1,D3
+	MOVE.L	D0,D1
+	CLR.W	D1
+	SWAP	D1
+	SWAP	D0
+	CLR.W	D0
+LB_5FA0	ADD.L	D0,D0
+	ADDX.L	D1,D1
+	CMP.L	D1,D3
+	BHI.B	LB_5FAC
+	SUB.L	D3,D1
+	ADDQ.L	#1,D0
+LB_5FAC	DBF	D2,LB_5FA0
+LB_END	MOVEM.L	(SP)+,D2/D3
+	RTS
+
+SetSamPosDelta
+	MOVEM.L	D0-D1,-(SP)
+	MOVE.L	SamDisplay(PC),D0
+	MOVEQ	#15,D1			; max safe frac precision bits
+	LSL.L	D1,D0
+	MOVE.L	#314,D1
+	BSR.W	DIVU32
+	MOVE.L	D0,SamPosDelta		; sample pos delta (17.15 fixed-point)
+	MOVEM.L	(SP)+,D0-D1
+	RTS
+
 ShowRange
 	; --PT2.3D bug fix: Show error if trying to zoom on empty sample
 	TST.B	EmptySampleFlag
@@ -22224,6 +22315,7 @@ srskip
 	MOVEQ	#1,D1
 shorano	MOVE.L	D1,SamDisplay
 	MOVE.L	D0,SamOffset
+	BSR.W	SetSamPosDelta
 	MOVEQ	#-1,D0
 	MOVE.L	D0,MarkStartOfs
 	CLR.W	MarkStart
@@ -22254,6 +22346,7 @@ zoomou2	SUB.L	D0,D2
 	MOVE.L	D1,D2
 zoomou3	MOVE.L	D2,SamOffset
 	MOVE.L	D3,SamDisplay
+	BSR.W	SetSamPosDelta
 	BSR.W	OffsetToMark
 	MOVE.L	MarkStartOfs(PC),D0
 	CMP.L	MarkEndOfs(PC),D0
@@ -22266,6 +22359,7 @@ zoomouo	BSR.W	DisplaySample
 ShowAll
 	CLR.L	SamOffset
 	MOVE.L	SamLength(PC),SamDisplay
+	BSR.W	SetSamPosDelta
 	BSR.W	OffsetToMark
 	MOVE.L	MarkStartOfs(PC),D0
 	CMP.L	MarkEndOfs(PC),D0
@@ -22718,6 +22812,7 @@ sacfree	MOVE.L	D2,D0
 	BLO.B	samnils		; if display < length, move offset
 samsall	CLR.L	SamOffset	; else show all
 	MOVE.L	D3,SamDisplay
+	BSR.W	SetSamPosDelta
 	BRA.B	samcuto
 samnils	MOVE.L	D3,D4
 	SUB.L	SamDisplay(PC),D4
@@ -23478,8 +23573,8 @@ lsdmsk2	MOVE.L	SamDisplay(PC),D0
 	;MULU.W	D0,D1
 	;DIVU.W	#314,D1
 	
-	; 128kb sample patch by hoffman
-	ASR.L	#1,D0
+	; 128kb sample patch by h0ffman
+	LSR.L	#1,D0
 	MULU.W	D0,D1
 	DIVU.W	#314,D1
 	AND.L	#$FFFF,D1
@@ -23569,8 +23664,8 @@ sdrskp1	MOVE.L	SamLength(PC),D1
 	;DIVU.W	#311,D0	
 	;AND.L	#$FFFF,D0
 	
-	; 128kb sample patch by hoffman
-	ASR.L	#1,D1
+	; 128kb sample patch by h0ffman
+	LSR.L	#1,D1
 	MULU.W	D1,D0
 	DIVU.W	#311,D0
 	AND.L	#$FFFF,D0
@@ -23589,7 +23684,8 @@ draglo	MOVE.L	SamOffset(PC),D0
 draglo2	CMP.L	SamOffset(PC),D0
 	BEQ.W	Return3		
 	MOVE.L	D0,SamOffset
-	BRA.W	DisplaySample
+	;BRA.W	DisplaySample
+	BRA.W	DisplaySampleNoTextUpdate
 	
 draghi	MOVE.L	SamOffset(PC),D0
 	ADD.L	SamDisplay(PC),D0
@@ -23617,7 +23713,7 @@ MarkToOffset
 	;DIVU.W	#314,D1
 	;AND.L	#$FFFF,D1
 	
-	; 128kb sample patch by hoffman (with fix by 8bitbubsy)
+	; 128kb sample patch by h0ffman (with fix by 8bitbubsy)
 	MULU.W	D0,D1
 	DIVU.W	#314,D1
 	AND.L	#$FFFF,D1
@@ -23639,7 +23735,7 @@ mtosome
 	;DIVU.W	#314,D1
 	;AND.L	#$FFFF,D1
 	
-	; 128kb sample patch by hoffman (with fix by 8bitbubsy)
+	; 128kb sample patch by h0ffman (with fix by 8bitbubsy)
 	MULU.W	D0,D1
 	DIVU.W	#314,D1
 	AND.L	#$FFFF,D1
@@ -23666,7 +23762,7 @@ OffsetToMark
 	;BEQ.B	otmskip
 	;DIVU.W	D1,D0
 	
-	; 128kb sample patch by hoffman (with fix by 8bitbubsy)
+	; 128kb sample patch by h0ffman (with fix by 8bitbubsy)
 	LSR.L	#1,D0
 	MULU.W	#314,D0
 	DIVU.W	D1,D0
@@ -23684,7 +23780,7 @@ otmskip
 	;BEQ.W	Return3
 	;DIVU.W	D1,D0
 	
-	; 128kb sample patch by hoffman (with fix by 8bitbubsy)	
+	; 128kb sample patch by h0ffman (with fix by 8bitbubsy)	
 	LSR.L	#1,D0
 	MULU.W	#314,D0
 	DIVU.W	D1,D0
@@ -23717,6 +23813,15 @@ MarkEndOfs	dc.l	0
 DisplaySample
 	TST.W	SamScrEnable
 	BEQ.W	Return3
+	BSR.W	rdsskip
+	TST.L	MarkStartOfs
+	BMI.W	Return3
+	BSR.W	OffsetToMark
+	BRA.W	InvertRange
+	
+DisplaySampleNoTextUpdate
+	TST.W	SamScrEnable
+	BEQ.W	Return3
 	BSR.W	rdsdoit
 	TST.L	MarkStartOfs
 	BMI.W	Return3
@@ -23725,7 +23830,7 @@ DisplaySample
 
 RedrawSample
 	TST.W	SamScrEnable
-	BEQ.W	Return3
+	BEQ.W	Return3	
 	MOVEQ	#-1,D0
 	MOVE.L	D0,MarkStartOfs
 	CLR.W	MarkStart
@@ -23742,20 +23847,37 @@ RedrawSample
 	MOVE.L	D1,SamLength
 	CLR.L	SamOffset
 	MOVE.L	D1,SamDisplay
-	BRA.B	rdsdoit
-rdsblnk
-	ST	EmptySampleFlag
+	BSR.W	SetSamPosDelta
+	BRA.B	rdsskip
+rdsblnk	ST	EmptySampleFlag
 	LEA	BlankSample,A0
 	MOVE.L	A0,SamStart
 	MOVE.L	#314,SamLength
 	CLR.L	SamOffset
 	MOVE.L	#314,SamDisplay
-rdsdoit	MOVE.L	GfxBase(PC),A6
-	JSR	_LVOOwnBlitter(A6)
-	JSR	_LVOWaitBlit(A6)
+	BSR.W	SetSamPosDelta
+rdsskip	MOVE.L	SamDisplay(PC),D0
+	LEA	BlankSample,A0
+	CMP.L	SamStart(PC),A0
+	BNE.B	rdsslwo
+	MOVEQ	#0,D0
+rdsslwo	MOVE.W	#215*40+33,TextOffset
+	BSR.W	Print6DecDigits	
+
+rdsdoit	
 	BSR.W	ClearSamArea
+
+	MOVE.L	GfxBase(PC),A6
+	JSR	_LVOOwnBlitter(A6)
+	JSR	_LVOWaitBlit(A6)	
+	
+	BSR.W	SetDragBar ; (also uses blitter, so do it now)
+	
+	; --PT2.3D change:
+	; Slightly optimized sample draw routine, which also supports
+	; 128kB samples. This one doesn't use DIVU & MULU per iteration.
+	; This is still slow because of blitter overhead...
 	MOVE.L	SamStart(PC),A0
-	MOVEQ	#0,D4
 	MOVE.L	SamOffset(PC),D5
 	MOVE.L	SamDisplay(PC),D6
 	MOVE.L	D5,D7
@@ -23764,90 +23886,68 @@ rdsdoit	MOVE.L	GfxBase(PC),A6
 	MOVE.L	D0,SamDrawStart
 	ADD.L	D6,D0
 	MOVE.L	D0,SamDrawEnd
-	ASR.L	#1,D6		; make DIV under 64K
-rdsloop	MOVE.W	D4,D0
-	ADDQ.W	#3,D0
+	ADD.L	D5,A0
+	MOVE.L	#$1FFFF,D5
+	MOVE.L	SamPosDelta(PC),D7
+	MOVEQ	#0,D6			; sample pos (17.15 fixed-point)	
+	MOVEQ	#0,D4
+rdsloop	MOVE.L	D6,D0
+	SWAP	D0
+	ROL.L	#1,D0
+	AND.L	D5,D0			; D7 = integer sample pos
 	MOVEQ	#127,D1
-	SUB.B	(A0,D7.L),D1
+	SUB.B	(A0,D0.L),D1
 	LSR.W	#2,D1
+	MOVE.W	D4,D0
+	ADDQ.W	#3,D0	
 	TST.W	D4
 	BNE.B	rdsdraw
 	BSR.W	MoveTo
 	BRA.B	rdsupdt
 rdsdraw	BSR.W	DrawTo
-	NOP	; XXX: Is this needed at all? Probably came from re-sourcing?
-rdsupdt	ADDQ.W	#1,D4
-
-	;MOVE.L	D4,D7
-	;MULU.W	D6,D7
-	;DIVU.W	#314,D7
-	;AND.L	#$FFFF,D7
-	
-	; 128kb sample patch by hoffman (slightly optimized by 8bitbubsy)
-	MOVE.W	D6,D7
-	MULU.W	D4,D7
-	DIVU.W	#314,D7
-	AND.L	#$FFFF,D7
-	ADD.L	D7,D7	
-	
-	ADD.L	D5,D7
+rdsupdt	ADD.L	D7,D6
+	ADDQ.W	#1,D4	
 	CMP.W	#314,D4
 	BLO.B	rdsloop
-	
-	MOVE.L	GfxBase(PC),A6
+
 	JSR	_LVODisownBlitter(A6)
-	BSR.W	SetDragBar
-	MOVE.L	SamDisplay(PC),D0
-	LEA	BlankSample,A0
-	CMP.L	SamStart(PC),A0
-	BNE.B	rdsslwo
-	MOVEQ	#0,D0
-rdsslwo	MOVE.W	#215*40+33,TextOffset
-	BSR.W	Print6DecDigits	
-	
-	; --PT2.3D change: dotted line in sampler screen
-	MOVE.L	A2,-(SP)
-	
+
+	; --PT2.3D change: dotted line in sampler screen	
 	LEA	BitplaneData+6800,A0
 	LEA	BitplaneData+10240+6800,A1
 	MOVE.L	TextBplPtr(PC),A2
 	LEA	6800(A2),A2
-	
+
 	MOVEQ	#(40/4)-1,D0
 	MOVE.L	#$AAAAAAAA,D1 	; bit pattern
-dlloop
-	MOVE.L	(A2)+,D3
+dlloop	MOVE.L	(A2)+,D3
 	NOT.L	D3
 	AND.L	D1,D3
 	OR.L	D3,(A0)+
 	OR.L	D3,(A1)+
 	DBRA	D0,dlloop
-	
-	; fix two bits
+
+	; fix two trashed bits
 	LEA	-40(A1),A1
 	BCLR	#7,(A1)
 	SUBQ.L	#1,A0
 	BCLR	#1,(A0)
-	
-	MOVE.L	(SP)+,A2
+
 	; ----------------------------------------------
 	BRA.W	SetLoopSprites
 	
 	cnop 0,4
+SamPosDelta	dc.l 0
 SamStart	dc.l 0
 SamLength	dc.l 0
 SamOffset	dc.l 0
 SamDisplay	dc.l 0
 SavSamIns	dc.w 0
-EmptySampleFlag	dc.b 0,0
+SamFracBits	dc.w 0
+EmptySampleFlag	dc.b 0
+	EVEN
 
 SetDragBar
-	MOVE.W	#4*10-1,D0
-	MOVE.L	TextBplPtr(PC),A0
-	LEA	$15B8+2720(A0),A0
-	MOVEQ	#0,D1
-sdblop2	MOVE.L	D1,(A0)+
-	DBRA	D0,sdblop2
 	MOVE.L	SamLength(PC),D0
 	BEQ.W	Return3
 	MOVE.L	SamOffset(PC),D4
@@ -23858,34 +23958,23 @@ sdblop2	MOVE.L	D1,(A0)+
 	
 	;MULU.W	#311,D4
 	;DIVU.W	D0,D4
-	
-	; 128kb sample patch by hoffman
-	MOVE.L	D0,-(SP)
-	ASR.L	#1,D0
-	ASR.L	#1,D4
-	MULU.W	#311,D4
-	DIVU.W	D0,D4
-	MOVE.L	(SP)+,D0
-	
-	ADDQ.W	#4,D4
-	MOVE.W	D4,DragStart
-	
 	;MULU.W	#311,D5
 	;DIVU.W	D0,D5
 	
-	; 128kb sample patch by hoffman
-	MOVE.L	D0,-(SP)
-	ASR.L	#1,D0
-	ASR.L	#1,D5
+	; 128kb sample patch by h0ffman	
+	LSR.L	#1,D0	
+	LSR.L	#1,D4
+	LSR.L	#1,D5
+	MULU.W	#311,D4
+	DIVU.W	D0,D4	
 	MULU.W	#311,D5
 	DIVU.W	D0,D5
-	MOVE.L	(SP)+,D0
-	
+
+	ADDQ.W	#4,D4
 	ADDQ.W	#5,D5
+	MOVE.W	D4,DragStart
 	MOVE.W	D5,DragEnd
-	MOVE.L	GfxBase(PC),A6
-	JSR	_LVOOwnBlitter(A6)
-	JSR	_LVOWaitBlit(A6)
+	
 	MOVEQ	#68,D6
 	MOVEQ	#3,D7
 sdbloop	MOVE.W	D4,D0
@@ -23895,12 +23984,10 @@ sdbloop	MOVE.W	D4,D0
 	BSR.B	DrawLine
 	ADDQ.L	#1,D6
 	DBRA	D7,sdbloop
-	MOVE.L	GfxBase(PC),A6
-	JSR	_LVODisownBlitter(A6)
 	RTS
 
-DragStart	dc.w	0
-DragEnd		dc.w	0
+DragStart	dc.w 0
+DragEnd		dc.w 0
 
 ;---- Line Routine ----
 
@@ -24050,10 +24137,10 @@ SetLoopSprites2
 	;MULU.W	#314,D0
 	;DIVU.W	D3,D0
 	
-	; 128kb sample patch by hoffman
+	; 128kb sample patch by h0ffman
 	MOVE.L	D3,-(SP)
-	ASR.L	#1,D0
-	ASR.L	#1,D3
+	LSR.L	#1,D0
+	LSR.L	#1,D3
 	MULU.W	#314,D0
 	DIVU.W	D3,D0
 	MOVE.L	(SP)+,D3
@@ -24069,10 +24156,10 @@ SetLoopSprites2
 	;MULU.W	#314,D5
 	;DIVU.W	D3,D5
 	
-	; 128kb sample patch by hoffman
+	; 128kb sample patch by h0ffman
 	MOVE.L	D3,-(SP)
-	ASR.L	#1,D3
-	ASR.L	#1,D5
+	LSR.L	#1,D3
+	LSR.L	#1,D5
 	MULU.W	#314,D5
 	DIVU.W	D3,D5
 	MOVE.L	(SP)+,D3
@@ -24274,7 +24361,8 @@ plvskip	MOVE.L	(A0,D1.L),(A6)	; Read note from pattern
 	LSR.B	#4,D2
 	MOVE.B	(A6),D0		; Get higher 4 bits of instrument
 	AND.B	#$F0,D0
-	OR.B	D0,D2
+	OR.B	D0,D2	
+	AND.B	#31,D2		; PT2.3D bugfix: mask instrument
 	TST.B	D2
 	BEQ.W	SetRegisters	; Instrument was zero
 	
@@ -26379,115 +26467,6 @@ C_BoxData	EQU	S_BoxData+110
 N_BoxData	EQU	S_BoxData+132
 O_BoxData	EQU	S_BoxData+154
 
-	; period 113..936 -> 49.92Hz (PAL) delta for scopes (16.16 fixed-point)
-	; for (i = 113; i <= 936; i++)
-	;     x = round(((3546895.0 / i) * 65536.0) / 49.9204092835);
-	cnop 0,4
-ScopeDeltaTab
-	dc.l $274C519,$26F411F,$269D5B4,$2648235,$25F4604,$25A208B,$2551136,$2501777
-	dc.l $24B32C7,$246629F,$241A681,$23CFDEF,$2386873,$233E596,$22F74EA,$22B1600
-	dc.l $226C86F,$2228BD1,$21E5FC1,$21A43E1,$21637D2,$2123B39,$20E4DC0,$20A6F0F
-	dc.l $2069ED5,$202DCC1,$1FF2885,$1FB81D4,$1F7E866,$1F45BF2,$1F0DC32,$1ED68E4
-	dc.l $1EA01C4,$1E6A693,$1E35713,$1E01307,$1DCDA34,$1D9AC60,$1D68953,$1D370D8
-	dc.l $1D062B8,$1CD5EC1,$1CA64C0,$1C77483,$1C48DDC,$1C1B09C,$1BEDC94,$1BC119A
-	dc.l $1B94F81,$1B69620,$1B3E54D,$1B13CE1,$1AE9CB4,$1AC04A0,$1A97481,$1A6EC31
-	dc.l $1A46B8D,$1A1F272,$19F80C0,$19D1653,$19AB30D,$19856CE,$1960176,$193B2E9
-	dc.l $1916B07,$18F29B5,$18CEED7,$18ABA50,$1888C06,$18663DE,$18441C0,$1822591
-	dc.l $1800F39,$17DFEA0,$17BF3AE,$179EE4C,$177EE64,$175F3E0,$173FEA9,$1720EAB
-	dc.l $17023D0,$16E3E05,$16C5D36,$16A814E,$168AA3C,$166D7EB,$1650A4B,$1634148
-	dc.l $1617CD1,$15FBCD5,$15E0143,$15C4A0A,$15A971A,$158E863,$1573DD6,$1559762
-	dc.l $153F4FA,$152568D,$150BC0F,$14F256F,$14D92A1,$14C0397,$14A7843,$148F098
-	dc.l $1476C89,$145EC09,$1446F0D,$142F587,$1417F6C,$1400CAF,$13E9D46,$13D3125
-	dc.l $13BC840,$13A628C,$1390000,$137A090,$1364431,$134EADA,$1339481,$132411A
-	dc.l $130F09E,$12FA302,$12E583D,$12D1045,$12BCB12,$12A889B,$12948D6,$1280BBC
-	dc.l $126D143,$1259963,$1246415,$1233150,$122010B,$120D341,$11FA7E7,$11E7EF8
-	dc.l $11D586B,$11C3439,$11B125C,$119F2CB,$118D581,$117BA75,$116A1A2,$1158B00
-	dc.l $1147689,$1136438,$1125404,$11145E8,$11039DF,$10F2FE1,$10E27E9,$10D21F0
-	dc.l $10C1DF2,$10B1BE9,$10A1BCE,$1091D9D,$108214F,$10726E0,$1062E4A,$1053788
-	dc.l $1044294,$1034F6B,$1025E06,$1016E60,$1008076,$0FF9442,$0FEA9C0,$0FDC0EA
-	dc.l $0FCD9BD,$0FBF433,$0FB1048,$0FA2DF9,$0F94D40,$0F86E19,$0F79080,$0F6B472
-	dc.l $0F5D9E9,$0F500E2,$0F42959,$0F3534A,$0F27EB0,$0F1AB8A,$0F0D9D1,$0F00983
-	dc.l $0EF3A9D,$0EE6D1A,$0EDA0F7,$0ECD630,$0EC0CC2,$0EB44AA,$0EA7DE3,$0E9B86C
-	dc.l $0E8F440,$0E8315C,$0E76FBD,$0E6AF60,$0E5F042,$0E53260,$0E475B6,$0E3BA42
-	dc.l $0E30000,$0E246EE,$0E18F09,$0E0D84E,$0E022BA,$0DF6E4A,$0DEBAFC,$0DE08CD
-	dc.l $0DD57BA,$0DCA7C0,$0DBF8DE,$0DB4B10,$0DA9E53,$0D9F2A6,$0D94806,$0D89E70
-	dc.l $0D7F5E2,$0D74E5A,$0D6A7D5,$0D60250,$0D55DCA,$0D4BA40,$0D417B1,$0D37618
-	dc.l $0D2D576,$0D235C6,$0D19708,$0D0F939,$0D05C57,$0CFC060,$0CF2551,$0CE8B2A
-	dc.l $0CDF1E7,$0CD5987,$0CCC207,$0CC2B67,$0CB95A4,$0CB00BB,$0CA6CAC,$0C9D974
-	dc.l $0C94712,$0C8B584,$0C824C7,$0C794DB,$0C705BD,$0C6776B,$0C5E9E5,$0C55D28
-	dc.l $0C4D132,$0C44603,$0C3BB98,$0C331EF,$0C2A908,$0C220E0,$0C19976,$0C112C8
-	dc.l $0C08CD6,$0C0079C,$0BF831B,$0BEFF50,$0BE7C3A,$0BDF9D7,$0BD7826,$0BCF726
-	dc.l $0BC76D5,$0BBF732,$0BB783B,$0BAF9F0,$0BA7C4E,$0B9FF54,$0B98302,$0B90755
-	dc.l $0B88C4D,$0B811E8,$0B79825,$0B71F03,$0B6A680,$0B62E9B,$0B5B753,$0B540A7
-	dc.l $0B4CA96,$0B4551E,$0B3E03E,$0B36BF6,$0B2F843,$0B28525,$0B2129B,$0B1A0A4
-	dc.l $0B12F3E,$0B0BE68,$0B04E22,$0AFDE6A,$0AF6F40,$0AF00A1,$0AE928E,$0AE2505
-	dc.l $0ADB805,$0AD4B8D,$0ACDF9C,$0AC7432,$0AC094C,$0AB9EEB,$0AB350D,$0AACBB1
-	dc.l $0AA62D7,$0A9FA7D,$0A992A3,$0A92B47,$0A8C469,$0A85E07,$0A7F822,$0A792B8
-	dc.l $0A72DC7,$0A6C951,$0A66552,$0A601CB,$0A59EBB,$0A53C21,$0A4D9FC,$0A4784C
-	dc.l $0A4170F,$0A3B644,$0A355EC,$0A2F605,$0A2968E,$0A23786,$0A1D8EE,$0A17AC3
-	dc.l $0A11D06,$0A0BFB6,$0A062D1,$0A00658,$09FAA48,$09F4EA3,$09EF367,$09E9892
-	dc.l $09E3E26,$09DE420,$09D8A80,$09D3146,$09CD871,$09C8000,$09C27F2,$09BD048
-	dc.l $09B78FF,$09B2219,$09ACB93,$09A756D,$09A1FA7,$099CA40,$0997538,$099208D
-	dc.l $098CC40,$098784F,$09824BA,$097D181,$0977EA3,$0972C1F,$096D9F4,$0968823
-	dc.l $09636AA,$095E589,$09594C0,$095444D,$094F431,$094A46B,$09454FA,$09405DE
-	dc.l $093B716,$09368A1,$0931A80,$092CCB2,$0927F35,$092320B,$091E531,$09198A8
-	dc.l $0914C6F,$0910086,$090B4EC,$09069A0,$0901EA3,$08FD3F4,$08F8991,$08F3F7C
-	dc.l $08EF5B3,$08EAC35,$08E6304,$08E1A1D,$08DD180,$08D892E,$08D4125,$08CF966
-	dc.l $08CB1EF,$08C6AC0,$08C23DA,$08BDD3A,$08B96E2,$08B50D1,$08B0B06,$08AC580
-	dc.l $08A8040,$08A3B45,$089F68E,$089B21C,$0896DED,$0892A02,$088E65A,$088A2F4
-	dc.l $0885FD1,$0881CEF,$087DA4F,$08797F0,$08755D2,$08713F4,$086D256,$08690F8
-	dc.l $0864FD9,$0860EF9,$085CE58,$0858DF4,$0854DCF,$0850DE7,$084CE3C,$0848ECE
-	dc.l $0844F9D,$08410A7,$083D1EE,$0839370,$083552D,$0831725,$082D957,$0829BC4
-	dc.l $0825E6A,$082214A,$081E463,$081A7B5,$0816B40,$0812F03,$080F2FE,$080B730
-	dc.l $0807B9A,$080403B,$0800513,$07FCA21,$07F8F66,$07F54E0,$07F1A90,$07EE075
-	dc.l $07EA68F,$07E6CDE,$07E3362,$07DFA19,$07DC105,$07D8824,$07D4F77,$07D16FC
-	dc.l $07CDEB5,$07CA6A0,$07C6EBD,$07C370D,$07BFF8E,$07BC840,$07B9124,$07B5A39
-	dc.l $07B237E,$07AECF4,$07AB69B,$07A8071,$07A4A77,$07A14AC,$079DF11,$079A9A5
-	dc.l $0797467,$0793F58,$0790A77,$078D5C5,$078A140,$0786CE9,$07838BF,$07804C2
-	dc.l $077D0F2,$0779D4E,$07769D8,$077368D,$077036E,$076D07B,$0769DB4,$0766B18
-	dc.l $07638A7,$0760661,$075D446,$075A255,$075708E,$0753EF2,$0750D7F,$074DC36
-	dc.l $074AB16,$0747A20,$0744953,$07418AE,$073E832,$073B7DF,$07387B3,$07357B0
-	dc.l $07327D5,$072F821,$072C895,$0729930,$07269F2,$0723ADB,$0720BEB,$071DD21
-	dc.l $071AE7D,$0718000,$07151A9,$0712377,$070F56B,$070C784,$07099C3,$0706C27
-	dc.l $0703EB0,$070115D,$06FE42F,$06FB725,$06F8A3F,$06F5D7E,$06F30E0,$06F0466
-	dc.l $06ED810,$06EABDD,$06E7FCD,$06E53E0,$06E2816,$06DFC6F,$06DD0EA,$06DA588
-	dc.l $06D7A48,$06D4F2A,$06D242E,$06CF953,$06CCE9A,$06CA403,$06C798D,$06C4F38
-	dc.l $06C2504,$06BFAF1,$06BD0FF,$06BA72D,$06B7D7C,$06B53EA,$06B2A79,$06B0128
-	dc.l $06AD7F7,$06AAEE5,$06A85F3,$06A5D20,$06A346D,$06A0BD8,$069E363,$069BB0C
-	dc.l $06992D4,$0696ABB,$06942C0,$0691AE3,$068F325,$068CB84,$068A402,$0687C9D
-	dc.l $0685555,$0682E2C,$068071F,$067E030,$067B95E,$06792A9,$0676C10,$0674595
-	dc.l $0671F36,$066F8F3,$066D2CD,$066ACC3,$06686D6,$0666104,$0663B4E,$06615B3
-	dc.l $065F035,$065CAD2,$065A58A,$065805E,$0655B4C,$0653656,$065117B,$064ECBA
-	dc.l $064C814,$064A389,$0647F18,$0645AC2,$0643686,$0641264,$063EE5B,$063CA6D
-	dc.l $063A699,$06382DE,$0635F3D,$0633BB6,$0631847,$062F4F2,$062D1B7,$062AE94
-	dc.l $0628B8A,$0626899,$06245C1,$0622301,$062005A,$061DDCC,$061BB56,$06198F8
-	dc.l $06176B2,$0615484,$061326E,$0611070,$060EE8A,$060CCBB,$060AB04,$0608964
-	dc.l $06067DC,$060466B,$0602511,$06003CE,$05FE2A2,$05FC18D,$05FA08F,$05F7FA8
-	dc.l $05F5ED7,$05F3E1D,$05F1D79,$05EFCEB,$05EDC74,$05EBC13,$05E9BC8,$05E7B93
-	dc.l $05E5B74,$05E3B6B,$05E1B77,$05DFB99,$05DDBD1,$05DBC1E,$05D9C80,$05D7CF8
-	dc.l $05D5D85,$05D3E27,$05D1EDE,$05CFFAA,$05CE08B,$05CC181,$05CA28C,$05C83AB
-	dc.l $05C64DE,$05C4627,$05C2783,$05C08F4,$05BEA79,$05BCC13,$05BADC0,$05B8F81
-	dc.l $05B7157,$05B5340,$05B353D,$05B174D,$05AF972,$05ADBAA,$05ABDF5,$05AA054
-	dc.l $05A82C6,$05A654B,$05A47E3,$05A2A8F,$05A0D4E,$059F01F,$059D304,$059B5FB
-	dc.l $0599905,$0597C22,$0595F51,$0594293,$05925E7,$059094E,$058ECC7,$058D052
-	dc.l $058B3EF,$058979F,$0587B61,$0585F34,$058431A,$0582711,$0580B1A,$057EF35
-	dc.l $057D362,$057B7A0,$0579BF0,$0578051,$05764C3,$0574947,$0572DDC,$0571283
-	dc.l $056F73A,$056DC03,$056C0DC,$056A5C7,$0568AC2,$0566FCE,$05654EB,$0563A19
-	dc.l $0561F57,$05604A6,$055EA06,$055CF75,$055B4F6,$0559A86,$0558027,$05565D9
-	dc.l $0554B9A,$055316B,$055174D,$054FD3E,$054E340,$054C951,$054AF72,$05495A3
-	dc.l $0547BE4,$0546234,$0544894,$0542F04,$0541583,$053FC11,$053E2AF,$053C95C
-	dc.l $053B018,$05396E4,$0537DBE,$05364A8,$0534BA1,$05332A9,$05319C0,$05300E6
-	dc.l $052E81A,$052CF5E,$052B6B0,$0529E11,$0528580,$0526CFE,$052548B,$0523C26
-	dc.l $05223CF,$0520B87,$051F34E,$051DB22,$051C305,$051AAF6,$05192F5,$0517B02
-	dc.l $051631E,$0514B47,$051337E,$0511BC3,$0510416,$050EC77,$050D4E5,$050BD62
-	dc.l $050A5EC,$0508E83,$0507728,$0505FDB,$050489B,$0503169,$0501A44,$050032C
-	dc.l $04FEC21,$04FD524,$04FBE34,$04FA752,$04F907C,$04F79B3,$04F62F8,$04F4C49
-	dc.l $04F35A8,$04F1F13,$04F088B,$04EF210,$04EDBA2,$04EC540,$04EAEEB,$04E98A3
-	dc.l $04E8268,$04E6C39,$04E5616,$04E4000,$04E29F6,$04E13F9,$04DFE08,$04DE824
-	dc.l $04DD24C,$04DBC80,$04DA6C0,$04D910C,$04D7B65,$04D65C9,$04D503A,$04D3AB7
-	dc.l $04D253F,$04D0FD4,$04CFA74,$04CE520,$04CCFD8,$04CBA9C,$04CA56B,$04C9047
-	dc.l $04C7B2D,$04C6620,$04C511E,$04C3C28,$04C273D,$04C125D,$04BFD89,$04BE8C1
-
 ;************************** CHIP DATA HUNK **************************
 
 	SECTION ptdata,DATA_C
@@ -26952,6 +26931,8 @@ WaitRasterLines1	ds.w	1
 WaitRasterLines2	ds.w	1
 VolToolBoxShown	ds.b	1
 ShowRasterbar	ds.b	1
+
+ScopeLUT	ds.b	((32+1)*256)+1
 
 END
 

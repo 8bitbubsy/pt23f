@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-              25th of January, 2023
+               7th of March, 2023
 
  If you find any bugs, please email me at olav.sorensen@live.no
  Based on a disassembly of PT2.3D.
@@ -20,6 +20,17 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+ 
+ == Update 07.03.2023 ===============================================
+ - Fixed: Text editing delays were too short when writing/deleting
+   characters and moving the text cursor (in comparison to PT2.3D).
+ - Some small optimizations were done to the quadrascope to use less
+   frame time. This leads to less flickering of scopes on 7MHz 68k
+   Amigas, which would happen because of raster beam racing.
+ - The waveform plotter in the sample editor has been given a small
+   optimization. It's still very slow and flickery on a 7MHz 68k
+   Amiga, though...
+ ====================================================================
  
  == Update 25.01.2023 ===============================================
  - Fixed: Weird things would happen if you were in text/number edit
