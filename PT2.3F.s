@@ -671,7 +671,6 @@ Return1	RTS
 ;---- Open Lots Of Things ----
 
 OpenLotsOfThings
-	BSR.W	ScopeInitLUT
 	MOVE.B	$BFE001,LEDStatus
 	BSET	#1,$BFE001
 	JSR	TurnOffVoices
@@ -1879,23 +1878,6 @@ ns_posfrac	= 20 ; W
 
 ScopeInfoSize	= 24 ; should be a multiple of 4!
 
-ScopeInitLUT
-	MOVE.W	#(32+1)*256,D7
-	LEA	ScopeLUT,A0
-	ADD.W	D7,A0
-	ADDQ.W	#1,A0
-.loop	MOVE.B	D7,D0
-	EXT.W	D0		; D0.W = -128..127 (sample value)
-	MOVE.W	D7,D1
-	LSR.W	#8,D1		; D1.W = 0..32 (volume)
-	NEG.W	D1
-	MULS.W	D1,D0	
-	ASR.W	#6,D0		; D0.B = -63..64 (bigger range for real VU-meter scan)
-	MOVE.B	D0,-(A0)
-	SUBQ.W	#1,D7
-	BPL.B	.loop	
-	RTS
-
 Scope
 	LEA	audchan1temp,A0
 	LEA	ScopeSamInfo,A1
@@ -2103,14 +2085,12 @@ ScoDraw
 	BNE.W	sdlpos
 	TST.B	EdEnable
 	BNE.W	sdlpos
-	LSR.W	#1,D5		; D5 = 0..64 -> 0..32
-	CMP.B	#32,D5
+	CMP.B	#64,D5
 	BLS.B	sdsk1
-	MOVEQ	#32,D5
-sdsk1	LSL.W	#8,D5
-	LEA	ScopeLUT,A5
-	ADD.W	D5,A5
-	MOVEQ	#0,D5
+	MOVEQ	#64,D5
+sdsk1	EXT.W	D5
+	LSL.W	#7,D5
+	NEG.W	D5
 
 	MOVE.L	ns_sampleptr(A2),A0
 	;ADD.L	TextBplPtr,A1
@@ -2132,10 +2112,10 @@ sdlp2LOOP
 	CMP.L	A4,A0			; did we reach sample loop end yet?
 	BHS.B	sWrapLoop		; yes, wrap loop
 sdlnowrap
-	MOVE.B	(A0)+,D5		; get byte from sample data
-	MOVE.B	(A5,D5.W),D0
+	MOVE.B	(A0)+,D0		; get byte from sample data	
 	EXT.W	D0			; extend to word
-	ASR.W	#2,D0			; -63..64 -> -15..16
+	MULS.W	D5,D0			; multiply by volume
+	SWAP	D0			; D0.W = -15..16
 	MOVE.W	D0,D1
 	LSL.W	#5,D0			; * 32
 	LSL.W	#3,D1			; * 8
@@ -2159,10 +2139,10 @@ sdlp2
 	CMP.L	A4,A0			; did we reach sample end yet?
 	BHS.B	.drawit			; yes, draw empty sample
 	; -----------------------------
-	MOVE.B	(A0)+,D5		; get byte from sample data
-	MOVE.B	(A5,D5.W),D0
+	MOVE.B	(A0)+,D0		; get byte from sample data
 	EXT.W	D0			; extend to word
-	ASR.W	#2,D0			; -63..64 -> -15..16
+	MULS.W	D5,D0			; multiply by volume
+	SWAP	D0			; D0.W = -15..16
 	MOVE.W	D0,D1
 	LSL.W	#5,D0			; * 32
 	LSL.W	#3,D1			; * 8
@@ -2304,15 +2284,13 @@ rScoDraw
 	BNE.W	rsdkip
 	TST.B	EdEnable
 	BNE.W	rsdkip
-	ST	D7		; do draw scopes
-rsdkip	LSR.W	#1,D5		; D5 = 0..64 -> 0..32
-	CMP.B	#32,D5
+	ST	D7			; do draw scopes
+rsdkip
+	CMP.B	#64,D5
 	BLS.B	rsdsk1
-	MOVEQ	#32,D5
-rsdsk1	LSL.W	#8,D5
-	LEA	ScopeLUT,A5
-	ADD.W	D5,A5
-	MOVEQ	#0,D5
+	MOVEQ	#64,D5
+rsdsk1	EXT.W	D5
+	NEG.W	D5
 
 	MOVE.L	ns_sampleptr(A2),A0
 	;ADD.L	TextBplPtr,A1
@@ -2336,9 +2314,9 @@ rsdlp2LOOP
 	CMP.L	D4,A0			; did we reach sample loop end yet?
 	BHS.B	rWrapLoop		; yes, wrap loop
 rsdlnowrap
-	MOVE.B	(A0)+,D5		; get byte from sample data
-	MOVE.B	(A5,D5.W),D0
+	MOVE.B	(A0)+,D0		; get byte from sample data
 	EXT.W	D0			; extend to word
+	MULS.W	D5,D0			; multiply by volume
 	
 	MOVE.W	D0,D1			; D1 = amplitude
 	BPL.B 	rnotSigned		; D1 >= 0?
@@ -2350,8 +2328,9 @@ rnotSigned
 rnoNewStore
 	TST.B	D7			; draw scopes or not?
 	BEQ.B	rsdlskip		; nope...
-
-	ASR.W	#2,D0			; -63..64 -> -15..16
+	
+	ASR.W	#8,D0			; shift down
+	ASR.B	#1,D0
 	MOVE.W	D0,D1
 	LSL.W	#5,D0			; * 32
 	LSL.W	#3,D1			; * 8
@@ -2378,9 +2357,9 @@ rsdlp2
 	CMP.L	D4,A0			; did we reach sample end yet?
 	BHS.B	rnoNewStore2		; yes, draw empty sample
 	
-	MOVE.B	(A0)+,D5		; get byte from sample data
-	MOVE.B	(A5,D5.W),D0
+	MOVE.B	(A0)+,D0		; get byte from sample data
 	EXT.W	D0			; extend to word
+	MULS.W	D5,D0			; multiply by volume
 	
 	MOVE.W	D0,D1			; D1 = amplitude
 	BPL.B 	rnotSigned2		; D1 >= 0?
@@ -2392,8 +2371,9 @@ rnotSigned2
 rnoNewStore2
 	TST.B	D7			; draw scopes or not?
 	BEQ.B	rsdlskip2		; nope...
-
-	ASR.W	#2,D0			; -63..64 -> -15..16
+	
+	ASR.W	#8,D0			; shift down
+	ASR.B	#1,D0
 	MOVE.W	D0,D1
 	LSL.W	#5,D0			; * 32
 	LSL.W	#3,D1			; * 8
@@ -2700,28 +2680,20 @@ svum4	LEA	200(A0),A0	; A0 = VU #4 sprite
 	BEQ.B	svumend		; yes, don't sink
 	ADDQ.B	#1,(A0)		; sink
 svumend	RTS
-
-	; x = round[x * (47.0 / 64.0)]
-RealVULUT
-	dc.b  0, 1, 1, 2, 3, 4, 4, 5, 6, 7, 7, 8, 9,10,10,11
-	dc.b 12,12,13,14,15,15,16,17,18,18,19,20,21,21,22,23
-	dc.b 24,24,25,26,26,27,28,29,29,30,31,32,32,33,34,35
-	dc.b 35,36,37,37,38,39,40,40,41,42,43,43,44,45,46,46
-	dc.b 47
-	EVEN
 	
 RealVUMeters
 	LEA	VUSpriteData1,A0
 	LEA	6+audchan1toggle(PC),A1
-	LEA	RealVULUT(PC),A2
 	MOVEQ	#-23,D2		; initial sprite value (-23 = 233)
-	MOVEQ	#5,D5		; VU-Meter sink value (higher = faster sink)
+	MOVE.W	#376,D4		; magical MUL value! ( 65536 / (8192/47) )
+	MOVE.W	#700,D5		; VU-Meter sink value (higher = faster sink)
+	MOVE.L	#65536/2,D6	; rounding bias
 	; ------------------
 	MOVEQ	#4-1,D3
-rvuloop	MOVE.W	(A1),D0		; D0 = 0..64 (average peak)
-	CMP.W	#64,D0
-	BHI.B	.rvuhi
-.skip0	MOVE.B	(A2,D0.W),D0	; D0 = 0..47, sprite value)
+rvuloop	MOVE.W	(A1),D0		; D0 = 0..8192 (average peak)
+	MULU.W	D4,D0		; D0 *= 384
+	ADD.L	D6,D0		; D0 += 32768
+	SWAP	D0		; D0 /= 65536 (0..47, sprite value)
 	; ------------------
 	MOVE.B	D2,D1		; D1 = 233
 	SUB.B	D0,D1		; D1 -= D0
@@ -2735,11 +2707,8 @@ rvuloop	MOVE.W	(A1),D0		; D0 = 0..64 (average peak)
 	LEA	200(A0),A0	; A0 = next VU-meter sprite value
 	DBRA	D3,rvuloop
 	RTS
-	
-.rvuhi	MOVEQ	#64,D0
-	BRA.B	.skip0
 
-; last value = sample peak from scopes (0..128, for real VU-meters)
+; last value = sample peak from scopes (0..8192, for real VU-meters)
 audchan1toggle	dc.w 1,  78,$00,0
 audchan2toggle	dc.w 1, 518,$16,0
 audchan3toggle	dc.w 1, 958,$2C,0
@@ -26931,8 +26900,6 @@ WaitRasterLines1	ds.w	1
 WaitRasterLines2	ds.w	1
 VolToolBoxShown	ds.b	1
 ShowRasterbar	ds.b	1
-
-ScopeLUT	ds.b	((32+1)*256)+1
 
 END
 
