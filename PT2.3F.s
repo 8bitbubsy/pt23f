@@ -11126,9 +11126,9 @@ ChangeSpeed
 
 SpeedUp	MOVE.W	DefaultSpeed,D1
 	ADDQ.B	#1,D1
-	CMP.B	#$1F,D1	; --PT2.3D bug fix: was $FF
+	CMP.B	#$FF,D1
 	BLS.B	spedup2
-	MOVE.W	#$1F,D1	; --PT2.3D bug fix: was $FF
+	MOVE.W	#$FF,D1
 spedup2	MOVE.W	D1,DefaultSpeed
 	MOVE.L	D1,CurrSpeed
 	BSR.B	ShowSpeed
@@ -12045,7 +12045,7 @@ POSED_Bottom
 	MOVE.L	D7,SongPosition
 	BRA.B	POSED_Update
 	
-POSED_OneDown	; ; --PT2.3D bug fix: could overflow (funny bug to look at!)
+POSED_OneDown	; --PT2.3D bug fix: could overflow
 	ST	SetSignalFlag
 	MOVE.L	D1,-(SP)
 	MOVEQ	#0,D1
@@ -12069,7 +12069,8 @@ peodok
 	BSR.B	POSED_ScrollDelay
 	BRA.W	POSED_Update
 	
-POSED_ScrollDelay	; added in PT2.3E to prevent insanely fast POS-Ed scroll on faster Amigas
+	; added in PT2.3E to prevent insanely fast scroll on faster Amigas
+POSED_ScrollDelay
 	MOVEM.L	A0/D0-D1,-(SP)
 	LEA	$DFF006,A0
 	MOVE.W	#255,D0
@@ -13970,7 +13971,7 @@ lbC00B83C	BRA.W	lbC00B62A
 lososkip
 	CMP.L	#'M.K.',sd_magicid(A0)
 	BEQ.B	lososkip2
-	BSR.W	MahoneyAndKaktus
+	BSR.W	NotMKFormat
 lososkip2
 	LEA	LoadingSongText,A0
 	BSR.W	ShowStatusText
@@ -14070,7 +14071,7 @@ losoloop8
 	MOVEM.L	(SP)+,D0-D4/A0/A1
 	RTS
 
-MahoneyAndKaktus
+NotMKFormat
 	LEA	Loadas31Text(PC),A0
 	BSR.W	AreYouSure
 	BEQ.B	putmk
@@ -16691,7 +16692,7 @@ ChordMajor7
 	MOVE.W	D0,ChordNote2
 	ADDQ.W	#3,D0
 	MOVE.W	D0,ChordNote3
-	ADDQ.W	#4,D0	; --PT2.3D bug fix: improved major7 chord (was #3)
+	ADDQ.W	#4,D0	; --PT2.3D bug fix: fixed major7 chord (was #3)
 	MOVE.W	D0,ChordNote4
 	
 CheckOctaves3
@@ -17911,7 +17912,7 @@ lbC00ED1A
 lm64Patts
 	CMP.L	#'M.K.',sd_magicid(A0)
 	BEQ.B	lbC00ED4A
-	BSR.W	MahoneyAndKaktus
+	BSR.W	NotMKFormat
 	BNE.B	lbC00ED4A
 	MOVE.L	FileHandle(PC),D1
 	MOVE.L	#600,D2
@@ -18798,8 +18799,8 @@ cruiskip2
 	MOVEM.L	RegBackup(PC),D0-D7/A0-A6
 	RTS
 
-RegBackup		dcb.b 60	; 8*4 + 7*4 [D0-D7/A0-A6]
 	CNOP 0,4
+RegBackup		dcb.l 15	; 8*4 + 7*4 [D0-D7/A0-A6]
 CrunchSpeed		dc.l 0
 CrunchBufferMode	dc.l 0
 CrunchGainText		dc.b 'Gain...    %',0,0
@@ -19659,7 +19660,8 @@ TextTable
 	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 ; 224
 	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	
+	EVEN
+
 ;---- Set Sprite Position ----
 
 SetSpritePos
@@ -21210,6 +21212,7 @@ spnloop2
 
 fitutexttab
 	dc.b " 0+1+2+3+4+5+6+7-8-7-6-5-4-3-2-1"
+	EVEN
 
 DisplayPreset
 	MOVEQ	#19,D0
@@ -22454,7 +22457,7 @@ LoopToggle
 	MULU.W	#30,D1
 	LEA	12(A0,D1.W),A0
 	
-	TST.W	(A0)		; 8bitbubsy: sample length == 0?
+	TST.W	(A0)		; sample length == 0?
 	BEQ.B	LTSmpEmpty	; yup, don't allow loop toggle...
 		
 	TST.W	LoopOnOffFlag
@@ -22673,10 +22676,10 @@ resamskip2
 	MOVE.W	InsNum(PC),D1
 	MULU.W	#30,D1
 	LEA	12(A0,D1.W),A0
-	LSR.L	#1,D7	; len/2 -> (A0)
+	LSR.L	#1,D7		; len/2 -> (A0)
 	MOVE.W	D7,(A0)
-	CLR.B	2(A0)	; clear finetune
-	CLR.W	4(A0)	; clear repeat
+	CLR.B	2(A0)		; clear finetune
+	CLR.W	4(A0)		; clear repeat
 	MOVE.W	#1,6(A0)	; replen=1
 	JSR	RestorePtrCol
 	BSR.W	ClearSamStarts
@@ -22709,7 +22712,7 @@ samcut2	BSR.W	TurnOffVoices
 	BLO.W	EmptySampleError
 	
 	MOVE.L	D0,A1
-	MOVE.L	D0,A2		; sample start
+	MOVE.L	D0,A2			; sample start
 	MOVE.L	D0,A3
 	MOVE.L	D0,A4
 	MOVE.L	D0,A5
@@ -22723,7 +22726,7 @@ samcut2	BSR.W	TurnOffVoices
 	BLO.B	samsome
 	MOVE.L	D2,D0
 	SUBQ.L	#1,D0
-samsome	ADD.L	D0,A4	; mark end
+samsome	ADD.L	D0,A4		; mark end
 	ADD.L	D2,A5		; sample end
 	
 	MOVE.L	A3,D0
@@ -22969,7 +22972,7 @@ sapaski	MOVE.L	D1,D0
 	BRA.W	RedrawSample
 
 RampVolume
-	BSR.W	HideLoopSprites	; -PT2.3D bug fix
+	BSR.W	HideLoopSprites		; -PT2.3D bug fix
 	ST	VolToolBoxShown		; --
 	MOVE.L	TextBplPtr(PC),A0
 	LEA	6209(A0),A0
@@ -22994,19 +22997,19 @@ ravlop1	MOVE.B	(A1)+,(A0)+
 	BSR.W	ShowVolSliders
 	JSR	WaitForButtonUp
 ravloop
-	TST.W	AbortDecFlag	; --PT2.3D bug fix
+	TST.W	AbortDecFlag		; --PT2.3D bug fix
 	BNE.B	ravskip			; --
 	BTST	#2,$DFF016		; right mouse button
 	BEQ.B	ExitVolBox
-ravskip						; --
+ravskip					; --
 	JSR	WaitForButtonUp		; --
 	CLR.W	AbortDecFlag
-ravskip2					; --
+ravskip2				; --
 	JSR	DoKeyBuffer
 	MOVE.B	RawKeyCode(PC),D2
 	CMP.B	#68,D2
 	BEQ.B	ExitVolBox
-	BTST	#6,$BFE001	; left mouse button
+	BTST	#6,$BFE001		; left mouse button
 	BNE.B	ravloop
 	MOVE.W	MouseX(PC),D0
 	MOVE.W	MouseY(PC),D1
@@ -24161,9 +24164,9 @@ HideLoopSprites	; new PT2.3E routine
 	MOVE.W	#270,D1
 	MOVEQ	#64,D2
 	LEA	LoopSpriteData1,A0
-	BSR SetSpritePos
+	BSR	SetSpritePos
 	LEA	LoopSpriteData2,A0
-	BSR SetSpritePos
+	BSR	SetSpritePos
 	MOVEM.L	(SP)+,D0-D2/A0
 	RTS
 	
@@ -24670,26 +24673,31 @@ Return3	RTS
 PerNop	MOVE.W	n_period(A6),6(A5)
 	MOVE.W	n_period(A6),n_periodout(A6)	; Set scope period
 	RTS
-	
-	; DIV -> LUT optimization. DIVU is 140+ cycles on a 68000.
-ArpTab
-	dc.b 0,1,2,0,1,2,0,1
-	dc.b 2,0,1,2,0,1,2,0
-	dc.b 1,2,0,1,2,0,1,2
-	dc.b 0,1,2,0,1,2,0,1
 
 Arpeggio
 	MOVEQ	#0,D0
 	MOVE.L	Counter(PC),D0
-	AND.B	#$1F,D0			; just in case
+	AND.L	#255,D0			; just in case
 	MOVE.B	ArpTab(PC,D0.W),D0
 	CMP.B	#1,D0
-	BEQ.B	Arpeggio1
+	BEQ.W	Arpeggio1
 	CMP.B	#2,D0
-	BEQ.B	Arpeggio2
+	BEQ.W	Arpeggio2
 Arpeggio0
 	MOVE.W	n_period(A6),D2
-	BRA.B	ArpeggioSet
+	BRA.W	ArpeggioSet
+	
+	; DIV -> LUT optimization. DIVU is up to 140+ cycles on a 68000.
+ArpTab
+        dc.b 0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1
+        dc.b 2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
+        dc.b 1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2
+        dc.b 0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1
+        dc.b 2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
+        dc.b 1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2
+        dc.b 0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1
+        dc.b 2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
+	EVEN
 
 Arpeggio1
 	MOVEQ	#0,D0
@@ -25415,7 +25423,7 @@ VibratoTable
 	dc.b 255,253,250,244,235,224,212,197
 	dc.b 180,161,141,120, 97, 74, 49, 24
 	
-	; DIV -> LUT optimization. Maybe a bit extreme, but DIVU is 140+
+	; DIV -> LUT optimization. Maybe a bit extreme, but DIVU is up to 140+
 	; cycles on a 68000.
 RetrigTab
 	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -25992,7 +26000,7 @@ DefCol	dc.w	$000,$BBB,$888,$555,$FD0,$D04,$000,$34F
 	dc.b	1 ; IFFLoop
 	dc.b	0 ; SysReqFlag
 	dc.w	125 ; Tempo
-	dc.w	300 ; DMAWait (not used)
+	dc.w	300 ; DMAWait (not used anymore)
 	dc.w	24  ; TuneNote (C-3)
 	dc.w	$20 ; TToneVol
 	dc.b	0 ; LoadTrackToBufferFlag
@@ -26768,6 +26776,7 @@ PlayPosSpriteData
 
 	SECTION ptbss,BSS
 
+	CNOP 0,4
 FileInfoBlock	ds.b	256
 FIB_EntryType	EQU	FileInfoBlock+4
 FIB_FileName	EQU	FileInfoBlock+8
