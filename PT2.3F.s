@@ -33,7 +33,7 @@ RasterWait2_020		EQU 40-1
 sd_sampleinfo		EQU 20
 sd_numofpatt		EQU 950
 sd_pattpos		EQU 952
-sd_mahokakt		EQU 1080
+sd_magicid		EQU 1080
 sd_patterndata		EQU 1084
 
 ; audXtemp offsets
@@ -724,7 +724,7 @@ alotloop1
 	
 	MOVE.L	SongDataPtr,A0
 	MOVE.W	#$017F,sd_numofpatt(A0)
-	MOVE.L	#'M.K.',sd_mahokakt(A0)	; M.K. again...
+	MOVE.L	#'M.K.',sd_magicid(A0)	; M.K. again...
 	
 	MOVEQ	#6,D0
 	MOVE.L	D0,CurrSpeed
@@ -9255,7 +9255,7 @@ caloop	MOVE.W	D0,(A1)+
 	BNE.B	caloop
 	MOVE.L	SongDataPtr,A0
 	MOVE.W	#$17F,sd_numofpatt(A0)
-	MOVE.L	#'M.K.',sd_mahokakt(A0)  ; M.K. all the way...
+	MOVE.L	#'M.K.',sd_magicid(A0)  ; M.K. all the way...
 	SF	EdEnable
 	CLR.L	CurrPos
 	CLR.L	SongPosition
@@ -13938,7 +13938,7 @@ lbC00B75E	MOVE.L	4(A0),CrunchedSongLength
 	BSR.W	ShowAllRight
 lbC00B796
 	MOVE.L	SongDataPtr,A0
-	CMP.L	#'M!K!',sd_mahokakt(A0)
+	CMP.L	#'M!K!',sd_magicid(A0)
 	BNE.W	lososkip
 	TST.W	OutOfMemoryFlag
 	BNE.W	lososkip2
@@ -13968,7 +13968,7 @@ lbC00B80E	MOVE.L	SongAllocSize(PC),D0
 lbC00B83C	BRA.W	lbC00B62A
 
 lososkip
-	CMP.L	#'M.K.',sd_mahokakt(A0)
+	CMP.L	#'M.K.',sd_magicid(A0)
 	BEQ.B	lososkip2
 	BSR.W	MahoneyAndKaktus
 lososkip2
@@ -14083,7 +14083,7 @@ makloop	MOVE.L	(A0),484(A0)
 	CMP.L	A0,A1
 	BNE.B	makloop
 	MOVE.L	SongDataPtr,A0
-	LEA	sd_mahokakt(A0),A1
+	LEA	sd_magicid(A0),A1
 	LEA	sd_numofpatt(A0),A0
 makloop2
 	MOVE.W	4(A0),(A0)+
@@ -14095,7 +14095,7 @@ makloop2
 
 putmk
 	MOVE.L	SongDataPtr,A0
-	MOVE.L	#'M.K.',sd_mahokakt(A0)
+	MOVE.L	#'M.K.',sd_magicid(A0)
 	MOVEQ	#-1,D0
 	RTS
 
@@ -17495,10 +17495,10 @@ dssoloop	MOVE.B	(A0)+,(A1)+
 	LSL.L	#2,D0
 	ADD.L	D0,DiskDataLength
 	MOVE.B	#$7F,951(A0)
-	MOVE.L	#'M.K.',sd_mahokakt(A0)
+	MOVE.L	#'M.K.',sd_magicid(A0)
 	CMP.W	#$40,HighPattNum
 	BLO.B	lbC00E82C
-	MOVE.L	#'M!K!',sd_mahokakt(A0)
+	MOVE.L	#'M!K!',sd_magicid(A0)
 lbC00E82C	MOVE.B	PackMode,D0
 	BTST	#0,D0
 	BEQ.B	lbC00E852
@@ -17870,7 +17870,7 @@ LoadModule3
 	MOVE.B	#128,sd_numofpatt(A0)
 songLenOK
 	MOVE.B	#127,sd_numofpatt+1(A0) ; Set repeatstart to 127
-	CMP.L	#'M!K!',sd_mahokakt(A0)
+	CMP.L	#'M!K!',sd_magicid(A0)
 	BNE.W	lm64Patts
 	
 	; 100 patterns MOD (M!K!)
@@ -17909,7 +17909,7 @@ lbC00ED1A
 	
 	; 64 patterns MOD (M.K.)
 lm64Patts
-	CMP.L	#'M.K.',sd_mahokakt(A0)
+	CMP.L	#'M.K.',sd_magicid(A0)
 	BEQ.B	lbC00ED4A
 	BSR.W	MahoneyAndKaktus
 	BNE.B	lbC00ED4A
@@ -17967,7 +17967,7 @@ lbC00EDC8
 	MOVE.L	DOSBase(PC),A6
 	JSR	_LVORead(A6)
 	MOVE.L	SongDataPtr(PC),A0
-	MOVE.L	#'M.K.',sd_mahokakt(A0)
+	MOVE.L	#'M.K.',sd_magicid(A0)
 	TST.L	D4
 	BEQ.B	lbC00EE2C
 	MOVE.L	D4,D0
@@ -18471,10 +18471,10 @@ dsmloop
 	LSL.L	#2,D0
 	ADD.L	D0,DiskDataLength	; Add 1024 x NumOfPatt
 	MOVE.B	#127,sd_numofpatt+1(A0) ; Set maxpatt to 127
-	MOVE.L	#'M.K.',sd_mahokakt(A0)	; M.K. again...
+	MOVE.L	#'M.K.',sd_magicid(A0)	; M.K. again...
 	CMP.W	#64,HighPattNum
 	BLO.B	dsmskip2
-	MOVE.L	#'M!K!',sd_mahokakt(A0) ; over 64 patterns...
+	MOVE.L	#'M!K!',sd_magicid(A0) ; over 64 patterns...
 dsmskip2
 	CMP.W	#1,makeExeModFlag
 	BEQ.W	WriteExeModule
