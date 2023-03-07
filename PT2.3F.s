@@ -437,7 +437,7 @@ MainLoop
 .skip2	BSR.W	ArrowKeys	
 	BRA.W	CheckGadgets
 	
-	cnop 0,4
+	CNOP 0,4
 PTProcess	dc.l	0
 PTProcessTmp	dc.l	0
 rb_CurrentDir	dc.l	0
@@ -529,7 +529,7 @@ cusskip2
 	RTS
 
 ProgLockMode	dc.b	0
-	cnop 0,4
+	CNOP 0,4
 ; Key sequence phrase used to lock PT
 LockPhrase	dc.l	$28183327	; 'l', 'o', 'c', 'k' key sequence
 LockPhrasePtr	dc.l	LockPhrase
@@ -540,7 +540,7 @@ UnlockPhrase
 	dc.l	$FFFFFFFF
 	dc.w	$FFFF
 	
-	cnop 0,4
+	CNOP 0,4
 UnlockPhrasePtr	dc.l	UnlockPhrase
 ; ----
 
@@ -842,7 +842,7 @@ alotlp5	MOVE.W	(A5),D4
 VUmeterColRegs
 	dc.w	$01AA,$01AC,$01AE,$01B2,$01B4,$01B6
 	
-	cnop 0,4
+	CNOP 0,4
 CopListBpl4Ptr	dc.l	0
 ;CopListPtr	dc.l	0	(unneeded)
 ;CopListBplPtr	dc.l	0	(unneeded)
@@ -917,7 +917,7 @@ alotloop2
 	DBRA	D2,alotloop2
 	RTS
 
-	cnop 0,4
+	CNOP 0,4
 PointerSpritePtr	dc.l	0
 
 	
@@ -1014,7 +1014,7 @@ vbiend
 .skip2
 	RTS
 	
-	cnop 0,4
+	CNOP 0,4
 VBIntServer
 	dc.l 0,0
 	dc.b 2,0 ; type, priority
@@ -1142,7 +1142,7 @@ WorkbenchToFront
 	MOVEM.L	(SP)+,D1/A0-A1/A6
 	RTS	
 
-	cnop 0,4
+	CNOP 0,4
 PTScreenStruct	
 	dc.w 0			; LeftEdge
 	dc.w 0			; TopEdge
@@ -1169,7 +1169,7 @@ PTScreenStruct
 	;dc.l	$00000000
 	;dc.l	$00000000
 	
-	cnop 0,4
+	CNOP 0,4
 PTScreenHandle dc.l 0
 WBScreenHandle dc.l 0
 
@@ -1193,7 +1193,7 @@ ResetMusicInt
 	JSR	_LVORemIntServer(A6)
 	RTS
 
-	cnop 0,4
+	CNOP 0,4
 MusicIntServer
 	dc.l 0,0
 	dc.b 2,1 ; type, priority
@@ -1292,7 +1292,7 @@ RemInt	LEA	MusicIntServer(PC),A1
 	RTS
 
 CIAAname	dc.b 'ciaa.resource',0
-	cnop 0,4
+	CNOP 0,4
 CIAAbase	dc.l	0
 TimerFlag	dc.l	0
 TimerValue	dc.l	0
@@ -1401,7 +1401,7 @@ SetTemA	MOVE.B	D1,ciatalo(A5)
 	RTS
 
 RealTempo	dc.w 125
-	cnop 0,4
+	CNOP 0,4
 CIAAaddr	dc.l 0
 
 ;---- Input Event Handler ----
@@ -1440,7 +1440,7 @@ ResetInputHandler
 	JSR	_LVOCloseDevice(A6)
 	RTS
 
-	cnop 0,4
+	CNOP 0,4
 InpEvStuff
 	dc.l	0,0
 	dc.b	2,52 ; type, priority
@@ -1724,7 +1724,7 @@ ShowTimer
 	JMP	Print2DecDigits
 
 PatternTicks	dc.w	0
-	cnop 0,4
+	CNOP 0,4
 TimerTicks	dc.l	0
 
 ;---- Spectrum Analyzer ----
@@ -2416,7 +2416,7 @@ HideAboutScreen
 DisableScopeMuting	dc.b 0,0
 ScopeEnable		dc.b 0
 AnaScopFlag		dc.b 1
-	cnop 0,4
+	CNOP 0,4
 xBlankSample		dc.l BlankSample
 SamDrawStart		dc.l 0
 SamDrawEnd		dc.l 0
@@ -2532,7 +2532,7 @@ shtudec	MOVE.L	TuneMemory(PC),D0
 	JMP	Print6DecDigits
 
 UpdateFreeMem	dc.b	0,0
-	cnop 0,4
+	CNOP 0,4
 FreeMemory	dc.l	0
 TuneMemory	dc.l	0
 TuneUp		dc.w	31
@@ -3102,7 +3102,7 @@ lbC0022C8
 	MOVE.W	#3,WaitTime
 	BRA.W	WaitALittle
 
-	cnop 0,4
+	CNOP 0,4
 dpnum
 	dc.l 0
 	dc.w 0
@@ -4246,7 +4246,7 @@ scoomskip
 	JSR	_LVOClose(A6)
 	BRA.W	ShowSampleCrunchBox
 
-	cnop 0,4
+	CNOP 0,4
 CrunchBufferLen		dc.l 0
 CrunchInfoPtr		dc.l 0
 CrunchBufferPtr		dc.l 0
@@ -4749,7 +4749,7 @@ pdgskp1	CMP.B	#':',(A1)
 pdgslsh	CLR.B	(A1)
 	BRA.W	addpdir
 
-	cnop 0,4
+	CNOP 0,4
 FileNamesPtr
 	dc.l	0  ; A5+ 0
 	dc.l	0  ;   + 4
@@ -4937,7 +4937,7 @@ baehsj  JSR	OutOfMemErr
 	MOVEQ	#-1,D0
 	RTS
 
-	cnop 0,4
+	CNOP 0,4
 DirAllocSize	dc.l	0
 DirEntries	dc.w	0
 
@@ -9536,7 +9536,7 @@ ssxfree
 	JSR	PTFreeMem
 ssxexit	RTS
 
-	cnop 0,4
+	CNOP 0,4
 SetupMemPtr	dc.l 0
 
 DecompactSetup2
@@ -10113,7 +10113,7 @@ ConfigName	dc.b 'PT.Config-00',0,0
 ConfigNumber	dc.w 0
 LoadingCfgText	dc.b 'loading config',0
 SavingCfgText	dc.b 'saving config',0,0
-	cnop 0,4
+	CNOP 0,4
 ConfigID	dc.l 0
 ConfigID2	dc.l 0
 
@@ -10200,7 +10200,7 @@ winderr	LEA	ConsoleErrText(PC),A0
 	BRA.W	SetErrorPtrCol
 
 ExtCmdNumber	dc.b 0,0
-	cnop 0,4
+	CNOP 0,4
 ExtCmdAddress	dc.l 0
 ExtCmdWindow	dc.l 0
 ExtCmdConsole	dc.b "CON:0/0/640/150/ProTracker Output Window",0
@@ -10520,7 +10520,7 @@ cocclp5	MOVE.W	(A0)+,(A1)+
 	RTS
 
 UndoCol		dc.w 0
-	cnop 0,4
+	CNOP 0,4
 UndoColAddr	dc.l 0
 CanCols		dc.w 0,0,0,0,0,0,0,0
 
@@ -10714,7 +10714,7 @@ ps2_loop2
 	MOVE.B	D0,(A1)+
 	BRA.B	ps2_loop2
 
-	cnop 0,4
+	CNOP 0,4
 SavIt	dc.l 0
 
 PrintSong3
@@ -11222,7 +11222,7 @@ sstskip5
 	DBRA	D7,sstloop3
 	BRA.W	WaitForButtonUp
 	
-	cnop 0,4
+	CNOP 0,4
 SongAllocSize	dc.l SongSize64Patt
 MaxPatterns	dc.l 63
 
@@ -11756,7 +11756,7 @@ rainlp3	MOVE.L	#$01B80000,(A0)+
 	RTS
 
 RainbowPos	dc.w	0
-	cnop 0,4
+	CNOP 0,4
 TheRightColors	dc.l	0
 ColorsMax	dc.w	48
 
@@ -11810,7 +11810,7 @@ FreeDecompMem
 	CLR.L	DecompMemPtr
 	RTS
 
-	cnop 0,4
+	CNOP 0,4
 CompPtr	dc.l 0
 CompLen	dc.l 0
 
@@ -12825,7 +12825,7 @@ RestoreLength
 	BRA.W	ShowSampleInfo
 
 AddWorkSpaceText	dc.b 'add workspace ?',0
-	cnop 0,4
+	CNOP 0,4
 PlaySamPtr	dc.l 0
 RealSamPtr	dc.l 0
 SamAllocPtr	dc.l 0
@@ -13295,7 +13295,7 @@ UpdateText
 	ADD.L	DSTOffset(PC),A0
 	BRA.W	ShowText2
 
-	cnop 0,4
+	CNOP 0,4
 DSTPtr		dc.l 0
 DSTPos		dc.l 0
 DSTOffset	dc.l 0
@@ -13462,7 +13462,7 @@ wDisL	MOVE.L	SampleInstrSave(PC),A3
 	MOVE.W	#1,28(A3)
 	BRA.B	cilend
 
-	cnop 0,4
+	CNOP 0,4
 SampleInstrSave	dc.l 0
 SampleLengthAdd	dcb.w 32+1,0
 
@@ -15597,7 +15597,7 @@ MixText		dc.b 'mix 01+02 to 03       '
 MixChar		dc.b 0,0
 MixCurPos	dc.w 0
 ToSam		dc.w 0
-	cnop 0,4
+	CNOP 0,4
 FromPtr1	dc.l 0
 FromPtr2	dc.l 0
 ToPtr		dc.l 0
@@ -16224,14 +16224,14 @@ dnsok3	MOVE.W	D0,28(A5)
 
 dsErrorRestoreCol	JMP	ErrorRestoreCol
 
-	cnop 0,4
+	CNOP 0,4
 SamplePos	dc.l	0
 SampleVol	dc.w	100
-	cnop 0,4
+	CNOP 0,4
 FlangePos	dc.l	0
 ModSpeed	dc.b	0
 HalfClipFlag	dc.b	0
-	cnop 0,4
+	CNOP 0,4
 ModPos		dc.l	0
 ModOffset	dc.l	0
 BufMemPtr	dc.l	0
@@ -16476,11 +16476,11 @@ chordmin	; '.'
 ChordMaxLenFlag	dc.b 0,0
 MaxChordLen	dc.w 1
 TmpChordLen	dc.w 1
-	cnop 0,4
+	CNOP 0,4
 SampleLength	dc.l 0
 ChordLen	dc.w 0
 ChordLenOld	dc.w 0
-	cnop 0,4
+	CNOP 0,4
 ChordLenBias	dc.l 0
 ChordLenBiasOld	dc.l 0
 ChordNote1	dc.w 36
@@ -17396,7 +17396,7 @@ lbC00E6A8
 LenTooSmallText		dc.b 'Length too small!',0
 OnlyOneNoteText		dc.b 'Only one note!',0,0
 NoEmptySampleText	dc.b 'No empty sample!',0,0
-	cnop 0,4
+	CNOP 0,4
 lbL00E6DC	dc.l 0
 lbL00E6E0	dc.l 0
 lbL00E6E4	dc.l 0
@@ -17568,7 +17568,7 @@ cloop	MOVE.B	-(A0),-(A1)
 	MOVE.L	D0,DiskDataLength
 	RTS
 
-	cnop 0,4
+	CNOP 0,4
 EndOfSongPtr		dc.l 0
 SongPlus70kPtr		dc.l 0
 RealSongLength		dc.l 0
@@ -17679,7 +17679,7 @@ DoCrunch5
 	MOVEQ	#1,D0
 	RTS
 
-	cnop 0,4
+	CNOP 0,4
 CrunchData1	dc.l 0
 CrunchData2	dc.b 0,0
 CrunchData3	dc.w $0100,$0200,$0400,$1000,8,9,10,8
@@ -18366,7 +18366,7 @@ lbC00F362
 
 LoadingNamesText	dc.b 'Loading names',0
 SavingNamesText		dc.b 'Saving names',0,0
-	cnop 0,4
+	CNOP 0,4
 ppBufferPtr		dc.l 0
 ppBufferLen		dc.l 0
 PowerPackedText		dc.b 'Powerpacked File!',0
@@ -18799,7 +18799,7 @@ cruiskip2
 	RTS
 
 RegBackup		dcb.b 60	; 8*4 + 7*4 [D0-D7/A0-A6]
-	cnop 0,4
+	CNOP 0,4
 CrunchSpeed		dc.l 0
 CrunchBufferMode	dc.l 0
 CrunchGainText		dc.b 'Gain...    %',0,0
@@ -20114,7 +20114,7 @@ df0text		dc.b 'DF0:',0,0
 df1text		dc.b 'DF1:',0,0
 df2text		dc.b 'DF2:',0,0
 lbW010D56	dc.w 0
-	cnop 0,4
+	CNOP 0,4
 lbL010D58	dc.l 0
 
 CheckPLSTGadgs
@@ -20549,7 +20549,7 @@ rpnskp2	BSR.B	AddPreset
 	BSR.W	ShowPEDnumbers
 	BRA.W	IsPLSTfull
 
-	cnop 0,4
+	CNOP 0,4
 chkiffbuffer
 	dc.l 0,0,0
 
@@ -21580,31 +21580,31 @@ MIDIOutIntHandler
 	MOVE.W	#1,intreq(A0)		;clear intreq bit
 	RTS
 	
-	cnop 0,4
+	CNOP 0,4
 PrevTBE		dc.l 0
 PrevRBF		dc.l 0		
 PrevBits	dc.b 0,0
 
-	cnop 0,4
+	CNOP 0,4
 MIDIOutInterrupt
 	dc.l 0,0
 	dc.b 2,0
 	dc.l MIDIOutName,lbL012076,MIDIOutIntHandler
 	
-	cnop 0,4
+	CNOP 0,4
 MIDIInInterrupt
 	dc.l 0,0
 	dc.b 2,0
 	dc.l MIDIInName,MIDIinBuffer,MIDIInIntHandler
 	
-	cnop 0,4
+	CNOP 0,4
 lbL012076
 	dc.l SerPortAlloc
 	dc.l SerPortAlloc
 	
 SerPortAlloc	dc.b 0
 lastcmdbyte	dc.b 0
-	cnop 0,4
+	CNOP 0,4
 MiscResBase	dc.l 0
 
 MIDIOutName	dc.b 'PT MIDI Out',0
@@ -21796,7 +21796,7 @@ mp_2	MOVE.L	NoteAddr(PC),A0
 	MOVE.W	D1,6(A0)
 	RTS
 
-	cnop 0,4
+	CNOP 0,4
 NoteAddr	dc.l 0
 
 M_rts	RTS
@@ -21845,7 +21845,7 @@ M_Start		JMP	PlaySong
 M_Continue	RTS
 M_Stop		JMP	StopIt
 
-	cnop 0,4
+	CNOP 0,4
 MIDIinBuffer	dc.l 0
 MIDIinTo	dc.b 0
 MIDIinFrom	dc.b 0
@@ -22207,7 +22207,7 @@ prskip	; ----------------------------------------
 StopPlaying
 	BRA.W	TurnOffVoices
 
-	cnop 0,4
+	CNOP 0,4
 StartOfs	dc.l 0
 
 ;----
@@ -22408,7 +22408,7 @@ swabuf2	MOVE.W	D0,2(A0)
 	BSR.W	RedrawSample
 	JMP	WaitForButtonUp
 
-	cnop 0,4
+	CNOP 0,4
 RepBuf	dc.l 1
 RepBuf2	dc.w $0040
 
@@ -22485,7 +22485,7 @@ sltskip	MOVEQ	#3,D0
 	BRA.W	ShowText3
 
 LoopOnOffFlag	dc.w 0
-	cnop 0,4
+	CNOP 0,4
 SavSamInf	dc.l 0
 
 SetSamNote
@@ -22864,7 +22864,7 @@ FreeCopyBuf
 	CLR.L	CopyBufPtr
 	RTS
 
-	cnop 0,4
+	CNOP 0,4
 CopyBufPtr	dc.l 0
 CopyBufSize	dc.l 0
 
@@ -23361,7 +23361,7 @@ TToneCh1Flag	dc.b 0
 TToneCh2Flag	dc.b 0
 TToneCh3Flag	dc.b 0
 TToneCh4Flag	dc.b 0
-	cnop 0,4
+	CNOP 0,4
 TToneChPtr	dc.l 0
 
 SamplePressed
@@ -23767,13 +23767,13 @@ otmout
 	RTS
 
 SamScrEnable	dc.w	0
-	cnop 0,4
+	CNOP 0,4
 SamMemPtr	dc.l	0
 SamMemSize	dc.l	0
 LastSamPos	dc.w	0
 MarkStart	dc.w	0
 MarkEnd		dc.w	0
-	cnop 0,4
+	CNOP 0,4
 MarkStartOfs	dc.l	0
 MarkEndOfs	dc.l	0
 
@@ -23905,7 +23905,7 @@ dlloop	MOVE.L	(A2)+,D3
 	; ----------------------------------------------
 	BRA.W	SetLoopSprites
 	
-	cnop 0,4
+	CNOP 0,4
 SamPosDelta	dc.l 0
 SamStart	dc.l 0
 SamLength	dc.l 0
@@ -24063,7 +24063,7 @@ LinMask		dc.w $FFFF
 MinTerm		dc.b $C8,0
 PenX		dc.w 0
 PenY		dc.w 0
-	cnop 0,4
+	CNOP 0,4
 LineScreenPtr	dc.l 0
 
 ;---- Loop Sprites ----
@@ -24169,7 +24169,7 @@ HideLoopSprites	; new PT2.3E routine
 	
 ;---- Playroutine ----
 
-	cnop 0,4
+	CNOP 0,4
 audchan1temp
 	dcb.b 24
 	dc.w $0001	; voice #1 DMA bit
@@ -25527,7 +25527,7 @@ VerifyingText	dc.b	'Verifying  cyl ',0
 InitDiskText	dc.b	'Initializing',0
 PlsEntNamText	dc.b	'Please enter name'
 OfVolumeText	dc.b	'of volume:  ST-__',0,0
-	cnop 0,2
+	CNOP 0,2
 DiskNumText1	dc.b	'0'
 DiskNumText2	dc.b	'0  '
 PEdDefaultPath	dc.b	'df0:',0
@@ -25566,7 +25566,7 @@ SongDumpText
 CRLF_Text	dc.b	13,10
 FF_Text		dc.b	12,0
 	
-	cnop 0,2
+	CNOP 0,2
 PatternNumText	dc.b	9,9,9,'Pattern: '
 PattNumText1	dc.b	'0'
 PattNumText2	dc.b	'0',$D,$A,$D,$A
@@ -25579,13 +25579,13 @@ ascii.MSG4	dc.b	'  0000'
 ascii.MSG5	dc.b	'  0000'
 ascii.MSG6	dc.b	'    ',$D,$A
 PnText2		dc.b	"        "
-	cnop 0,2
+	CNOP 0,2
 		dc.b	0
 PattPosText	dc.b	'00  :                                       '
 		dc.b	'                '
 PnText		dc.b	'    ',0
 
-	cnop 0,2
+	CNOP 0,2
 SongsText	dc.b	'Songs',0
 ModulesText	dc.b	'Modules',0
 TracksText	dc.b	'Tracks',0,0
@@ -25594,7 +25594,7 @@ SamplesText	dc.b	'Samples',0
 		dc.b	'DF0:',0
 		dc.b	'.'
 	
-	cnop 0,2
+	CNOP 0,2
 STText1		dc.b	'ST'
 STText1Num	dc.b	'-'
 STText1Number	dc.b	0,0,':'
@@ -25628,7 +25628,7 @@ FastHexTable
 		
 TrackdiskName	dc.b	'trackdisk.device',0
 InputDevName	dc.b	'input.device',0
-	cnop 0,4
+	CNOP 0,4
 DOSBase		dc.l	0
 IntuitionBase	dc.l	0
 GfxBase		dc.l	0
@@ -25773,7 +25773,7 @@ ShiftedKeymap
 	even
 	
 RightMouseButtonHeld	dc.b 0,0
-	cnop 0,4
+	CNOP 0,4
 NoteNamesPtr	dc.l	0
 SpritePtrsPtr	dc.l	0		; don't change the order of these...
 LineCurPosPtr	dc.l	0		; --
@@ -25784,7 +25784,7 @@ Ch4SpritePtr	dc.l	0		; --
 CursorPosPtr	dc.l	0		; --
 NoSpritePtr	dc.l	0			; --
 PPattPos	dc.w	0
-	cnop 0,4
+	CNOP 0,4
 SaveEditMode	dc.l	0
 EditMode	dc.l	0
 RunMode		dc.l	0
@@ -25792,7 +25792,7 @@ CurrCmds	dc.l	0
 TextBplPtr	dc.l	0
 TextOffset	dc.w	0
 TextLength	dc.w	0
-	cnop 0,4
+	CNOP 0,4
 ShowTextPtr	dc.l	0
 PatternNumber	dc.l	0
 CurrPos		dc.l	0
@@ -25807,13 +25807,13 @@ LoadInProgress	dc.w	0
 CurrentPlayNote	dc.w	214
 LineCurX	dc.w	0
 LineCurY	dc.w	0
-	cnop 0,4
+	CNOP 0,4
 TextEndPtr	dc.l	0
 ScrPattPos	dc.w	0
 PattCurPos	dc.w	0
 GadgRepeat	dc.w	0
 WordNumber	dc.w	0
-	cnop 0,4
+	CNOP 0,4
 LongWordNumber	dc.l	0
 HighPattNum	dc.w	0
 InsNum		dc.w	0
@@ -25822,7 +25822,7 @@ PlayInsNum	dc.w	1
 HiLowInstr	dc.w	0
 PEDpos		dc.w	0
 PLSTpos		dc.w	0
-	cnop 0,4
+	CNOP 0,4
 MaxPLSTOffset	dc.l	0
 PresetMarkTotal	dc.w	0
 PLSTOffset	dcb.b	14*4,0
@@ -25834,7 +25834,7 @@ MouseX2		dc.w	0
 MouseY2		dc.w	0
 MouseX3		dc.w	0
 MouseY3		dc.w	0
-	cnop 0,4
+	CNOP 0,4
 DecompMemPtr	dc.l	0
 DecompMemSize	dc.l	0
 
@@ -25853,16 +25853,16 @@ PBreakFlag	dc.b	0
 LEDStatus	dc.b	0
 PattDelayTime	dc.b	0
 PattDelayTime2	dc.b	0
-	cnop 0,4
+	CNOP 0,4
 PattRfshNum	dc.l	0
 DidQuantize	dc.w	0
-	cnop 0,4
+	CNOP 0,4
 FileNamePtr	dc.l	0
 DiskDataPtr	dc.l	0
 FileHandle	dc.l	0
 DiskDataLength	dc.l	0
 LowMask		dc.w	$FF00
-	cnop 0,4
+	CNOP 0,4
 PatternPosition	dc.l	0
 SongPosition	dc.l	0
 Counter		dc.l	0
@@ -25872,12 +25872,12 @@ SampleStarts	dcb.l	31,0		; DO NOT CHANGE LEN/ORDER!
 SamplePtrs	EQU	SampleStarts-4	; DO NOT CHANGE LEN/ORDER!
 SampleLengths	dcb.l	32,0		; DO NOT CHANGE LEN/ORDER!
 DMACONtemp	dc.w	0
-	cnop 0,4
+	CNOP 0,4
 StackSave	dc.l	0
 AnalyzerHeights	dcb.w	23,0
 AnalyzerOpplegg	dcb.w	23,0
 Action		dc.w	0
-	cnop 0,4
+	CNOP 0,4
 PathPtr		dc.l	0
 FileLock	dc.l	0
 CurrScreen	dc.w	0
@@ -25889,7 +25889,7 @@ PointerCol3Save	dc.w	0
 GetDecTemp	dc.b	0
 UpdateTempo	dc.b	0
 MoreInstrFlag	dc.w	0
-	cnop 0,4
+	CNOP 0,4
 SampleSortList	dcb.l	32,0
 PLSTmem		dc.l	0
 PresetTotal	dc.w	0
@@ -25900,10 +25900,10 @@ AboutScreenShown	dc.b	0
 SaveDA		dc.b	0
 StopInputFlag	dc.b	0
 NoSampleInfo	dc.b	0,0
-	cnop 0,4
+	CNOP 0,4
 FormatDataPtr	dc.l	0
 CylinderNumber	dc.w	0
-	cnop 0,4
+	CNOP 0,4
 TrackdiskPort	dc.l	0,0,0,0
 ProcessPtr	dc.l	0,0,0,0
 DateStamp	dc.l	0,0,0,0
@@ -25914,7 +25914,7 @@ PresetRepeat	dc.w	0
 PresetReplen	dc.w	0
 PED_Action	dc.w	0
 PsetNumTemp	dc.w	0
-	cnop 0,4
+	CNOP 0,4
 PsetPtrTemp	dc.l	0
 FreeDiskSpace	dc.l	0
 SplitAddress	dc.l	0
@@ -25925,11 +25925,11 @@ NumPatterns	dc.w	0
 AutoInsSlot	dc.w	0
 lbW015B92	dc.w	0
 makeExeModFlag	dc.w	0
-	cnop 0,4
+	CNOP 0,4
 PosEdCurrPos	dc.l	0
 PosEdNames	dcb.b 16*100,' '
 AskBoxShown	dc.b	0,0
-	cnop 0,4
+	CNOP 0,4
 LastAreYouSureTextPtr	dc.l	0
 
 ;---- Setup Data ----
@@ -26040,7 +26040,7 @@ vhposr	EQU	$00000006
 dmacon	EQU	$00000096
 dmaconr	EQU	$00000002
 
-	cnop 0,4
+	CNOP 0,4
 SamInfoPtr	dc.l	0
 SamInfoLen	dc.l	0
 SampleNote	dc.w	$18
@@ -26345,11 +26345,11 @@ ShowResamNote
 	
 
 ;---- Executable Module Data ----
-	cnop 0,4
+	CNOP 0,4
 exeDotInfoData		INCBIN "bin/dotinfo.bin"
- 	cnop 0,4
+ 	CNOP 0,4
 exeReplayData		INCBIN "bin/exereplay.bin"
-	cnop 0,4
+	CNOP 0,4
 exeReplayRelocHunk	INCBIN "bin/reloc32hunk.bin"
 
 ;---- Graphics Data ----
@@ -26371,61 +26371,61 @@ SampScreenSize	= 3838
 MonitorSize	= 817
 HelpScreenSize	= 900
 
-	cnop 0,4
+	CNOP 0,4
 FontData	INCBIN "raw/ptfont.raw"
-	cnop 0,4
+	CNOP 0,4
 SpectrumAnaData	INCBIN "pak/ptspectrumana.pak"
-	cnop 0,4
+	CNOP 0,4
 ScopeData	INCBIN "pak/ptscope.pak"
-	cnop 0,4
+	CNOP 0,4
 AboutBoxData	INCBIN "pak/ptaboutbox.pak"
-	cnop 0,4
+	CNOP 0,4
 SureBoxData	INCBIN "raw/ptsurebox.raw"
-	cnop 0,4
+	CNOP 0,4
 ClearBoxData	INCBIN "raw/ptclearbox.raw"
-	cnop 0,4
+	CNOP 0,4
 FormatBoxData	INCBIN "raw/ptformatbox.raw"
-	cnop 0,4
+	CNOP 0,4
 TrackNameBox	INCBIN "raw/pttrknamebox.raw"
-	cnop 0,4
+	CNOP 0,4
 CrunchBoxData	INCBIN "raw/ptcrunchbox.raw"
-	cnop 0,4
+	CNOP 0,4
 DirScreenData	INCBIN "pak/ptfilereq.pak"
-	cnop 0,4
+	CNOP 0,4
 DirScreen2Data	INCBIN "pak/ptfilereq2.pak"
-	cnop 0,4
+	CNOP 0,4
 PLSTData	INCBIN "pak/ptplst.pak"
-	cnop 0,4
+	CNOP 0,4
 PosEdData	INCBIN "pak/ptposed.pak"
-	cnop 0,4
+	CNOP 0,4
 Edit1Data	INCBIN "pak/ptedit1.pak"
-	cnop 0,4
+	CNOP 0,4
 Edit2Data	INCBIN "pak/ptedit2.pak"
-	cnop 0,4
+	CNOP 0,4
 Edit3Data	INCBIN "pak/ptedit3.pak"
-	cnop 0,4
+	CNOP 0,4
 Edit4Data	INCBIN "pak/ptedit4.pak"
-	cnop 0,4
+	CNOP 0,4
 SetupScreenData	INCBIN "pak/ptsetup.pak"
-	cnop 0,4
+	CNOP 0,4
 Setup2Data	INCBIN "pak/ptsetup2.pak"
-	cnop 0,4
+	CNOP 0,4
 Setup2ToggleData	INCBIN "raw/ptsetup2toggles.raw"
-	cnop 0,4
+	CNOP 0,4
 PresetEdData	INCBIN "pak/ptpreseted.pak"
-	cnop 0,4
+	CNOP 0,4
 SampScreenData	INCBIN "pak/ptsampler.pak"
-	cnop 0,4
+	CNOP 0,4
 MonitorData	INCBIN "pak/ptmonitor.pak"
-	cnop 0,4
+	CNOP 0,4
 HelpScreenData	INCBIN "pak/pthelpscreen.pak"
-	cnop 0,4
+	CNOP 0,4
 VolBoxData	INCBIN "raw/ptvolbox.raw"
-	cnop 0,4
+	CNOP 0,4
 ToggleONdata	INCBIN "raw/pttoggleon.raw"
-	cnop 0,4
+	CNOP 0,4
 ToggleOFFdata	INCBIN "raw/pttoggleoff.raw"
-	cnop 0,4
+	CNOP 0,4
 S_BoxData	INCBIN "raw/ptletters.raw"
 	
 A_BoxData	EQU	S_BoxData+22
@@ -26440,7 +26440,7 @@ O_BoxData	EQU	S_BoxData+154
 
 	SECTION ptdata,DATA_C
 	
-	cnop 0,4
+	CNOP 0,4
 BitplaneData	INCBIN "raw/ptmainscreen.raw"
 	
 TopMenusPos	EQU	BitplaneData+55
@@ -26463,7 +26463,7 @@ CopperData	; AGA fixed copper list
 	dc.w	$0106,$0C40,$0108,$0000,$010A,$0000
 	dc.w	$010C,$0011,$01DC,$0020,$01FC,$0000
 
-	cnop 0,4
+	CNOP 0,4
 CopList	dc.w	$0120	; Sprite 0 high
 	dc.w	0
 	dc.w	$0122	; Sprite 0 low
@@ -26875,15 +26875,15 @@ RealVUMetersFlag ds.b	1
 		ds.b	229 ; pad to 1024 bytes
 ; End of Setup Data
 
-	cnop 0,4
+	CNOP 0,4
 HelpTextIndex	ds.l	256
 HelpTextData	ds.b	656
 
 InpEvPort	ds.b	34
 InpEvIOReq	ds.b	48
-	cnop 0,4
+	CNOP 0,4
 ScopeInfo	ds.b	ScopeInfoSize*4
-	cnop 0,4
+	CNOP 0,4
 ScopeSamInfo	ds.b	16*31
 BlankSample	ds.b	320
 FileName	ds.b	96
