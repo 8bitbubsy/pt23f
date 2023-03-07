@@ -594,10 +594,10 @@ chkredr	CMP.L	#'patp',RunMode
 ;  D0 - memoryBlock (0 if alloc failed)
 ; ----------------------------------------------------------------------------
 PTAllocMem
-	MOVEM.L	D1/A6,-(SP)
+	MOVEM.L	D1/A1/A6,-(SP)
 	MOVE.L	4.W,A6
 	JSR	_LVOAllocMem(A6)
-	MOVEM.L	(SP)+,D1/A6
+	MOVEM.L	(SP)+,D1/A1/A6
 	RTS
 
 ; ----------------------------------------------------------------------------
@@ -608,10 +608,10 @@ PTAllocMem
 ;  D0 - byteSize
 ; ----------------------------------------------------------------------------
 PTFreeMem
-	MOVEM.L	D0/D1/A6,-(SP)
+	MOVEM.L	D0/D1/A1/A6,-(SP)
 	MOVE.L	4.W,A6
 	JSR	_LVOFreeMem(A6)	
-	MOVEM.L	(SP)+,D0/D1/A6
+	MOVEM.L	(SP)+,D0/D1/A1/A6
 	RTS
 	
 ;---- Cleanup upon exit from PT ----
