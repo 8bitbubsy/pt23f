@@ -267,8 +267,7 @@ _common:
 	lea	rb_HunkStart-4(pc),a0
 	move.l	(a0),d3		; ptr to next segment
 	clr.l	(a0)		; unlink next segment
-	moveq	#$40,d4
-	lsl.w	#8,d4		; stack=$4000
+	move.l	#2048,d4	; stack=2kB (good enough for PT)
 	jsr	_LVOCreateProc(a6)
 	move.l	d6,d1		; UnLock program dir or zero (from WB)
 	jsr	_LVOUnLock(a6)
