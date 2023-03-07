@@ -1863,7 +1863,7 @@ AnalyzerOffsets
 	dc.w $00F0
 	
 AnaDrawFlag	dc.b 0
-	even
+	EVEN
 
 ;---- Scope (normal) ----
 
@@ -5973,7 +5973,7 @@ trmEnd
 
 RecPattText	dc.b 'rec mode: patt',0
 RecSongText	dc.b 'rec mode: song',0
-	even
+	EVEN
 
 CheckAltKeys
 	TST.W	AltKeyStatus
@@ -9093,7 +9093,7 @@ FormatDiskNum2	dc.b	$30
 	dc.b	0
 	
 LockNameDF0	dc.b	"df0:",0
-	even
+	EVEN
 	
 ;---- Clear All Data ----
 
@@ -19570,7 +19570,7 @@ Print5HexDigits
 	RTS
 
 HexString	dc.b	"00000000"
-		even
+	EVEN
 ; ---------------------------------------------------------------
 
 PrintHexWord
@@ -19744,7 +19744,7 @@ CantSaveFileText	dc.b "can't save file !",0
 CantExamFileText	dc.b "examine error !",0
 CantFindFileText	dc.b "can't find file !",0
 FileIsEmptyText		dc.b "file is empty !",0
-	even
+	EVEN
 	
 DoSaveData
 	JSR	SetDiskPtrCol
@@ -24506,8 +24506,7 @@ VUmeterHeights
 	dc.b	23,24,25,26,26,27,28,29,29,30,31,32,32,33,34,35
 	dc.b	35,36,37,38,38,39,40,41,41,42,43,44,44,45,46,47
 	dc.b	47
-	
-	even
+	EVEN
 
 SetDMA
 	;MOVEM.L	A0/D1,-(SP)
@@ -25606,7 +25605,7 @@ STText3Num	dc.b	'-'
 STText3Number	dc.b	0,0,':'
 	
 EmptyLineText	dc.b	'                       ',0
-	even
+	EVEN
 	
 FastHexTable
 	dc.b	'000102030405060708090A0B0C0D0E0F'
@@ -25635,7 +25634,7 @@ GfxBase		dc.l	0
 PPLibBase	dc.l	0
 
 HexTable	dc.b	'0123456789ABCDEF'
-	even
+	EVEN
 	
 RawKeyHexTable
 	dc.b	10,1,2,3,4,5,6,7
@@ -25770,7 +25769,7 @@ ShiftedKeymap
 	dc.b	'qwertyuiop{}*123'
 	dc.b	'asdfghjkl:',34,'^',0,'456'
 	dc.b	'>zxcvbnm<>?',0,'.','789 '
-	even
+	EVEN
 	
 RightMouseButtonHeld	dc.b 0,0
 	CNOP 0,4
@@ -26808,7 +26807,7 @@ SongsPath2	ds.b	64
 SamplePath2	ds.b	64
 TrackPath2	ds.b	64
 PattPath2	ds.b	64
-	even
+	EVEN
 
 ; Setup Data
 SetupData	ds.b	26
