@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-               7th of March, 2023
+               8th of March, 2023
 
  If you find any bugs, please email me at olav.sorensen@live.no
  Based on a disassembly of PT2.3D.
@@ -21,12 +21,22 @@
 
  -- PT2.3F changelog: --
  
+ == Update 08.03.2023 ===============================================
+ - Fixed: Another vblank+>31 speed fix, for Note Retrigger (E9x)
+ - Removed note retrigger LUT (was used to remove DIV). Frees up
+   around 528 bytes of RAM. This optimization was a bit pointless as
+   a bunch of note retriggers at once is very uncommon.
+ ====================================================================
+ 
  == Update 07.03.2023 ===============================================
  - Fixed: Text editing delays were too short when writing/deleting
    characters and moving the text cursor (in comparison to PT2.3D).
- - Some small optimizations were done to the quadrascope to use less
-   frame time. This leads to less flickering of scopes on 7MHz 68k
-   Amigas, which would happen because of raster beam racing.
+ - Fixed: If arpeggio was used in vblank timing mode together with a
+   speed above 31, it would not work correctly.
+ - Fixed: Changing speed in SETUP was wrongly limited to 0..32.
+   (I had forgotten about vblank timing mode when I made this change).
+ - Lowered process stack from 16kB to 2kB, to free up more RAM for
+   systems like a stock A500.
  - The waveform plotter in the sample editor has been given a small
    optimization. It's still very slow and flickery on a 7MHz 68k
    Amiga, though...
