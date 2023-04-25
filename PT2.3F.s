@@ -22023,7 +22023,7 @@ blnktxt	dc.b "    "
 
 	; --PT2.3D change: heavily modified + some optimizations
 ClearSamArea
-	MOVEM.L	ClearRegs(pc),D0-D7
+	MOVEM.L	ClearRegs(PC),D0-D7
 
 	; clear scrollbar background
 	MOVE.L	TextBplPtr(PC),A0
@@ -22263,10 +22263,12 @@ LB_5FAC	DBF	D2,LB_5FA0
 LB_END	MOVEM.L	(SP)+,D1/D2/D3
 	RTS
 
+	; This is only called once when the sample view size changes,
+	; so speed is not a concern here.
 SetSamPosDelta
 	MOVEM.L	D0-D1,-(SP)
 	MOVE.L	SamDisplay(PC),D0
-	MOVEQ	#15,D1			; max safe frac precision bits
+	MOVEQ	#15,D1			; max safe fractional bits
 	LSL.L	D1,D0
 	MOVE.L	#314,D1
 	BSR.W	DIVU32
@@ -22278,8 +22280,7 @@ ShowRange
 	; --PT2.3D bug fix: Show error if trying to zoom on empty sample
 	TST.B	EmptySampleFlag
 	BNE.W	EmptySampleError
-srskip
-	; --------------------------------------------------------------
+srskip	; --------------------------------------------------------------
 	MOVE.L	MarkStartOfs(PC),D0
 	BMI.W	NoRangeError
 	MOVE.L	MarkEndOfs(PC),D1
@@ -23857,6 +23858,7 @@ rdsdoit
 	MOVE.L	SamDisplay(PC),D6
 	MOVE.L	D5,D7
 	MOVE.L	A0,D0
+
 	ADD.L	D5,D0
 	MOVE.L	D0,SamDrawStart
 	ADD.L	D6,D0
@@ -23864,12 +23866,12 @@ rdsdoit
 	ADD.L	D5,A0
 	MOVE.L	#$1FFFF,D5
 	MOVE.L	SamPosDelta(PC),D7
-	MOVEQ	#0,D6			; sample pos (17.15 fixed-point)	
+	MOVEQ	#0,D6	; sample pos (17.15 fixed-point)
 	MOVEQ	#0,D4
-rdsloop	MOVE.L	D6,D0
-	SWAP	D0
-	ROL.L	#1,D0
-	AND.L	D5,D0			; D7 = integer sample pos
+rdsloop	MOVE.L	D6,D0	; D0.L = current sample pos (17.15fp)
+	SWAP	D0	;
+	ROL.L	#1,D0	;
+	AND.L	D5,D0	; D0.L = current sample pos (integer)
 	MOVEQ	#127,D1
 	SUB.B	(A0,D0.L),D1
 	LSR.W	#2,D1
