@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-               8th of March, 2023
+               14th of June, 2023
 
  If you find any bugs, please email me at olav.sorensen@live.no
  Based on a disassembly of PT2.3D.
@@ -20,6 +20,13 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+ 
+ == Update 14.06.2023 ===============================================
+ - The spectrum analyzer didn't work like it should when jamming
+   samples with the computer keyboard (if finetune wasn't zero).
+ - Nasty out-of-bounds memory access fixed for the spectrum analyzer
+   in some edge cases.
+ ====================================================================
  
  == Update 08.03.2023 ===============================================
  - Fixed: Another vblank+>31 speed fix, for Note Retrigger (E9x)

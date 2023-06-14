@@ -1799,60 +1799,92 @@ cahloop	MOVE.W	D0,(A0)+
 	DBRA	D7,cahloop
 	RTS
 
-PlayNoteAnalyze		; Called by keyboard play
-	MOVEM.L	D0-D3/A0,-(SP)
+PlayNoteAnalyze		; Called by keyboard play (bugfixed in PT2.3F)
+	MOVEM.L	D0-D4/A0,-(SP)
 	MOVEQ	#0,D2
-	MOVE.W	2(A6),D2
+	MOVE.B	3(A6),D2
 	BRA.B	SpecAna2
 
-SpectrumAnalyzer	; Called by playroutine
+SpectrumAnalyzer	; Called by playroutine (bugfixed in PT2.3F)
 	TST.B	n_muted(A6)	; channel muted?
-	BNE.W	Return1			; yes, let's get outta here!
-	MOVEM.L	D0-D3/A0,-(SP)
+	BNE.W	Return1		; yes, don't do
+	MOVEM.L	D0-D4/A0,-(SP)
 	MOVEQ	#0,D2
 	MOVE.B	n_volume(A6),D2	; Get channel volume
 SpecAna2
 	TST.B	AnaDrawFlag
-	BNE.B	ohno
+	BNE.W	ohno
 	ST	AnaDrawFlag
-	TST.B	D2		; volume zero ?
+	; --------------------
+	; Volume
+	; --------------------
+	TST.B	D2		; volume zero?
 	BEQ.B	saend		; yes, don't do
-	MULU.W	#24576,D2	; 24576 = 2^16 / (64 / 24)
-	SWAP	D2		; D2 /= 2.6666666667 (0..64 -> 0..24)
-	;LSL.W	#8,D2
-	;DIVU.W	#682,D2
+	CMP.B	#64,D2		; volume above 64?
+	BHI.B	saend		; yes, don't do
+	MULU.W	#24576,D2	; (24576 = round[2^16 / (64 / 24)])
+	SWAP	D2		; D2 = 0..24
 	MOVE.W	D2,D3
-	LSR.W	#1,D3
-	LEA	AnalyzerHeights,A0
-	SUB.W	#113,D0		; Subtract 113 (highest rate)
+	LSR.B	#1,D3
+	; --------------------
+	; Period (fixed for C-1 finetune < 0 and B-3 finetune > 0)
+	; --------------------
+	CMP.W	#108,D0		; period below 108 (B-3 finetune +7)?
+	BLO.B	saend		; yes, don't do
+	CMP.W	#907,D0		; period above 907 (C-1 finetune -8)?
+	BHI.B	saend		; yes, don't do
+	; --------------------
+	MOVE.W	#856,D4
+	CMP.W	D4,D0		; lo-clamp to C-3 finetune 0
+	BLS.B	.L0
+	MOVE.W	D4,D0
+.L0	MOVEQ	#113,D4
+	CMP.W	D4,D0		; hi-clamp to B-3 finetune 0
+	BHS.B	.L1
+	MOVE.W	D4,D0
+.L1	; --------------------
+	SUB.W	D4,D0		; Subtract 113 (highest rate)
 	MOVE.W	#743,D1
 	SUB.W	D0,D1		; Invert range 0-743
 	MULU.W	D1,D1		; 0 - 743^2
-	DIVU.W	#25093,D1	; 0 - 743^2 -> 0..22
+	DIVU.W	#25093,D1	; 0 - 743^2 -> 0..22 (25093 = round[743^2 / 22])
 	MOVE.W	D1,D0
-	CMP.W	#46,D0
-	BLO.B	saskip
-	MOVEQ	#45,D0
-saskip	;LSL.W	#1,D0
+	; --------------------
+	; --------------------
+	MOVEQ	#36,D1
+	LEA	AnalyzerHeights+1,A0
 	ADD.W	D0,D0
-	ADD.W	D2,(A0,D0.W)
-	CMP.W	#36,(A0,D0.W)
+	ADD.W	D0,A0
+	; --------------------
+	MOVE.B	(A0),D4		; cache it (for safety)
+	ADD.B	D2,D4
+	CMP.B	D1,D4
 	BLO.B	saskip2
-	MOVE.W	#36,(A0,D0.W)
-saskip2	TST.W	D0
-	BEQ.B	saskip3
-	ADD.W	D3,-2(A0,D0.W)
-	CMP.W	#36,-2(A0,D0.W)
+	MOVE.B	D1,D4
+saskip2	MOVE.B	D4,(A0)
+	SUBQ.W	#2,A0		; A0 = -2(A0)
+	; --------------------
+	TST.B	D0
+	BEQ.B	saskip4
+	MOVE.B	(A0),D4		; cache it (for safety)
+	ADD.B	D3,D4
+	CMP.B	D1,D4
 	BLO.B	saskip3
-	MOVE.W	#36,-2(A0,D0.W)
-saskip3	CMP.W	#44,D0
+	MOVE.B	D1,D4
+saskip3	MOVE.B	D4,(A0)
+saskip4	ADDQ.W	#4,A0		; A0 = 2(A0)
+	; --------------------
+	CMP.B	#22*2,D0
 	BEQ.B	saend
-	ADD.W	D3,2(A0,D0.W)
-	CMP.W	#36,2(A0,D0.W)
-	BLO.B	saend
-	MOVE.W	#36,2(A0,D0.W)
+	MOVE.B	(A0),D4		; cache it (for safety)
+	ADD.B	D3,D4
+	CMP.B	D1,D4
+	BLO.B	saskip5
+	MOVE.B	D1,D4
+saskip5	MOVE.B	D4,(A0)
+	; --------------------
 saend	SF	AnaDrawFlag
-ohno	MOVEM.L	(SP)+,D0-D3/A0
+ohno	MOVEM.L	(SP)+,D0-D4/A0
 	RTS
 
 AnalyzerOffsets
