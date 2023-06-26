@@ -19,6 +19,8 @@
 ;               7) Set default BPM on mt_init
 ;               8) Clear more replayer variables on mt_init
 ;
+; - 26.06.2023: Fixed my own bug on .MODs with a ton of patterns
+;
 ; CIA Version:
 ; Call SetCIAInt to install the interrupt server. Then call mt_init
 ; to initialize the song. Playback starts when the mt_enable flag
@@ -362,12 +364,13 @@ mt_GetNewNote
 	MOVEQ	#0,D0
 	MOVE.B	mt_SongPos(PC),D0
 	MOVEQ	#0,D1
-	MOVE.B	(A2,D0.W),D1
+	MOVE.B	(A2,D0.W),D1	
+	LSL.L	#8,D1
+	LSL.L	#2,D1
+	MOVEQ	#0,D0	
+	MOVE.W	mt_PatternPos(PC),D0
+	ADD.L	D0,D1
 
-	SWAP	D1
-	LSR.L	#6,D1 ; D1 *= 1024 (faster than 8+2 shift on 68000)
-	
-	ADD.W	mt_PatternPos(PC),D1
 	CLR.W	mt_DMACONtemp
 
 	LEA	$DFF0A0,A5
