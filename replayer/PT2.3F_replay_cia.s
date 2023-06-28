@@ -20,15 +20,16 @@
 ;               8) Clear more replayer variables on mt_init
 ;
 ; - 26.06.2023: Fixed my own bug on .MODs with a ton of patterns
+; - 28.06.2023: 1) Fixed my own bug in mt_init (bytes written out-of-bounds)
+;               2) Removed Karplus-Strong effect (just like other PT players)
+;               3) Changed some logic to remove need for stacking regs in places
+;               4) Small code cleanup
 ;
 ; CIA Version:
 ; Call SetCIAInt to install the interrupt server. Then call mt_init
 ; to initialize the song. Playback starts when the mt_enable flag
 ; is set to a non-zero value. To end the song and turn off all voices,
 ; call mt_end. At last, call ResetCIAInt to remove the interrupt.
-;
-; This replay routine is modified to work exactly like the tracker replayer,
-; thus it is accurate, but not optimized in any way.
 ;
 ; You can use this routine to play a module. Just remove the semicolons.
 ; Also change the module path in mt_data at the very bottom of this file.
@@ -237,8 +238,13 @@ n_loopcount	EQU 42 ; B
 n_funkoffset	EQU 43 ; B
 
 mt_init
+	MOVEM.L	D0-A6,-(SP)
+
 	LEA	mt_data,A0
 	MOVE.L	A0,mt_SongDataPtr
+	MOVE.B	950(A0),mt_SongLength
+	LEA	12(A0),A1
+	MOVE.L	A1,mt_SampleStructPtr
 	
 	; count number of patterns (find highest referred pattern)
 	LEA	952(A0),A1	; order list address
@@ -253,28 +259,34 @@ mtloop2	MOVE.B	(A1)+,D1
 	ADDQ.B	#1,D2
 	
 	; generate mt_SampleStarts list and fix samples
-	LEA	mt_SampleStarts(PC),A1
 	
 	LSL.L	#8,D2
 	LSL.L	#2,D2		; D2 *= 1024 
 	ADD.L	#1084,D2
 	ADD.L	A0,D2
 	MOVE.L	D2,A2		; A2 is now the address of first sample's data
-	MOVEQ	#31-1,D0	; handle 31 samples
-mtloop3	MOVE.W  48(A0),D3	; get replen
-	TST.W   D3		; replen is zero?
-	BNE.B   mtskip		; no
-	MOVE.W  #1,48(A0)	; yes, set to 1 (fixes lock-up)
-mtskip	CMP.W   #1,D3		; loop enabled?
-	BHI.B   mtskip2		; yes
-	CLR.W   (A2)		; no, clear first two bytes of sample
-mtskip2	MOVE.L	A2,(A1)+	; move sample address into mt_SampleStarts slot
+
+	LEA	mt_SampleStarts(PC),A1
+	MOVEQ	#31-1,D3
+mtloop3	MOVEQ	#0,D0
+	MOVE.W	42(A0),D0	; get sample length
+	BEQ.B	mtskip2		; sample is empty, don't handle
 	MOVEQ	#0,D1
-	MOVE.W	42(A0),D1 	; get sample length
-	ADD.L	D1,D1		; turn into real sample length
-	ADD.L	D1,A2		; add to address
+	MOVE.W	46(A0),D1	; get repeat
+	MOVEQ	#0,D2
+	MOVE.W  48(A0),D2	; get replen
+	BNE.B   mtskip
+	MOVEQ	#1,D2
+	MOVE.W  D2,48(A0)	; replen is zero, set to 1 (fixes lock-up)
+mtskip	ADD.L	D2,D1
+	CMP.L   #1,D1		; loop enabled? (repeat+replen > 1)
+	BHI.B   mtskip2		; yes
+	CLR.W   (A2)		; no, clear first word of sample (prevents beep)
+mtskip2	MOVE.L	A2,(A1)+	; move sample address into mt_SampleStarts slot
+	ADD.L	D0,D0		; turn into real sample length
+	ADD.L	D0,A2		; add to address
 	LEA	30(A0),A0	; skip to next sample list entry
-	DBRA	D0,mtloop3
+	DBRA	D3,mtloop3
 
 	; initialize stuff
 	MOVE.B	$BFE001,D0		; copy of LED filter state
@@ -292,7 +304,10 @@ mtskip2	MOVE.L	A2,(A1)+	; move sample address into mt_SampleStarts slot
 	MOVEQ	#125,D0
 	BSR.W	SetTempo
 	SF	mt_Enable
-	BRA.B	mt_TurnOffVoices
+	BSR.B	mt_TurnOffVoices
+	
+	MOVEM.L	(SP)+,D0-A6
+	RTS
 	
 mt_end
 	SF	mt_Enable
@@ -324,7 +339,7 @@ reefsub	CLR.B	n_wavecontrol(A0)
 	RTS
 
 mt_IntMusic
-	MOVEM.L	D0-D7/A0-A6,-(SP)
+	MOVEM.L	D0-A6,-(SP)
 	TST.B	mt_Enable
 	BEQ.W	mt_exit
 	ADDQ.B	#1,mt_Counter
@@ -356,21 +371,22 @@ mt_NoNewAllChannels
 	BRA.W	mt_CheckEffects
 
 mt_GetNewNote
+	; Setup pattern pointer
 	MOVE.L	mt_SongDataPtr(PC),A0
-	LEA	12(A0),A3
-	LEA	952(A0),A2	;pattpo
+	LEA	952(A0),A1	;pattpo
 	LEA	1084(A0),A0	;patterndata
-
 	MOVEQ	#0,D0
 	MOVE.B	mt_SongPos(PC),D0
 	MOVEQ	#0,D1
-	MOVE.B	(A2,D0.W),D1	
+	MOVE.B	(A1,D0.W),D1
 	LSL.L	#8,D1
 	LSL.L	#2,D1
-	MOVEQ	#0,D0	
+	MOVEQ	#0,D0
 	MOVE.W	mt_PatternPos(PC),D0
 	ADD.L	D0,D1
-
+	ADD.L	D1,A0
+	MOVE.L	A0,mt_PatternPtr
+	
 	CLR.W	mt_DMACONtemp
 
 	LEA	$DFF0A0,A5
@@ -408,8 +424,10 @@ mt_PlayVoice
 	BNE.B	mt_plvskip
 	BSR.W	mt_PerNop
 mt_plvskip
-	MOVE.L	(A0,D1.L),(A6)	; Read note from pattern
-	ADDQ.L	#4,D1
+	MOVE.L	mt_PatternPtr(PC),A0
+	MOVE.L	(A0)+,(A6)	; Read note from pattern
+	MOVE.L	A0,mt_PatternPtr
+	
 	MOVEQ	#0,D2
 	MOVE.B	n_cmd(A6),D2	; Get lower 4 bits of instrument
 	AND.B	#$F0,D2
@@ -417,11 +435,11 @@ mt_plvskip
 	MOVE.B	(A6),D0		; Get higher 4 bits of instrument
 	AND.B	#$F0,D0
 	OR.B	D0,D2
-	TST.B	D2
 	BEQ.W	mt_SetRegisters	; Instrument was zero
 
-	MOVEQ	#0,D3
 	LEA	mt_SampleStarts(PC),A1
+	MOVE.L	mt_SampleStructPtr(PC),A3
+	
 	MOVE	D2,D4
 	SUBQ.L	#1,D2
 	LSL.L	#2,D2
@@ -438,10 +456,9 @@ mt_plvskip
 	LEA	mt_ftunePerTab(PC),A4
 	MOVE.L	(A4,D0.W),n_peroffset(A6)
 	; ----------------------------------
-	
+	MOVEQ	#0,D3
 	MOVE.B	3(A3,D4.L),n_volume(A6)
 	MOVE.W	4(A3,D4.L),D3		; Get repeat
-	TST.W	D3
 	BEQ.B	mt_NoLoop
 	MOVE.L	n_start(A6),D2		; Get start
 	ADD.L	D3,D3
@@ -488,12 +505,11 @@ mt_ChkTonePorta
 	BRA.W	mt_CheckMoreEffects
 
 mt_SetPeriod
-	MOVEM.L	D1/A0/A1,-(SP)
 	MOVE.W	(A6),D1
 	AND.W	#$0FFF,D1
 	LEA	mt_PeriodTable(PC),A1
 	MOVEQ	#0,D0
-	MOVEQ	#$24,D7
+	MOVEQ	#37-1,D7
 mt_ftuloop
 	CMP.W	(A1,D0.W),D1
 	BHS.B	mt_ftufound
@@ -502,7 +518,6 @@ mt_ftuloop
 mt_ftufound
 	MOVE.L	n_peroffset(A6),A1
 	MOVE.W	(A1,D0.W),n_period(A6)
-	MOVEM.L	(SP)+,D1/A0/A1
 
 	MOVE.W	2(A6),D0
 	AND.W	#$0FF0,D0
@@ -532,10 +547,7 @@ mt_sdmaskp
 	OR.W	D0,mt_DMACONtemp
 	BRA.W	mt_CheckMoreEffects
  
-mt_SetDMA
-	MOVE.L	A0,-(SP)
-	MOVE.L	D1,-(SP)
-	
+mt_SetDMA	
 	; scanline-wait (wait before starting Paula DMA)
 	LEA	$DFF006,A0
 	MOVEQ	#7-1,D1
@@ -558,8 +570,6 @@ waiteol2
 	CMP.B	(A0),D0
 	BEQ.B	waiteol2
 	DBRA	D1,lineloop2
-	MOVE.L	(SP)+,D1
-	MOVE.L	(SP)+,A0
 	
 	LEA	$DFF000,A5
 	LEA	mt_audchan4temp(PC),A6
@@ -607,17 +617,16 @@ mt_NextPosition
 	CLR.B	mt_PBreakPos
 	CLR.B	mt_PosJumpFlag
 	ADDQ.B	#1,mt_SongPos
-	AND.B	#$7F,mt_SongPos
+	AND.B	#127,mt_SongPos
 	MOVE.B	mt_SongPos(PC),D1
-	MOVE.L	mt_SongDataPtr(PC),A0
-	CMP.B	950(A0),D1
+	CMP.B	mt_SongLength(PC),D1
 	BLO.B	mt_NoNewPositionYet
 	CLR.B	mt_SongPos
 	
 mt_NoNewPositionYet
 	TST.B	mt_PosJumpFlag
 	BNE.B	mt_NextPosition
-mt_exit	MOVEM.L	(SP)+,D0-D7/A0-A6
+mt_exit	MOVEM.L	(SP)+,D0-A6
 	RTS
 	
 mt_CheckEffects
@@ -706,7 +715,7 @@ mt_ArpeggioFind
 	MOVE.L	n_peroffset(A6),A0
 	MOVEQ	#0,D1
 	MOVE.W	n_period(A6),D1
-	MOVEQ	#$24,D3
+	MOVEQ	#37-1,D3
 mt_arploop
 	MOVE.W	(A0,D0.W),D2
 	CMP.W	(A0),D1
@@ -731,10 +740,10 @@ mt_PortaUp
 	SUB.W	D0,n_period(A6)
 	MOVE.W	n_period(A6),D0
 	AND.W	#$0FFF,D0
-	CMP.W	#$0071,D0
+	CMP.W	#113,D0
 	BPL.B	mt_PortaUskip
 	AND.W	#$F000,n_period(A6)
-	OR.W	#$0071,n_period(A6)
+	OR.W	#113,n_period(A6)
 mt_PortaUskip
 	MOVE.W	n_period(A6),D0
 	AND.W	#$0FFF,D0
@@ -753,10 +762,10 @@ mt_PortaDown
 	ADD.W	D0,n_period(A6)
 	MOVE.W	n_period(A6),D0
 	AND.W	#$0FFF,D0
-	CMP.W	#$0358,D0
+	CMP.W	#856,D0
 	BMI.B	mt_PortaDskip
 	AND.W	#$F000,n_period(A6)
-	OR.W	#$0358,n_period(A6)
+	OR.W	#856,n_period(A6)
 mt_PortaDskip
 	MOVE.W	n_period(A6),D0
 	AND.W	#$0FFF,D0
@@ -974,9 +983,9 @@ mt_Tremolo3
 	BPL.B	mt_TremoloSkip
 	CLR.W	D0
 mt_TremoloSkip
-	CMP.W	#$40,D0
+	CMP.W	#64,D0
 	BLS.B	mt_TremoloOk
-	MOVE.W	#$40,D0
+	MOVE.W	#64,D0
 mt_TremoloOk
 	MOVE.W	D0,8(A5)
 	MOVE.B	n_tremolocmd(A6),D0
@@ -1001,20 +1010,19 @@ mt_sononew
 	ADD.L	D0,n_start(A6)
 	RTS
 mt_sofskip
-	MOVE.W	#$0001,n_length(A6)
+	MOVE.W	#1,n_length(A6)
 	RTS
 
 mt_VolumeSlide
 	MOVEQ	#0,D0
 	MOVE.B	n_cmdlo(A6),D0
 	LSR.B	#4,D0
-	TST.B	D0
 	BEQ.B	mt_VolSlideDown
 mt_VolSlideUp
 	ADD.B	D0,n_volume(A6)
-	CMP.B	#$40,n_volume(A6)
+	CMP.B	#64,n_volume(A6)
 	BMI.B	mt_vsuskip
-	MOVE.B	#$40,n_volume(A6)
+	MOVE.B	#64,n_volume(A6)
 mt_vsuskip
 	RTS
 
@@ -1040,9 +1048,9 @@ mt_pj2	CLR.B	mt_PBreakPos
 mt_VolumeChange
 	MOVEQ	#0,D0
 	MOVE.B	n_cmdlo(A6),D0
-	CMP.B	#$40,D0
+	CMP.B	#64,D0
 	BLS.B	mt_VolumeOk
-	MOVEQ	#$40,D0
+	MOVEQ	#64,D0
 mt_VolumeOk
 	MOVE.B	D0,n_volume(A6)
 	RTS
@@ -1126,6 +1134,8 @@ mt_E_Commands
 	JMP	(A4) ; every E-efx has RTS at the end, this is safe
 	
 mt_FilterOnOff
+	TST.B	mt_Counter
+	BNE.W	mt_Return3
 	MOVE.B	n_cmdlo(A6),D0
 	AND.B	#1,D0
 	ADD.B	D0,D0
@@ -1194,35 +1204,9 @@ mt_SetTremoloControl
 	RTS
 
 mt_KarplusStrong
-	MOVEM.L	D1/D2/A0/A1,-(SP)
-	MOVE.L	n_loopstart(A6),A0
-	CMP.W	#0,A0
-	BEQ.B	karplend
-	MOVE.L	A0,A1
-	MOVE.W	n_replen(A6),D0
-	ADD.W	D0,D0
-	SUBQ.W	#2,D0
-karplop	MOVE.B	(A0),D1
-	EXT.W	D1
-	MOVE.B	1(A0),D2
-	EXT.W	D2
-	ADD.W	D1,D2
-	ASR.W	#1,D2
-	MOVE.B	D2,(A0)+
-	DBRA	D0,karplop
-	MOVE.B	(A0),D1
-	EXT.W	D1
-	MOVE.B	(A1),D2
-	EXT.W	D2
-	ADD.W	D1,D2
-	ASR.W	#1,D2
-	MOVE.B	D2,(A0)
-karplend	
-	MOVEM.L	(SP)+,D1/D2/A0/A1
 	RTS
 
 mt_RetrigNote
-	MOVE.L	D1,-(SP)
 	MOVEQ	#0,D0
 	MOVE.B	n_cmdlo(A6),D0
 	AND.B	#$0F,D0
@@ -1248,7 +1232,6 @@ mt_DoRetrig
 	MOVE.W	n_period(A6),6(A5)  	; Set period
 
 	; scanline-wait (wait before starting Paula DMA)
-	MOVE.L	A0,-(SP)
 	LEA	$DFF006,A0
 	MOVEQ	#7-1,D1
 lineloop3
@@ -1270,12 +1253,10 @@ waiteol4
 	CMP.B	(A0),D0
 	BEQ.B	waiteol4
 	DBRA	D1,lineloop4
-	MOVE.L	(SP)+,A0
 
 	MOVE.L	n_loopstart(A6),(A5)
 	MOVE.L	n_replen(A6),4(A5)
 mt_rtnend
-	MOVE.L	(SP)+,D1
 	RTS
 	
 	; DIV -> LUT optimization. Maybe a bit extreme, but DIVU is 140+
@@ -1332,7 +1313,6 @@ mt_NoteDelay
 	MOVE.W	(A6),D0
 	AND.W	#$0FFF,D0
 	BEQ.W	mt_Return3
-	MOVE.L	D1,-(SP)
 	BRA.W	mt_DoRetrig
 
 mt_PatternDelay
@@ -1358,8 +1338,6 @@ mt_FunkIt
 	TST.B	D0
 	BEQ.W	mt_Return3
 mt_UpdateFunk
-	MOVE.L	D1,-(SP)
-	MOVE.L	A0,-(SP)
 	MOVEQ	#0,D0
 	MOVE.B	n_glissfunk(A6),D0
 	LSR.B	#4,D0
@@ -1388,8 +1366,6 @@ mt_funkok
 	SUB.B	(A0),D0
 	MOVE.B	D0,(A0)
 mt_funkend
-	MOVE.L	(SP)+,A0
-	MOVE.L	(SP)+,D1
 	RTS
 
 mt_FunkTable
@@ -1509,13 +1485,13 @@ mt_audchan4temp	dcb.b	26
 		dcb.b	16
 
 	CNOP 0,4
-mt_SampleStarts
-	dc.l	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	dc.l	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-
+mt_SampleStarts		dcb.l 31,0
 mt_SongDataPtr		dc.l 0
+mt_SampleStructPtr	dc.l 0
+mt_PatternPtr		dc.l 0
 mt_PatternPos		dc.w 0
 mt_DMACONtemp		dc.w 0
+mt_SongLength		dc.b 0
 mt_Speed		dc.b 6
 mt_Counter		dc.b 0
 mt_SongPos		dc.b 0
