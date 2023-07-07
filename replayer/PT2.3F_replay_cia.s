@@ -1255,7 +1255,7 @@ waiteol4
 	DBRA	D1,lineloop4
 
 	MOVE.L	n_loopstart(A6),(A5)
-	MOVE.L	n_replen(A6),4(A5)
+	MOVE.W	n_replen(A6),4(A5)
 mt_rtnend
 	RTS
 	
