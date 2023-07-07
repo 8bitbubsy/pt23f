@@ -25341,7 +25341,7 @@ waiteol7
 	DBRA	D1,lineloop7
 
 	MOVE.L	n_loopstart(A6),(A5)
-	MOVE.L	n_replen(A6),4(A5)
+	MOVE.W	n_replen(A6),4(A5)
 rtnend	MOVE.L	(SP)+,D1
 	MOVE.L	(SP)+,A0
 	RTS
