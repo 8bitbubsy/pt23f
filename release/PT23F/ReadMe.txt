@@ -1,15 +1,14 @@
                 ProTracker v2.3F 
          ==============================
-               14th of June, 2023
+              9th of October, 2023
 
- If you find any bugs, please email me at olav.sorensen@live.no
- Based on a disassembly of PT2.3D.
+ If you find any bugs, please email me at the email/Discord found on
+ the website 16-bits.org.
 
  NOTE:
-  This specific version is fully 128kB sample compliant, so
-  if you use loop points above the 64kB barrier, then the
-  module will fail to play correctly on most ProTracker
-  versions except some 3.x ones.
+  This specific version is fully 128kB sample compliant, so if you use
+  loop points above the 64kB barrier, then the module will fail to
+  play correctly on most ProTracker versions, except some 3.x ones.
 
  PT2.3D by:
  - Peter "CRAYON" Hanning
@@ -20,6 +19,33 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+ 
+ == Update 09.10.2023 ===============================================
+ - The following sample editing functions have been optimized to take
+   less time to complete:
+    1) Resample (Sampler screen)
+    2) Volume ("RAMP") (Sampler screen)
+    3) Volume change ("VOL") (Edit Op. #3)
+    4) Fade Up ("FU") (Edit Op. #3)
+    5) Fade Down ("FD") (Edit Op. #3)
+    6) Boost (Edit Op. #3, only very lightly optimized)
+    7) Filter (Edit Op. #3)
+    8) X-Fade (Edit Op. #3, only very lightly optimized)
+    9) Mix (Edit Op. #3)
+ - The sample chord editor now produces better samples (16-bit mixing
+   + normalized gain before converting to 8-bit), and takes up less
+   RAM. It's still as slow as before, if not slightly slower.
+ - Removed the custom length stuff from the sample chord editor. I
+   don't really think they were all that useful.
+ - Slightly reduced the duration of "red mouse cursor" errors
+ - A sample's waveform no longer "wiggles" while scrolling through it
+   in the sampler screen. It still flickers, though.
+ - The mouse now moves slightly more smoothly (no crude acceleration)
+ - Bugfix: Redraw sample after having mixed ("MIX") samples together
+ - Bugfix: The chord editor had a sample length bug
+ - Removed CTRL+V (filter all samples) and CTRL+G (boost all samples)
+ - Edited and cleaned up the PT help file
+ ====================================================================
  
  == Update 14.06.2023 ===============================================
  - The spectrum analyzer didn't work like it should when jamming
@@ -41,7 +67,7 @@
  - Fixed: If arpeggio was used in vblank timing mode together with a
    speed above 31, it would not work correctly.
  - Fixed: Changing speed in SETUP was wrongly limited to 0..32.
-   (I had forgotten about vblank timing mode when I made this change).
+   (I had forgotten about vblank timing mode when I made this change)
  - Lowered process stack from 16kB to 2kB, to free up more RAM for
    systems like a stock A500.
  - The waveform plotter in the sample editor has been given a small
