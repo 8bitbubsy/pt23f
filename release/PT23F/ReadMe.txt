@@ -42,6 +42,9 @@
    in the sampler screen. It still flickers, though.
  - The mouse now moves slightly more smoothly (no crude acceleration)
  - Bugfix: Redraw sample after having mixed ("MIX") samples together
+ - Removed the Karplus-Strong (E8x) command/effect. Not only was it
+   not documented anywhere, but it was the most useless and annoying
+   effect to ever exist. Probably also the least used.
  - Removed CTRL+V (filter all samples) and CTRL+G (boost all samples)
  - Edited and cleaned up the PT help file
  ====================================================================
