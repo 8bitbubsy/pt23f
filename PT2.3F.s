@@ -21868,6 +21868,7 @@ SamMenu4
 	CMP.W	#246,D0
 	BLO.W	Resample
 	BRA.W	SetResamNote
+
 	; 32x32 -> 32 unsigned multiplication
 	; Note: Don't use this if CPUIs68000 wasn't properly set!
 	;
