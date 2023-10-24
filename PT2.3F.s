@@ -1863,19 +1863,22 @@ ScoContinue
 	MOVE.W	ns_period(A2),D1
 	BEQ.B	ScoNextChan
 	
-	; --PT2.3D change: better scope pitch/delta precision
-	
+	; PT2.3F: better scope pitch/delta precision
+
+FRAC_BITS EQU 6				; max bits for period 113 w/ DIVU.W
+
 	CMP.W	#113,D1			; min. Paula period in normal video modes
 	BHS.B	ScoOk			; (clamp also needed for DIVU.W)
-	MOVE.W	#113,D1
-ScoOk	MOVE.L	#71051*(1<<6),D2	; PaulaClk / VBlankHz = 71051.0 (exact)
+	MOVEQ	#113,D1
+ScoOk	MOVE.L	#71051*(1<<FRAC_BITS),D2 ; PaulaClk / VBlankHz = 71051.0 (exact)
 	DIVU.W	D1,D2
 	MOVEQ	#0,D1
 	MOVE.W	D2,D1
-	LSR.W	#6,D1			; D1.L = delta integer
-	AND.W	#(1<<6)-1,D2
-	ROR.W	#6,D2			; D2.W = delta frac (scaled to .16fp)	
-	ADD.W	D2,ns_posfrac(A2)	; add delta fraction
+	ROR.L	#FRAC_BITS,D1
+	SWAP	D1			; D1.L is now laid out as 16.16fp
+	ADD.W	D1,ns_posfrac(A2)	; add delta fraction
+	CLR.W	D1
+	SWAP	D1
 	ADDX.L	D1,D0			; add integer + fraction overflow bit	
 	
 ScoChk	CMP.L	ns_endptr(A2),D0
