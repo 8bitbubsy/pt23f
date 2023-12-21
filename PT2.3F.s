@@ -24378,9 +24378,8 @@ PerNop	MOVE.W	n_period(A6),6(A5)
 	RTS
 
 Arpeggio
-	MOVEQ	#0,D0
 	MOVE.L	Counter(PC),D0
-	AND.L	#255,D0			; just in case
+	AND.W	#255,D0			; just in case
 	MOVE.B	ArpTab(PC,D0.W),D0
 	CMP.B	#1,D0
 	BEQ.W	Arpeggio1
