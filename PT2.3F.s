@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;     9th of October, 2023
+;    12th of September, 2024
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -15381,9 +15381,14 @@ shvoskip6
 PercentText	dc.b	'%',0
 	EVEN
 
-	; 128kB compatible and faster, by 8bitbubsy.
+	; 128kB compatible and much faster, by 8bitbubsy.
+dcvrts	RTS
 DoChangeVol	
 	JSR	WaitForButtonUp
+
+	CMP.W	#100,SampleVol	; volume change needed (vol != 100)?
+	BEQ.B	dcvrts		; nope, don't do anything
+
 	JSR	StorePtrCol
 	JSR	SetWaitPtrCol
 	MOVEQ	#0,D3
@@ -15394,35 +15399,54 @@ DoChangeVol
 	MOVE.L	si_pointer,D0
 	BEQ.W	bwErrorRestoreCol
 	MOVE.L	D0,A1
+	
+	; 8bb:
+	; Instead of doing a full loop of MUL+ASR, let's precalc
+	; a 256 byte long conversion LUT instead. This is
+	; dramatically faster.
+
+	; create amp conversion LUT
 	MOVEQ	#0,D0
 	MOVE.W	SampleVol(PC),D0
-	LSL.L	#7,D0		; Rescale volume range (for DIV -> ASR)	
-        DIVU.W	#100,D0		; D0.W = vol (0..1278)
-        
-        MOVEQ	#127,D4
-        MOVEQ	#-128,D5
-	
-dcvloop	MOVE.B	(A1),D1
+	MOVEQ	#11,D6		; max bits for 0..999 range
+	LSL.L	D6,D0		; rescale volume range (for DIV -> bitshift)	
+        DIVU.W	#100,D0		; vol 0..999/100 --> 0..20459
+        LEA	SmpConvLUT,A0
+        MOVEQ	#127,D4		; clip values
+        MOVEQ	#-128,D5	;
+        MOVEQ	#0,D2
+dcvll	MOVE.B	D2,D1
 	EXT.W	D1
 	MULS.W	D0,D1
-	ASR.W	#7,D1
+	SWAP	D1
+	ROL.L	#5,D1
 	CMP.W	D4,D1
 	BGT.B	dcvhi
 	CMP.W	D5,D1
 	BLT.B	dcvlo
-dcvset	MOVE.B	D1,(A1)+
+	MOVE.B	D1,(A0)+
+dcvnext	ADDQ.B	#1,D2
+	BCC.B	dcvll
+	BRA.B	dcvdone
+dcvhi	MOVE.B	D4,(A0)+
+	BRA.B	dcvnext
+dcvlo	MOVE.B	D5,(A0)+
+	BRA.B	dcvnext
+dcvdone
+
+	; do actual volume change
+	LEA	SmpConvLUT,A0
+	MOVEQ	#0,D0
+dcvloop	MOVE.B	(A1),D0
+	MOVE.B	(A0,D0.W),(A1)+
 	SUBQ.L	#1,D3
 	BPL.B	dcvloop
 
+	; done!
 	MOVE.L	si_pointer,A1
 	CLR.W	(A1)
 	JSR	RestorePtrCol
 	BRA.W	DisplaySample
-
-dcvhi	MOVE.B	D4,D1
-	BRA.B	dcvset
-dcvlo	MOVE.B	D5,D1
-	BRA.B	dcvset
 
 Mix
 	BTST	#2,$DFF016	; right mouse button
@@ -22224,7 +22248,7 @@ LoopToggle
 	MOVE.L	D0,4(A0)
 	BSR.W	TurnOffVoices
 looptlo	BSR.W	ShowSampleInfo
-	BSR.W	UpdateRepeats
+	JSR	UpdateRepeats
 	BRA.W	DisplaySample
 loopton	BSR.W	TurnOffVoices
 	MOVE.L	SavSamInf(PC),D0
@@ -25570,6 +25594,7 @@ AskBoxShown	dc.b	0,0
 CPUIs68000	dc.b	0
 AboutScreenShown	dc.b	0
 RightMouseButtonHeld	dc.b	0
+SmpConvLUT	dcb.b 256,0
 	EVEN
 
 ; -----------------------------------------------------------------------------
