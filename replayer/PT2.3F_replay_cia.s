@@ -24,6 +24,7 @@
 ;               2) Removed Karplus-Strong effect (just like other PT players)
 ;               3) Changed some logic to remove need for stacking regs in places
 ;               4) Small code cleanup
+; - 17.11.2024: Small arpeggio effect optimization
 ;
 ; CIA Version:
 ; Call SetCIAInt to install the interrupt server. Then call mt_init
@@ -697,8 +698,8 @@ mt_Arpeggio
 	CMP.B	#2,D0
 	BEQ.B	mt_Arpeggio2
 mt_Arpeggio0
-	MOVE.W	n_period(A6),D2
-	BRA.B	mt_ArpeggioSet
+	MOVE.W	n_period(A6),6(A5)
+	RTS
 	
 mt_Arpeggio1
 	MOVEQ	#0,D0
@@ -717,15 +718,14 @@ mt_ArpeggioFind
 	MOVE.W	n_period(A6),D1
 	MOVEQ	#37-1,D3
 mt_arploop
-	MOVE.W	(A0,D0.W),D2
 	CMP.W	(A0),D1
-	BHS.B	mt_ArpeggioSet
+	BHS.B	mt_ArpeggioFound
 	ADDQ.L	#2,A0
 	DBRA	D3,mt_arploop
 	RTS
-
-mt_ArpeggioSet
-	MOVE.W	D2,6(A5)
+	
+mt_ArpeggioFound
+	MOVE.W	(A0,D0.W),6(A5)
 	RTS
 
 mt_FinePortaUp
