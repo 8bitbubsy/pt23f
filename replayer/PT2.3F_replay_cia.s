@@ -25,6 +25,7 @@
 ;               3) Changed some logic to remove need for stacking regs in places
 ;               4) Small code cleanup
 ; - 17.11.2024: Small arpeggio effect optimization
+; - 12.03.2025: mt_LowMask was not initialized correctly (small portamento bug)
 ;
 ; CIA Version:
 ; Call SetCIAInt to install the interrupt server. Then call mt_init
@@ -1498,7 +1499,7 @@ mt_SongPos		dc.b 0
 mt_PBreakPos		dc.b 0
 mt_PosJumpFlag		dc.b 0
 mt_PBreakFlag		dc.b 0
-mt_LowMask		dc.b 0
+mt_LowMask		dc.b $FF
 mt_PattDelayTime	dc.b 0
 mt_PattDelayTime2	dc.b 0
 mt_Enable		dc.b 0
