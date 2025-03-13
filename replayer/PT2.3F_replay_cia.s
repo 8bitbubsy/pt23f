@@ -26,6 +26,7 @@
 ;               4) Small code cleanup
 ; - 17.11.2024: Small arpeggio effect optimization
 ; - 12.03.2025: mt_LowMask was not initialized correctly (small portamento bug)
+; - 13.03.2025: Register preserving in mt_end
 ;
 ; CIA Version:
 ; Call SetCIAInt to install the interrupt server. Then call mt_init
@@ -314,16 +315,16 @@ mtskip2	MOVE.L	A2,(A1)+	; move sample address into mt_SampleStarts slot
 mt_end
 	SF	mt_Enable
 	BCLR	#1,$BFE001		; restore previous LED filter state
+	MOVE.L	D0,-(SP)
 	MOVE.B	LEDStatus(PC),D0
 	OR.B	D0,$BFE001
+	MOVE.L	(SP)+,D0
 mt_TurnOffVoices
-	LEA	$DFF000,A0
-	MOVE.W	#$000F,$96(A0)		; turn off voice DMAs
-	MOVEQ	#0,D0			; clear voice volumes
-	MOVE.W	D0,$A8(A0)			
-	MOVE.W	D0,$B8(A0)
-	MOVE.W	D0,$C8(A0)
-	MOVE.W	D0,$D8(A0)
+	MOVE.W	#$F,$DFF096		; turn off voice DMAs
+	CLR.W	$DFF0A8			; clear voice volumes
+	CLR.W	$DFF0B8
+	CLR.W	$DFF0C8
+	CLR.W	$DFF0D8
 	RTS
 
 mt_RestoreEffects
