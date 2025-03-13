@@ -14,7 +14,7 @@
 ; - 13.03.2025: Initial version
 ;
 
-; Simple test code. Attempts to call mt_init() 50 times a second, but may play
+; Simple test code. Attempts to call mt_music() 50 times a second, but may play
 ; at the wrong tempo, especially in some emulator configs.
 main
 	BSR.W	mt_init			; setup module
