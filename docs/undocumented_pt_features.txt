@@ -7,7 +7,7 @@ Undocumented features in ProTracker (up to 2.3D):
 
 2) PT2.1A and newer (removed in PT2.3E):
    Type "noxious" on keyboard, it will show "not implemented".
-   Was probably meant to show an easter egg or some info..?
+   Was probably meant to show an easter egg, or some info..?
 
 3) PT2.2A and newer:
    Press both left and right mouse buttons on the little dot next to the
@@ -16,8 +16,8 @@ Undocumented features in ProTracker (up to 2.3D):
 	 
 4) PT2.1A and newer:
    Press CTRL + ALT + SHIFT + LEFT-AMIGA + DEL.
-   Prepares a pattern for the infamous "backwards play" trick by inverting data.
+   Prepares a pattern for the infamous "backwards play" trick by inverting
+   data.
 
 5) PT1.0B and newer:
-   Press the empty button next to the <> key.
-   Kills all playing voices!
+   Press the empty button next to the <> key. Stops all playing voices.
