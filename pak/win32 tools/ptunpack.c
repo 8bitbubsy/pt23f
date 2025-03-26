@@ -4,14 +4,13 @@
 #include <stdbool.h>
 #include <string.h>
 
+char inName[8192+1], tmpFileName[8192+1];
 static uint8_t compCode = 181;
 
 static bool unpack(const char *filenameIn, const char *filenameOut);
 
 int main(int argc, char *argv[])
 {
-	char inName[4096+1], tmpFileName[4096+1];
-
 	if (argc < 2 || argc > 3)
 	{
 		printf("Usage: ptunpack <filename.pak> [--rle-id]\n");
@@ -25,6 +24,7 @@ int main(int argc, char *argv[])
 
 	size_t filenameLen = strlen(inName);
 
+	// XXX: This is not safe!
 	strcpy(tmpFileName, inName);
 	tmpFileName[filenameLen-3] = 'r';
 	tmpFileName[filenameLen-2] = 'a';

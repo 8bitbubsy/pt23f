@@ -4,14 +4,13 @@
 #include <stdbool.h>
 #include <string.h>
 
+char inName[8192+1], tmpFileName[8192+1];
 static uint8_t compCode = 181;
 
 static bool pack(const char *filenameIn, const char *filenameOut);
 
 int main(int argc, char *argv[])
 {
-	char inName[4096+1], tmpFileName[4096+1];
-
 	if (argc < 2 || argc > 3)
 	{
 		printf("Usage: ptpack <filename.raw> [--rle-id]\n");
@@ -25,6 +24,7 @@ int main(int argc, char *argv[])
 
 	const size_t filenameLen = strlen(inName);
 
+	// XXX: This is not safe!
 	strcpy(tmpFileName, inName);
 	tmpFileName[filenameLen-3] = 'p';
 	tmpFileName[filenameLen-2] = 'a';
@@ -59,8 +59,11 @@ static bool pack(const char *filenameIn, const char *filenameOut)
 	fread(DataPtr, 1, DataLen, in);
 	fclose(in);
 
-	/* The following mess is a direct 68k asm of ptcompactor.s found in
-	** the ProTracker 1.2A source code.
+	/* The following mess is a direct 68k asm port of ptcompactor.s,
+	** found in the ProTracker 1.2A source code.
+	**
+	** TODO: Convert to clean C code? It's not that hard?
+	**
 	*/
 	uint8_t *a0 = NULL, *a1 = NULL;
 	int32_t d0 = 0, d1 = 0, d4 = 0, d7 = 0;
