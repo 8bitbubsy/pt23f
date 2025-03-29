@@ -4,122 +4,146 @@
 #include <stdbool.h>
 #include <string.h>
 
-char inName[8192+1], tmpFileName[8192+1];
-static uint8_t compCode = 181;
+#define COMPACTOR_CODE 181
+
+#define SWAP32(value) \
+( \
+	(((uint32_t)((value) & 0x000000FF)) << 24) | \
+	(((uint32_t)((value) & 0x0000FF00)) <<  8) | \
+	(((uint32_t)((value) & 0x00FF0000)) >>  8) | \
+	(((uint32_t)((value) & 0xFF000000)) >> 24)   \
+)
+
+#ifdef _WIN32
+#define PATH_MAX MAX_PATH
+#endif
+
+static bool bigEndian;
+static char tmpFilename[PATH_MAX+4+1];
 
 static bool unpack(const char *filenameIn, const char *filenameOut);
 
 int main(int argc, char *argv[])
 {
-	if (argc < 2 || argc > 3)
+	// detect endianness
+	volatile uint32_t endiantest32 = 0xFF;
+	bigEndian = (*(uint8_t *)&endiantest32 != 0xFF);
+
+	if (argc != 2)
 	{
-		printf("Usage: ptunpack <filename.pak> [--rle-id]\n");
-		printf("  --rle-id decvalue     Sets the compactor code. 181 is used if not entered.\n\n");
+		printf("Usage: ptunpack <filename.pak>\n");
 		return -1;
 	}
 
-	strcpy(inName, argv[1]);
-	if (argc == 3)
-		compCode = (uint8_t)atoi(argv[2]);
+	strcpy(tmpFilename, argv[1]);
 
-	size_t filenameLen = strlen(inName);
-
-	// XXX: This is not safe!
-	strcpy(tmpFileName, inName);
-	tmpFileName[filenameLen-3] = 'r';
-	tmpFileName[filenameLen-2] = 'a';
-	tmpFileName[filenameLen-1] = 'w';
-	unpack(inName, tmpFileName);
-
-	return 0;
+	uint32_t filenameLen = (uint32_t)strlen(tmpFilename);
+	if (filenameLen >= 5)
+		tmpFilename[filenameLen-4] = '\0';
+	strcat(tmpFilename, ".raw");
+	
+	if (!unpack(argv[1], tmpFilename))
+		return 1;
+	else
+		return 0;
 }
 
 static bool unpack(const char *filenameIn, const char *filenameOut)
 {
-	FILE *in = fopen(filenameIn, "rb");
-	if (in == NULL)
+	FILE *f = NULL;
+	uint8_t *srcData = NULL, *dstData = NULL;
+
+	f = fopen(filenameIn, "rb");
+	if (f == NULL)
 	{
 		printf("ERROR: Could not open input file for reading!\n");
-		return false;
+		goto error;
 	}
 
 	// fetch input file length
-	fseek(in, 0, SEEK_END);
-	size_t packedLen = ftell(in);
-	rewind(in);
+	fseek(f, 0, SEEK_END);
+	uint32_t packedLength = (uint32_t)ftell(f);
+	rewind(f);
 
-	uint8_t *src = (uint8_t *)malloc(packedLen);
-	if (src == NULL)
+	if (packedLength <= 4) goto corruptFile;
+	packedLength -= 4; // skip unpacked length field
+
+	srcData = (uint8_t *)malloc(packedLength);
+	if (srcData == NULL)
 	{
-		fclose(in);
-		printf("ERROR: Out of memory! (tried to alloc %d bytes...)\n", packedLen);
-		return false;
+		printf("ERROR: Out of memory!\n");
+		goto error;
+	}
+	
+	uint32_t unpackedLength;
+	fread(&unpackedLength, 4, 1, f);
+	if (!bigEndian)
+		unpackedLength = SWAP32(unpackedLength);
+	fread(srcData, 1, packedLength, f);
+	fclose(f);
+	f = NULL;
+	
+	if (unpackedLength == 0 || unpackedLength >= 1<<20)
+		goto corruptFile;
+	
+	dstData = (uint8_t *)malloc(unpackedLength);
+	if (dstData == NULL)
+	{
+		printf("ERROR: Out of memory!\n");
+		goto error;
 	}
 
-	// read input file to buffer
-	fread(src, 1, packedLen, in);
-	fclose(in);
-
-	uint32_t decodedLength = (src[0] << 24) | (src[1] << 16) | (src[2] << 8) | src[3];
-	if (decodedLength >= (1 << 20))
-	{
-		free(src);
-		printf("ERROR: Internal error.\n");
-		return false;
-	}
-
-	uint8_t *tmpBuffer = (uint8_t *)malloc(decodedLength + 16); // needs some padding
-	if (tmpBuffer == NULL)
-	{
-		free(src);
-		printf("ERROR: Out of memory! (tried to alloc %d bytes...)\n", decodedLength + 16);
-		return false;
-	}
-
-	uint8_t *packSrc = src + 4;
-	uint8_t *packDst = tmpBuffer;
-
+	uint8_t *src = srcData;
+	uint8_t *dst = dstData;
+	uint8_t *srcEnd = srcData + packedLength;
+	uint8_t *dstEnd = dstData + unpackedLength;
+	
 	// RLE decode
-
-	int32_t i = packedLen - 4;
-	while (i > 0)
+	while (src < srcEnd && dst < dstEnd)
 	{
-		const uint8_t byte = *packSrc++;
-		if (byte == compCode)
+		const uint8_t byte = *src++;
+		if (byte == COMPACTOR_CODE)
 		{
-			uint16_t count = *packSrc++;
-			const uint8_t data = *packSrc++;
-			while (count >= 0)
-			{
-				*packDst++ = data;
-				count--;
-			}
+			if (src >= srcEnd) goto corruptFile;
+			uint16_t numBytes = (uint16_t)(*src++) + 1;
 
-			i -= 2;
+			if (src >= srcEnd) goto corruptFile;
+			const uint8_t data = *src++;
+
+			// packer is sometimes buggy, some protection is needed
+			if (dst+numBytes > dstEnd)
+				numBytes = dstEnd - dst;
+
+			memset(dst, data, numBytes);
+			dst += numBytes;
 		}
 		else
 		{
-			*packDst++ = byte;
+			*dst++ = byte;
 		}
-
-		i--;
 	}
+	free(srcData);
 
-	free(src);
-
-	FILE *out = fopen(filenameOut, "wb");
-	if (out == NULL)
+	f = fopen(filenameOut, "wb");
+	if (f == NULL)
 	{
-		free(tmpBuffer);
 		printf("ERROR: Could not open output file for writing!\n");
-		return false;
+		goto error;
 	}
+	fwrite(dstData, 1, unpackedLength, f);
+	fclose(f);
+	free(dstData);
 
-	fwrite(tmpBuffer, 1, decodedLength, out);
-	fclose(out);
-
-	free(tmpBuffer);
-
-	printf("Done. Unpacked length: %d (0x%08X)\n", decodedLength, decodedLength);
+	printf("RLE decoding done!\n");
+	printf("=============================================\n");	
+	printf("Decoded size: %d bytes\n", unpackedLength);
 	return true;
+	
+corruptFile:
+	printf("ERROR: Corrupt input file!\n");
+error:
+	if (srcData != NULL) free(srcData);
+	if (dstData != NULL) free(dstData);
+	if (f       != NULL) fclose(f);
+	return false;
 }
