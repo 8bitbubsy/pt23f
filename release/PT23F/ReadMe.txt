@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-              9th of October, 2023
+              10th of April, 2025
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -20,6 +20,20 @@
 
  -- PT2.3F changelog: --
  
+ == Update 10.04.2025 ===============================================
+ - Sample loops are now updated properly when dragging the loop
+   points while the sample is playing.
+ ====================================================================
+
+ == Update 17.11.2024 ===============================================
+ - Small arpeggio effect optimization
+ ====================================================================
+  
+ == Update 12.09.2024 ===============================================
+ - Bug-fix and speed-up of the volume change ("VOL") function in
+   Edit Op. #3.
+ ====================================================================
+
  == Update 09.10.2023 ===============================================
  - The following sample editing functions have been optimized to take
    less time to complete:
