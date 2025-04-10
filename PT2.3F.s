@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;    17th of November, 2024
+;     10th of April, 2025
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -12782,6 +12782,7 @@ UpdateRepeats
 	MULU.W	#30,D0
 	LEA	12(A0,D0.W),A0
 	; --------------------------
+	MOVE.L	A4,-(SP)
 	LEA	audchan1temp,A1
 	LEA	$DFF0A0,A2
 	LEA	ScopeInfo+(ScopeInfoSize*0),A3
@@ -12797,21 +12798,31 @@ UpdateRepeats
 	LEA	audchan4temp,A1
 	LEA	$DFF0D0,A2
 	LEA	ScopeInfo+(ScopeInfoSize*3),A3
+	BSR.B	upre2
+	MOVE.L	(SP)+,A4
+	RTS	
+
 upre2	MOVE.W	InsNum,D0
 	CMP.B	n_samplenum(A1),D0
 	BNE.B	upreRTS
-	MOVE.L	n_start(A1),A1
+	MOVE.L	n_start(A1),A4
 	MOVEQ	#0,D0
-	MOVE.W	4(A0),D0	; repeat
-	ADD.L	D0,A1
-	ADD.L	D0,A1
-	MOVE.L	A1,(A2)
-	MOVE.W	6(A0),D0
-	MOVE.W	D0,4(A2)	; replen
-	MOVE.L	A1,ns_repeatptr(A3)
-	ADD.L	D0,A1
-	ADD.L	D0,A1
-	MOVE.L	A1,ns_rependptr(A3)
+	MOVE.W	4(A0),D0		; repeat
+	ADD.L	D0,A4
+	ADD.L	D0,A4
+	MOVE.W	6(A0),D0		; replen
+	; ----------------------------
+	; PT2.3D bugfix: also update replayer vars
+	MOVE.L	A4,n_loopstart(A1)
+	MOVE.W	D0,n_replen(A1)
+	; ----------------------------
+	MOVE.L	A4,0(A2)		; set Paula DAT
+	MOVE.W	D0,4(A2)		; set Paula LEN
+	; ----------------------------
+	MOVE.L	A4,ns_repeatptr(A3)	; quadrascope
+	ADD.L	D0,A4
+	ADD.L	D0,A4
+	MOVE.L	A4,ns_rependptr(A3)
 upreRTS	RTS
 
 SetPatternPos
