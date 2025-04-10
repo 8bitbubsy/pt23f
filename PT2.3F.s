@@ -12815,6 +12815,7 @@ upre2	MOVE.W	InsNum,D0
 	; PT2.3D bugfix: also update replayer vars
 	MOVE.L	A4,n_loopstart(A1)
 	MOVE.W	D0,n_replen(A1)
+	MOVE.L	A4,n_wavestart(A1)
 	; ----------------------------
 	MOVE.L	A4,0(A2)		; set Paula DAT
 	MOVE.W	D0,4(A2)		; set Paula LEN
