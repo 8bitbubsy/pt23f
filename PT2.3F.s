@@ -24453,10 +24453,16 @@ ArpeggioFind
 	MOVEQ	#0,D1
 	MOVE.W	n_period(A6),D1
 	MOVEQ	#37-1,D7
-arploop	CMP.W	(A0),D1
+arploop	CMP.W	(A0)+,D1
 	BHS.B	ArpeggioFound
-	ADDQ	#2,A0
 	DBRA	D7,arploop
+	RTS
+	
+ArpeggioFound
+	MOVE.W	-2(A0,D0.W),D2
+ArpeggioSet
+	MOVE.W	D2,6(A5)
+	MOVE.W	D2,n_periodout(A6)	; Set scope period
 	RTS
 	
 ArpeggioFound

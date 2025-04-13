@@ -720,14 +720,13 @@ mt_ArpeggioFind
 	MOVE.W	n_period(A6),D1
 	MOVEQ	#37-1,D3
 mt_arploop
-	CMP.W	(A0),D1
+	CMP.W	(A0)+,D1
 	BHS.B	mt_ArpeggioFound
-	ADDQ.L	#2,A0
 	DBRA	D3,mt_arploop
 	RTS
 	
 mt_ArpeggioFound
-	MOVE.W	(A0,D0.W),6(A5)
+	MOVE.W	-2(A0,D0.W),6(A5)
 	RTS
 
 mt_FinePortaUp
