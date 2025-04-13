@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-              10th of April, 2025
+              13th of April, 2025
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -20,6 +20,12 @@
 
  -- PT2.3F changelog: --
  
+ == Update 13.04.2025 ===============================================
+ - You can now use SHIFT + ALT/CTRL + left/right/up/down to adjust
+   the sample data mark in the sampler screen.
+ - Removed some unneeded stuff (PT lock & "show rasterbar" keys)
+ ====================================================================
+
  == Update 10.04.2025 ===============================================
  - Sample loops are now updated properly when dragging the loop
    points while the sample is playing.

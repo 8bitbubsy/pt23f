@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;     10th of April, 2025
+;     13th of April, 2025
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -343,7 +343,7 @@ srwskip	; ---------------------
 MainLoop
 	JSR	CheckMIDIin
 	BSR.W	DoKeyBuffer
-	BSR.W	CheckToggleRasterbarKeys
+	BSR.W	CheckSampleDataMarkKeys	
 	BSR.W	CheckPatternInvertKeys
 	BSR.W	CheckTransKeys
 	BSR.W	CheckCtrlKeys
@@ -381,49 +381,86 @@ MainLoop
 	; used stop further key/mouse input for a while
 StopInputLoop	
 	TST.B	StopInputFlag
-	BNE.B	mskip
+	BNE.W	MainLoop
 	MOVEQ	#8*2,D1
 	BSR.W	WaitD1
 	BRA.B	StopInputLoop
-mskip	TST.B	ProgLockMode
-	BEQ.W	MainLoop
-	CMP.B	#1,ProgLockMode	; 1 = PT about to get locked
-	BNE.B	mskip2
-	MOVE.W	#$91,D0
-	BSR.W	WaitForVBlank
-	LEA	EnterPassText(PC),A0
-	JSR	ShowStatusText
-	BSR.W	CheckRedraw
-	BRA.B	StopInputLoop
-mskip2	CMP.B	#2,ProgLockMode	; 2 = locked
-	BNE.B	mskip3
-	MOVE.W	#$91,D0
-	BSR.W	WaitForVBlank
-	LEA	PTLockedText(PC),A0
-	JSR	ShowStatusText
-	BSR.W	CheckRedraw
-	BRA.B	StopInputLoop
-mskip3	CMP.B	#3,ProgLockMode	; 3 = password enterd, unlock PT
-	BNE.B	StopInputLoop
-	CLR.B	ProgLockMode
-	JSR	ShowAllRight
-	CLR.W	KeyBufPos
-	BRA.B	StopInputLoop
-
-EnterPassText	dc.b "Enter password",0
-PTLockedText	dc.b "PT is locked",0
-	EVEN
 	
-CheckToggleRasterbarKeys
-	TST.W	LeftAmigaStatus
-	BEQ.W	Return1
+;---- Sample data mark adjustment keys (sampler screen) ----
+	
+	; SHIFT + ALT/CTRL + up/down/left/right
+	; Extends/shrinks sample data marking (sampler screen)
+CheckSampleDataMarkKeys
+	TST.W	SamScrEnable
+	BEQ.B	MarkCheckEnd
+	TST.W	ShiftKeyStatus
+	BEQ.B	MarkCheckEnd
+	TST.W	AltKeyStatus
+	BNE.B	.doit
 	TST.W	CtrlKeyStatus
-	BEQ.W	Return1
+	BEQ.B	MarkCheckEnd
+.doit	; ----------------------------
 	MOVE.B	RawKeyCode,D0
-	CMP.B	#48,D0	; '<'
-	BNE.W	Return1
-	EOR.B	#1,ShowRasterbar
+	CMP.B	#79,D0 ; left
+	BEQ.B	ExtendLeftMarkSide
+	CMP.B	#78,D0 ; right
+	BEQ.B	ShrinkLeftMarkSide
+	CMP.B	#76,D0 ; up
+	BEQ.B	ExtendRightMarkSide
+	CMP.B	#77,D0 ; down
+	BEQ.B	ShrinkRightMarkSide
+MarkCheckEnd
 	RTS
+
+ExtendLeftMarkSide
+	CLR.B	RawKeyCode
+	TST.W	MarkStart
+	BEQ.B	MarkCheckEnd
+	CMP.W	#3,MarkStart
+	BLS.B	MarkCheckEnd
+	JSR	InvertRange
+	SUBQ.W	#1,MarkStart
+	BRA.B	UpdateNewMark
+	
+ShrinkLeftMarkSide
+	CLR.B	RawKeyCode
+	TST.W	MarkStart
+	BEQ.B	MarkCheckEnd
+	CMP.W	#316,MarkStart
+	BGE.B	MarkCheckEnd
+	JSR	InvertRange
+	ADDQ.W	#1,MarkStart
+	BRA.B	UpdateNewMark
+	
+ExtendRightMarkSide
+	CLR.B	RawKeyCode
+	TST.W	MarkStart
+	BEQ.B	MarkCheckEnd
+	CMP.W	#316,MarkEnd
+	BGE.B	MarkCheckEnd
+	JSR	InvertRange
+	ADDQ.W	#1,MarkEnd
+	BRA.B	UpdateNewMark
+	
+ShrinkRightMarkSide
+	CLR.B	RawKeyCode
+	TST.W	MarkStart
+	BEQ.W	MarkCheckEnd
+	CMP.W	#3,MarkEnd
+	BLS.W	MarkCheckEnd
+	JSR	InvertRange
+	SUBQ.W	#1,MarkEnd
+	; -- fall-through --
+
+UpdateNewMark
+	MOVE.W	MarkStart,D0
+	MOVE.W	MarkEnd,D1
+	CMP.W	D0,D1
+	BHS.B	.ok
+	MOVE.W	D0,MarkEnd
+	MOVE.W	D1,MarkStart
+.ok	JSR	InvertRange
+	JMP	MarkToOffset
 	
 	CNOP 0,4
 PTProcess	dc.l	0
@@ -432,97 +469,6 @@ rb_CurrentDir	dc.l	0
 rb_PtDir	dc.l	0
 rb_Progname	dc.b	'PT2.3F',0
 VersionText	dc.b	'ProTracker v2.3F',0
-	EVEN
-
-; ---- Password Lock Routines ----
-
-CheckLockSequence
-	TST.W	GetLineFlag
-	BNE.W	Return1
-	TST.B	D0	; D0 = raw key
-	BEQ.W	Return1
-	MOVE.L	LockPhrasePtr(PC),A3
-	MOVE.B	-1(A3),D2
-	CMP.B	D2,D0
-	BEQ.W	Return1
-	ADD.B	#$80,D2	; also check if SHIFT was held
-	CMP.B	D2,D0
-	BEQ.W	Return1
-	MOVE.B	(A3)+,D1
-	CMP.B	D1,D0
-	BEQ.B	clsskip
-	MOVE.L	#LockPhrase,LockPhrasePtr
-	RTS
-clsskip
-	CMP.B	#$27,D0	; the 'K' in "LOCK" (e.g. we completed the phrase)
-	BEQ.B	clsskip2
-	MOVE.L	A3,LockPhrasePtr
-	RTS
-clsskip2
-	MOVE.L	#LockPhrase,LockPhrasePtr
-	MOVE.B	#1,ProgLockMode
-	CLR.L	UnlockPhrase
-	CLR.L	UnlockPhrase+4
-	CLR.B	RawKeyCode
-	CLR.B	LastRawkey
-	RTS
-
-SetUnlockSequence
-	TST.B	D0
-	BEQ.W	Return1
-	BTST	#7,D0
-	BNE.W	Return1
-	MOVE.L	UnlockPhrasePtr(PC),A3
-	CMP.B	#$44,D0		; ENTER/RETURN
-	BEQ.B	mucskip
-	MOVE.B	D0,(A3)+
-	CMP.B	#$FF,(A3)	; end of password string
-	BEQ.B	mucskip
-	MOVE.L	A3,UnlockPhrasePtr
-	RTS
-mucskip
-	CMP.L	#UnlockPhrase,A3
-	BNE.B	mucskip2
-	MOVE.B	#3,ProgLockMode
-	BRA.B	mucskip3
-mucskip2
-	MOVE.B	#$FF,(A3)
-	MOVE.B	#2,ProgLockMode
-mucskip3
-	MOVE.L	#UnlockPhrase,UnlockPhrasePtr
-	CLR.B	RawKeyCode
-	CLR.B	LastRawkey
-	RTS
-
-CheckUnlockSequence
-	TST.B	D0
-	BEQ.W	Return1
-	BTST	#7,D0
-	BNE.W	Return1
-	MOVE.L	UnlockPhrasePtr(PC),A3
-	MOVE.B	(A3)+,D1
-	CMP.B	D1,D0
-	BEQ.B	cusskip
-	MOVE.L	#UnlockPhrase,UnlockPhrasePtr
-	RTS
-cusskip
-	CMP.B	#$FF,(A3)	; end of password string
-	BEQ.B	cusskip2
-	MOVE.L	A3,UnlockPhrasePtr
-	RTS
-cusskip2
-	MOVE.L	#UnlockPhrase,UnlockPhrasePtr
-	MOVE.B	#3,ProgLockMode
-	CLR.B	RawKeyCode
-	CLR.B	LastRawkey
-	RTS
-	
-	CNOP 0,4
-UnlockPhrasePtr	dc.l	UnlockPhrase
-LockPhrase	dc.l	$28183327	; 'l', 'o', 'c', 'k' key sequence
-LockPhrasePtr	dc.l	LockPhrase
-UnlockPhrase	dcb.b	10,$FF
-ProgLockMode	dc.b	0
 InitError	dc.b	0
 	EVEN
 
@@ -911,10 +857,6 @@ ResetVBInt
 	RTS
 
 vbint
-	TST.B	ShowRasterbar
-	BEQ.B	.skip1
-	MOVE.W	#$125,$DFF180	; rasterbars to measure frame time left
-.skip1
 	MOVEM.L	D0-D7/A0-A6,-(SP)
 	BSR.W	CheckIfProgramIsActive
 	BEQ.W	vbiend
@@ -980,10 +922,6 @@ vbiend
 	BSR.W	UpdateTicks
 	JSR	SetBackNumberText
 	MOVEM.L	(SP)+,D0-D7/A0-A6
-	TST.B	ShowRasterbar
-	BEQ.B	.skip2
-	MOVE.W	#0,$DFF180 	; rasterbars to measure frame time left
-.skip2
 	RTS
 	
 	CNOP 0,4
@@ -1447,20 +1385,7 @@ ProcessRawkey
 	CMP.B	LastRawkey(PC),D0
 	BEQ.W	Return1
 	MOVE.B	D0,LastRawkey	
-	TST.B	ProgLockMode
-	BEQ.B	prkskip2
-	CMP.B	#1,ProgLockMode	; 1 = type password 
-	BNE.B	prkskip
-	BSR.W	SetUnlockSequence
-	RTS
-prkskip
-	CMP.B	#2,ProgLockMode	; 2 = locked, check for password sequence
-	BNE.B	prkskip2
-	BSR.W	CheckUnlockSequence
-	BRA.B	prkskip3
-prkskip2
-	BSR.W	CheckLockSequence
-prkskip3
+	; -------------------------
 	CMP.B	#96,D0
 	BEQ.W	ShiftOn
 	CMP.B	#97,D0
@@ -13985,9 +13910,6 @@ InpUnc2	MOVE.L	(A1),(A2)
 	
 InpRawmouse
 	BSR.B	InpUnchain
-	; ----------------------
-	CMP.B	#2,ProgLockMode	; is PT locked?
-	BEQ.B	.next
 	; ----------------------
 	TST.B	DiskDriveBusy	; is floppy drive accessing?
 	BNE.B	.next
@@ -26595,7 +26517,6 @@ BeamCONTemp	ds.w	2
 WaitRasterLines1	ds.w	1
 WaitRasterLines2	ds.w	1
 VolToolBoxShown	ds.b	1
-ShowRasterbar	ds.b	1
 
 END
 

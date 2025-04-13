@@ -4,6 +4,7 @@ Undocumented features in ProTracker (up to 2.3D):
    Type "lock" on the keyboard to lock PT, it asks for a password up to 8 chars
    (press ENTER for a password less than 8 chars), then PT is locked until you
    type the password again. This locks mouse/keyboard input.
+   Removed in later versions of PT2.3F, who really uses this in 2025?
 
 2) PT2.1A and newer (removed in PT2.3E):
    Type "noxious" on keyboard, it will show "not implemented".
