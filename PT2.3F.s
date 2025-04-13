@@ -24464,13 +24464,6 @@ ArpeggioSet
 	MOVE.W	D2,6(A5)
 	MOVE.W	D2,n_periodout(A6)	; Set scope period
 	RTS
-	
-ArpeggioFound
-	MOVE.W	(A0,D0.W),D2
-ArpeggioSet
-	MOVE.W	D2,6(A5)
-	MOVE.W	D2,n_periodout(A6)	; Set scope period
-	RTS
 
 FinePortaUp
 	TST.L	Counter
