@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-              13th of April, 2025
+              14th of April, 2025
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -19,6 +19,10 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+ 
+ == Update 14.04.2025 ===============================================
+ - SHIFT + ALT/CTRL + z = play sample range (hi XSM!)
+ ====================================================================
  
  == Update 13.04.2025 ===============================================
  - You can now use SHIFT + ALT/CTRL + left/right/up/down to adjust

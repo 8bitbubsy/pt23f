@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;     13th of April, 2025
+;     14th of April, 2025
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -343,7 +343,7 @@ srwskip	; ---------------------
 MainLoop
 	JSR	CheckMIDIin
 	BSR.W	DoKeyBuffer
-	BSR.W	CheckSampleDataMarkKeys	
+	BSR.W	CheckSamplerScreenKeys	
 	BSR.W	CheckPatternInvertKeys
 	BSR.W	CheckTransKeys
 	BSR.W	CheckCtrlKeys
@@ -386,38 +386,63 @@ StopInputLoop
 	BSR.W	WaitD1
 	BRA.B	StopInputLoop
 	
-;---- Sample data mark adjustment keys (sampler screen) ----
+;---- Sample data range/mark special keys (sampler screen) ----
 	
-	; SHIFT + ALT/CTRL + up/down/left/right
-	; Extends/shrinks sample data marking (sampler screen)
-CheckSampleDataMarkKeys
+	; SHIFT + ALT/CTRL + z:
+	;  Play Range
+	;
+	; SHIFT + ALT/CTRL + up/down/left/right:
+	;  Extends/shrinks sample range
+CheckSamplerScreenKeys
 	TST.W	SamScrEnable
-	BEQ.B	MarkCheckEnd
+	BEQ.B	SKeysCheckEnd
 	TST.W	ShiftKeyStatus
-	BEQ.B	MarkCheckEnd
+	BEQ.B	SKeysCheckEnd
 	TST.W	AltKeyStatus
 	BNE.B	.doit
 	TST.W	CtrlKeyStatus
-	BEQ.B	MarkCheckEnd
+	BEQ.B	SKeysCheckEnd
 .doit	; ----------------------------
 	MOVE.B	RawKeyCode,D0
+	CMP.B	#49,D0 ; z
+	BEQ.B	PlayRange2
 	CMP.B	#79,D0 ; left
-	BEQ.B	ExtendLeftMarkSide
+	BEQ.W	ExtendLeftMarkSide
 	CMP.B	#78,D0 ; right
-	BEQ.B	ShrinkLeftMarkSide
+	BEQ.W	ShrinkLeftMarkSide
 	CMP.B	#76,D0 ; up
-	BEQ.B	ExtendRightMarkSide
+	BEQ.W	ExtendRightMarkSide
 	CMP.B	#77,D0 ; down
-	BEQ.B	ShrinkRightMarkSide
-MarkCheckEnd
+	BEQ.W	ShrinkRightMarkSide
+SKeysCheckEnd
+	RTS
+
+PlayRange2
+	CLR.B	RawKeyCode
+	MOVE.L	MarkStartOfs,D1
+	BMI.B	SKeysCheckEnd
+	MOVE.L	MarkEndOfs,D0
+	CMP.L	D0,D1
+	BEQ.B	SKeysCheckEnd
+	LEA	SampleInfo,A0
+	MOVE.L	D1,StartOfs
+	SUB.L	D1,D0
+	LSR.L	#1,D0
+	MOVE.W	D0,(A0)
+	CLR.W	4(A0)
+	MOVE.W	#1,6(A0)
+	MOVE.W	PlayInsNum,-(SP)
+	CLR.W	PlayInsNum
+	JSR	PlayNote
+	MOVE.W	(SP)+,PlayInsNum
 	RTS
 
 ExtendLeftMarkSide
 	CLR.B	RawKeyCode
 	TST.W	MarkStart
-	BEQ.B	MarkCheckEnd
+	BEQ.B	SKeysCheckEnd
 	CMP.W	#3,MarkStart
-	BLS.B	MarkCheckEnd
+	BLS.B	SKeysCheckEnd
 	JSR	InvertRange
 	SUBQ.W	#1,MarkStart
 	BRA.B	UpdateNewMark
@@ -425,9 +450,9 @@ ExtendLeftMarkSide
 ShrinkLeftMarkSide
 	CLR.B	RawKeyCode
 	TST.W	MarkStart
-	BEQ.B	MarkCheckEnd
+	BEQ.W	SKeysCheckEnd
 	CMP.W	#316,MarkStart
-	BGE.B	MarkCheckEnd
+	BGE.W	SKeysCheckEnd
 	JSR	InvertRange
 	ADDQ.W	#1,MarkStart
 	BRA.B	UpdateNewMark
@@ -435,9 +460,9 @@ ShrinkLeftMarkSide
 ExtendRightMarkSide
 	CLR.B	RawKeyCode
 	TST.W	MarkStart
-	BEQ.B	MarkCheckEnd
+	BEQ.W	SKeysCheckEnd
 	CMP.W	#316,MarkEnd
-	BGE.B	MarkCheckEnd
+	BGE.W	SKeysCheckEnd
 	JSR	InvertRange
 	ADDQ.W	#1,MarkEnd
 	BRA.B	UpdateNewMark
@@ -445,9 +470,9 @@ ExtendRightMarkSide
 ShrinkRightMarkSide
 	CLR.B	RawKeyCode
 	TST.W	MarkStart
-	BEQ.W	MarkCheckEnd
+	BEQ.W	SKeysCheckEnd
 	CMP.W	#3,MarkEnd
-	BLS.W	MarkCheckEnd
+	BLS.W	SKeysCheckEnd
 	JSR	InvertRange
 	SUBQ.W	#1,MarkEnd
 	; -- fall-through --
