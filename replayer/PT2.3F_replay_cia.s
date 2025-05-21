@@ -27,7 +27,8 @@
 ; - 17.11.2024: Small arpeggio effect optimization
 ; - 12.03.2025: mt_LowMask was not initialized correctly (small portamento bug)
 ; - 13.03.2025: Register preserving in mt_end
-;
+; - 21.05.2025: Set Sample Offset (9xx) now works on >64kB samples
+
 ; CIA Version:
 ; Call SetCIAInt to install the interrupt server. Then call mt_init
 ; to initialize the song. Playback starts when the mt_enable flag
@@ -1005,7 +1006,7 @@ mt_sononew
 	MOVE.B	n_sampleoffset(A6),D0
 	LSL.W	#7,D0
 	CMP.W	n_length(A6),D0
-	BGE.B	mt_sofskip
+	BHS.B	mt_sofskip
 	SUB.W	D0,n_length(A6)
 	ADD.W	D0,D0
 	ADD.L	D0,n_start(A6)

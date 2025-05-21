@@ -12,7 +12,7 @@
 ;
 ; Changelog:
 ; - 13.03.2025: Initial version
-;
+; - 21.05.2025: Set Sample Offset (9xx) now works on >64kB samples
 
 ; Simple test code. Attempts to call mt_music() 50 times a second, but may play
 ; at the wrong tempo, especially in some emulator configs.
@@ -827,7 +827,7 @@ mt_sononew
 	MOVE.B	n_sampleoffset(A6),D0
 	LSL.W	#7,D0
 	CMP.W	n_length(A6),D0
-	BGE.B	mt_sofskip
+	BHS.B	mt_sofskip
 	SUB.W	D0,n_length(A6)
 	ADD.W	D0,D0
 	ADD.L	D0,n_start(A6)

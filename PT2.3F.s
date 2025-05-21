@@ -1970,6 +1970,7 @@ sdsk1	EXT.W	D5
 
 	MOVE.L	ns_sampleptr(A2),A0
 	MOVEQ	#5-1,D2
+	LEA	(16*2)+scopeXTab(PC),A5
 	
 	; --PT2.3D bug fix: scope loop fix
 	MOVE.L	ns_endptr(A2),A4	; sample end
@@ -1991,10 +1992,8 @@ sdlnowrap
 	EXT.W	D0			; extend to word
 	MULS.W	D5,D0			; multiply by volume
 	SWAP	D0			; D0.W = -15..16
-	MOVE.W	D0,D1
-	LSL.W	#5,D0			; * 32
-	LSL.W	#3,D1			; * 8
-	ADD.W	D1,D0			; (32+8) = * 40
+	ADD.W	D0,D0
+	MOVE.W	(A5,D0.W),D0
 	BSET	D3,(A1,D0.W)		; set the current bitplane bit
 	DBRA	D3,sdlp2LOOP
 	ADDQ	#1,A1			; we have done 8 bits now, increase bitplane ptr
@@ -2018,10 +2017,8 @@ sdlp2
 	EXT.W	D0			; extend to word
 	MULS.W	D5,D0			; multiply by volume
 	SWAP	D0			; D0.W = -15..16
-	MOVE.W	D0,D1
-	LSL.W	#5,D0			; * 32
-	LSL.W	#3,D1			; * 8
-	ADD.W	D1,D0			; (32+8) = * 40
+	ADD.W	D0,D0
+	MOVE.W	(A5,D0.W),D0
 .drawit	BSET	D3,(A1,D0.W)		; set the current bitplane bit
 	DBRA	D3,sdlp2
 	ADDQ	#1,A1			; we have done 8 bits now, increase bitplane ptr
@@ -2094,7 +2091,7 @@ ss9Skip1
 	MOVE.B	n_sampleoffset2(A0),D0
 	LSL.W	#7,D0
 	CMP.W	n_oldlength(A0),D0
-	BGE.B	ss9Skip2
+	BHS.B	ss9Skip2
 	SUB.W	D0,n_oldlength(A0)
 	ADD.W	D0,D0
 	ADD.L	D0,n_oldstart(A0)
@@ -2140,7 +2137,15 @@ ss9Done
 sconorep
 	CLR.L	ns_repeatptr(A4)
 	RTS
-	
+
+	CNOP 0,2
+scopeXTab
+	DC.W -640, -600, -560, -520, -480, -440, -400, -360
+	DC.W -320, -280, -240, -200, -160, -120,  -80,  -40
+	DC.W    0,   40,   80,  120,  160,  200,  240,  280
+	DC.W  320,  360,  400,  440,  480,  520,  560,  600
+	DC.W  640
+
 	; --- Scopes drawing in real VU-Meters mode (fetch peak) ---
 
 rScoDraw
@@ -2166,6 +2171,7 @@ rsdsk1	EXT.W	D5
 	ADDQ	#6,A4	
 	MOVE.L	D6,-(SP)
 	MOVEQ	#9,D6			; sample shift value
+	LEA	(16*2)+scopeXTab(PC),A5
 
 	; --PT2.3D bug fix: scope loop fix
 	MOVE.L	ns_endptr(A2),D4
@@ -2199,10 +2205,9 @@ rnoNewStore
 	BEQ.B	rsdlskip		; nope...
 	
 	ASR.W	D6,D0			; shift down
-	MOVE.W	D0,D1
-	LSL.W	#5,D0			; * 32
-	LSL.W	#3,D1			; * 8
-	ADD.W	D1,D0			; (32+8) = * 40
+	ADD.W	D0,D0
+	MOVE.W	(A5,D0.W),D0
+	
 	BSET	D3,(A1,D0.W)		; set the current bitplane bit
 rsdlskip
 	DBRA	D3,rsdlp2LOOP
@@ -2235,17 +2240,15 @@ rsdlp2
 	NEG.W 	D1			; no, D1 = ABS(D1)
 rnotSigned2
 	CMP.W	(A4),D1			; D1 < amp?
-	BLS.B	rnoNewStore2		; yes, don't update
+	BLS.B	rnoupdate		; yes, don't update
 	MOVE.W	D1,(A4)			; store current value for use in real VU-Meter mode
+rnoupdate
+	ASR.W	D6,D0			; shift down
+	ADD.W	D0,D0
+	MOVE.W	(A5,D0.W),D0
 rnoNewStore2
 	TST.B	D7			; draw scopes or not?
 	BEQ.B	rsdlskip2		; nope...
-	
-	ASR.W	D6,D0			; shift down
-	MOVE.W	D0,D1
-	LSL.W	#5,D0			; * 32
-	LSL.W	#3,D1			; * 8
-	ADD.W	D1,D0			; (32+8) = * 40
 	BSET	D3,(A1,D0.W)		; set the current bitplane bit
 rsdlskip2
 	DBRA	D3,rsdlp2
@@ -24695,7 +24698,7 @@ SampleOffset
 sononew	MOVE.B	n_sampleoffset(A6),D0
 	LSL.W	#7,D0
 	CMP.W	n_length(A6),D0
-	BGE.B	sofskip
+	BHS.B	sofskip
 	SUB.W	D0,n_length(A6)
 	ADD.W	D0,D0
 	ADD.L	D0,n_start(A6)
