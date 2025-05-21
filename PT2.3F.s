@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;     14th of April, 2025
+;      21st of May, 2025
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -12753,9 +12753,11 @@ UpdateRepeats
 	RTS	
 
 upre2	MOVE.W	InsNum,D0
-	CMP.B	n_samplenum(A1),D0
-	BNE.B	upreRTS
+	CMP.B	n_samplenum(A1),D0	; channel sample == selected GUI sample?
+	BNE.B	upreRTS			; nope, don't update loops
 	MOVE.L	n_start(A1),A4
+	CMP.L	#0,A4			; ch->n_start == NULL?
+	BEQ.B	upreRTS			; yep, don't update loops
 	MOVEQ	#0,D0
 	MOVE.W	4(A0),D0		; repeat
 	ADD.L	D0,A4

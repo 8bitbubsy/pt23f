@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-              14th of April, 2025
+               21st of May, 2025
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -19,6 +19,11 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+ 
+ == Update 21.05.2025 ===============================================
+ - Safer code for when updating sample loops in realtime
+   (e.g. when dragging the loop points while a sample is playing).
+ ====================================================================
  
  == Update 14.04.2025 ===============================================
  - SHIFT + ALT/CTRL + z = play sample range (hi XSM!)
