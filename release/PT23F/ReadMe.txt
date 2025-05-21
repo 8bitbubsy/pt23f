@@ -23,6 +23,8 @@
  == Update 21.05.2025 ===============================================
  - Safer code for when updating sample loops in realtime
    (e.g. when dragging the loop points while a sample is playing).
+ - Set Sample Offset (9xx) now works on >64kB samples
+ - Small quadrascope optimization
  ====================================================================
  
  == Update 14.04.2025 ===============================================
