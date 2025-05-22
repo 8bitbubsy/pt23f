@@ -1970,7 +1970,7 @@ sdsk1	EXT.W	D5
 
 	MOVE.L	ns_sampleptr(A2),A0
 	MOVEQ	#5-1,D2
-	LEA	(16*2)+scopeXTab(PC),A5
+	LEA	(16*2)+scopeYTab(PC),A5
 	
 	; --PT2.3D bug fix: scope loop fix
 	MOVE.L	ns_endptr(A2),A4	; sample end
@@ -2139,12 +2139,12 @@ sconorep
 	RTS
 
 	CNOP 0,2
-scopeXTab
-	DC.W -640, -600, -560, -520, -480, -440, -400, -360
-	DC.W -320, -280, -240, -200, -160, -120,  -80,  -40
-	DC.W    0,   40,   80,  120,  160,  200,  240,  280
-	DC.W  320,  360,  400,  440,  480,  520,  560,  600
-	DC.W  640
+scopeYTab
+.i	SET -16*40
+	REPT 33
+	DC.W .i
+.i	SET .i+40
+	ENDR
 
 	; --- Scopes drawing in real VU-Meters mode (fetch peak) ---
 
@@ -2171,7 +2171,7 @@ rsdsk1	EXT.W	D5
 	ADDQ	#6,A4	
 	MOVE.L	D6,-(SP)
 	MOVEQ	#9,D6			; sample shift value
-	LEA	(16*2)+scopeXTab(PC),A5
+	LEA	(16*2)+scopeYTab(PC),A5
 
 	; --PT2.3D bug fix: scope loop fix
 	MOVE.L	ns_endptr(A2),D4
