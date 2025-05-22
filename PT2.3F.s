@@ -2138,7 +2138,6 @@ sconorep
 	CLR.L	ns_repeatptr(A4)
 	RTS
 
-	CNOP 0,2
 scopeYTab
 .i	SET -16*40
 	REPT 33
