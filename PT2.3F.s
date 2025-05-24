@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;      21st of May, 2025
+;      24th of May, 2025
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -633,6 +633,7 @@ SetDefaultSampleReplens
 	RTS
 
 OpenLotsOfThings
+	BSR.W	ScopeInitLUT
 	MOVE.B	$BFE001,LEDStatus
 	BSET	#1,$BFE001
 	JSR	TurnOffVoices
@@ -882,7 +883,7 @@ ResetVBInt
 	RTS
 
 vbint
-	MOVEM.L	D0-D7/A0-A6,-(SP)
+	MOVEM.L	D0-D7/A0-A6,-(SP)	
 	BSR.W	CheckIfProgramIsActive
 	BEQ.W	vbiend
 	BSR.W	Scope ; draw scopes ASAP to lower chance of flicker
@@ -1665,11 +1666,19 @@ PlayNoteAnalyze	 ; called by keyboard play (bugfixed in PT2.3F)
 	MOVE.B	3(A6),D2
 	BRA.B	SpecAna2
 
+SpecAnaVolLUT
+	dc.b  0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 5, 6
+	dc.b  6, 6, 7, 7, 8, 8, 8, 9, 9, 9,10,10,11,11,11,12
+	dc.b 12,12,13,13,14,14,14,15,15,15,16,16,17,17,17,18
+	dc.b 18,18,19,19,20,20,20,21,21,21,22,22,23,23,23,24
+	dc.b 24
+	EVEN
+
 SpectrumAnalyzer ; called by playroutine (bugfixed in PT2.3F)
 	TST.B	n_muted(A6)	; channel muted?
 	BNE.W	Return1		; yes, don't do
 	MOVEM.L	D0-D4/A0,-(SP)
-	MOVEQ	#0,D2
+	;MOVEQ	#0,D2
 	MOVE.B	n_volume(A6),D2	; Get channel volume
 SpecAna2
 	TST.B	AnaDrawFlag
@@ -1682,8 +1691,8 @@ SpecAna2
 	BEQ.B	saend		; yes, don't do
 	CMP.B	#64,D2		; volume above 64?
 	BHI.B	saend		; yes, don't do
-	MULU.W	#24576,D2	; (24576 = round[2^16 / (64 / 24)])
-	SWAP	D2		; D2 = 0..24
+	EXT.W	D2
+	MOVE.B	(SpecAnaVolLUT,PC,D2.W),D2 ; D2.W = 0..24
 	MOVE.W	D2,D3
 	LSR.B	#1,D3
 	; --------------------
@@ -1704,16 +1713,13 @@ SpecAna2
 	MOVE.W	D4,D0
 .L1	; --------------------
 	SUB.W	D4,D0		; Subtract 113 (highest rate)
-	MOVE.W	#743,D1
-	SUB.W	D0,D1		; Invert range 0-743
-	MULU.W	D1,D1		; 0 - 743^2
-	DIVU.W	#25093,D1	; 0 - 743^2 -> 0..22 (25093 = round[743^2 / 22])
-	MOVE.W	D1,D0
+	MOVE.B	(SpecAnaPeriodTab,PC,D0.W),D0
+	EXT.W	D0		; D0.W = (0..22)<<1 (for word LUT)
 	; --------------------
 	; --------------------
 	MOVEQ	#36,D1
 	LEA	AnalyzerHeights+1,A0
-	ADD.W	D0,D0
+	;ADD.W	D0,D0
 	ADD.W	D0,A0
 	; --------------------
 	MOVE.B	(A0),D4		; cache it (for safety)
@@ -1747,6 +1753,48 @@ saend	SF	AnaDrawFlag
 ohno	MOVEM.L	(SP)+,D0-D4/A0
 	RTS
 
+	; for (i = 0 to 743) x = round[(743-x)^2 / (743^2 / 22)] * 2
+SpecAnaPeriodTab
+	dc.b 44,44,44,44,44,44,44,44,44,42,42,42,42,42,42,42,42,42,42,42
+	dc.b 42,42,42,42,42,42,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+	dc.b 40,40,40,40,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38
+	dc.b 38,38,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36
+	dc.b 36,34,34,34,34,34,34,34,34,34,34,34,34,34,34,34,34,34,34,34
+	dc.b 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
+	dc.b 30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30
+	dc.b 28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28
+	dc.b 28,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26
+	dc.b 26,26,26,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24
+	dc.b 24,24,24,24,24,24,22,22,22,22,22,22,22,22,22,22,22,22,22,22
+	dc.b 22,22,22,22,22,22,22,22,22,22,20,20,20,20,20,20,20,20,20,20
+	dc.b 20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,18,18,18,18,18
+	dc.b 18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18
+	dc.b 18,18,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16
+	dc.b 16,16,16,16,16,16,16,16,16,16,14,14,14,14,14,14,14,14,14,14
+	dc.b 14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14
+	dc.b 12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12
+	dc.b 12,12,12,12,12,12,12,12,12,12,12,12,10,10,10,10,10,10,10,10
+	dc.b 10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10
+	dc.b 10,10,10,10,10,10,10, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
+	dc.b  8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
+	dc.b  8, 8, 8, 8, 8, 8, 8, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6
+	dc.b  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6
+	dc.b  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 4, 4, 4, 4, 4, 4, 4
+	dc.b  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
+	dc.b  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
+	dc.b  4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+	dc.b  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+	dc.b  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+	dc.b  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+	dc.b  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	dc.b  0, 0, 0, 0
+	EVEN
+
 AnalyzerOffsets
 	dc.w $0730,$0708,$06E0,$06B8,$0690,$0668,$0640,$0618
 	dc.w $05F0,$05C8,$05A0,$0578,$0550,$0528,$0500,$04D8
@@ -1770,6 +1818,23 @@ ns_oneshotflag	= 19 ; B
 ns_posfrac	= 20 ; W
 
 ScopeInfoSize	= 24 ; should be a multiple of 4!
+
+ScopeInitLUT
+	MOVE.W	#(32+1)*256,D7
+	LEA	ScopeLUT,A0
+	ADD.W	D7,A0
+	ADDQ.W	#1,A0
+.loop	MOVE.B	D7,D0
+	EXT.W	D0		; D0.W = -128..127 (sample value)
+	MOVE.W	D7,D1
+	LSR.W	#8,D1		; D1.W = 0..32 (volume)
+	NEG.W	D1
+	MULS.W	D1,D0	
+	ASR.W	#6,D0		; D0.B = -63..64 (bigger range for real VU-meter scan)
+	MOVE.B	D0,-(A0)
+	SUBQ.W	#1,D7
+	BPL.B	.loop	
+	RTS
 
 Scope
 	LEA	audchan1temp,A0
@@ -1803,7 +1868,7 @@ ScoRetrig
 	MOVE.L	ns_rependptr(A1,D0.W),ns_rependptr(A2)
 	MOVE.L	ns_sampleptr(A2),D0
 	CMP.L	A3,D0 ; at end of sample...
-	BEQ.B	ScoNextChan
+	BEQ.W	ScoNextChan
 	BRA.B	ScoChk
 	
 ScoContinue
@@ -1834,17 +1899,32 @@ ScoOk	MOVE.L	#71051*(1<<FRAC_BITS),D2 ; PaulaClk / VBlankHz = 71051.0 (exact)
 ScoChk	CMP.L	ns_endptr(A2),D0
 	BLO.B	ScoUpdatePtr
 	TST.L	ns_repeatptr(A2)
-	BNE.B	ScoSamLoop
+	BNE.B	ScoHandleLoop
 ScoSampleEnd
 	MOVE.L	A3,D0
 	BRA.B	ScoUpdatePtr
-
-ScoSamLoop
+ScoHandleLoop	
+	MOVE.L	ns_endptr(A2),D1
+	SUB.L	ns_repeatptr(A2),D1	; D1.L = loop length
+	CMP.L	#256,D1			; loopLength < 256 = use MOD (DIV) instead
+	BHS.B	ScoNoDivLoop
+	DIVU.W	D1,D0			; 140 cycles
+	CLR.W	D0
+	SWAP	D0
+	ADD.L	ns_repeatptr(A2),D0
+	MOVE.L	ns_rependptr(A2),ns_endptr(A2)
+	BRA.B	ScoLoopDone
+	; --------------------------------
+ScoNoDivLoop
 	SUB.L	ns_endptr(A2),D0
 	ADD.L	ns_repeatptr(A2),D0
 	MOVE.L	ns_rependptr(A2),ns_endptr(A2)
 	CMP.L	ns_endptr(A2),D0
-	BHS.B	ScoSamLoop
+	BHS.B	ScoNoDivLoop
+	; ^^
+	; 90-92 cycles per iteration
+	; --------------------------------
+ScoLoopDone
 	SF	ns_oneshotflag(A2)
 ScoUpdatePtr
 	MOVE.L	D0,ns_sampleptr(A2) 
@@ -1961,17 +2041,19 @@ ScoDraw
 	BNE.W	sdlpos
 	TST.B	EdEnable
 	BNE.W	sdlpos
-	CMP.B	#64,D5
+	LSR.W	#1,D5		; D5 = 0..64 -> 0..32
+	CMP.B	#32,D5
 	BLS.B	sdsk1
-	MOVEQ	#64,D5
-sdsk1	EXT.W	D5
-	LSL.W	#7,D5
-	NEG.W	D5
+	MOVEQ	#32,D5
+sdsk1	LSL.W	#8,D5
+	LEA	ScopeLUT,A6
+	ADD.W	D5,A6
+	MOVEQ	#0,D5
+	LEA	(64*2)+scopeYTab(PC),A5
 
 	MOVE.L	ns_sampleptr(A2),A0
 	MOVEQ	#5-1,D2
-	LEA	(16*2)+scopeYTab(PC),A5
-	
+
 	; --PT2.3D bug fix: scope loop fix
 	MOVE.L	ns_endptr(A2),A4	; sample end
 	TST.L	ns_repeatptr(A2)	; loop enabled?
@@ -1988,10 +2070,9 @@ sdlp2LOOP
 	CMP.L	A4,A0			; did we reach sample loop end yet?
 	BHS.B	sWrapLoop		; yes, wrap loop
 sdlnowrap
-	MOVE.B	(A0)+,D0		; get byte from sample data	
-	EXT.W	D0			; extend to word
-	MULS.W	D5,D0			; multiply by volume
-	SWAP	D0			; D0.W = -15..16
+	MOVE.B	(A0)+,D5		; get byte from sample data
+	MOVE.B	(A6,D5.W),D0
+	EXT.W	D0
 	ADD.W	D0,D0
 	MOVE.W	(A5,D0.W),D0
 	BSET	D3,(A1,D0.W)		; set the current bitplane bit
@@ -2014,9 +2095,8 @@ sdlp2
 	BHS.B	.drawit			; yes, draw empty sample
 	; -----------------------------
 	MOVE.B	(A0)+,D0		; get byte from sample data
-	EXT.W	D0			; extend to word
-	MULS.W	D5,D0			; multiply by volume
-	SWAP	D0			; D0.W = -15..16
+	MOVE.B	(A6,D0.W),D0
+	EXT.W	D0
 	ADD.W	D0,D0
 	MOVE.W	(A5,D0.W),D0
 .drawit	BSET	D3,(A1,D0.W)		; set the current bitplane bit
@@ -2035,7 +2115,7 @@ sdlpos	; process sample play position (the blue line)
 	LEA	xBlankSample(PC),A0
 	CMP.L	A0,A2
 	BEQ.B	sdloscr
-	MOVE.L	(A2),D1
+	MOVE.L	ns_sampleptr(A2),D1
 	MOVE.L	SamDrawStart(PC),D0
 	CMP.L	D0,D1
 	BLS.W	ScoRTS
@@ -2047,17 +2127,14 @@ sdlpos	; process sample play position (the blue line)
 	CMP.L	#2,D1
 	BLT.B	sdloscr
 
-	LSR.L	#1,D1
-	MULU.W	#314,D1
-	MOVE.L	SamDisplay,D0
-	LSR.L	#1,D0
+	MOVE.L	#314,D0
+	JSR	MULU32
+	MOVE.L	SamDisplay,D1
 	BEQ.W	ScoRTS
-	DIVU.W	D0,D1
-	AND.L	#$FFFF,D1
-	
+	JSR	DIVU32
+
 	ST	D4
 	ST	D7
-	MOVE.L	D1,D0
 	ADDQ.W	#6,D0
 	MOVE.W	#139,D1
 sdlpspr	MOVEQ	#64,D2
@@ -2074,7 +2151,7 @@ SetScope
 	SUBQ.B	#1,D1
 	LSL.W	#4,D1
 	LEA	ScopeSamInfo,A4
-	LEA	(A4,D1.W),A4
+	ADD.W	D1,A4
 
 	; -- PT2.3D bug fix: show 9xx properly on scopes ( doesn't include 9xx quirks :-( )
 	TST.L	RunMode
@@ -2139,11 +2216,15 @@ sconorep
 	RTS
 
 scopeYTab
-.i	SET -16*40
-	REPT 33
-	DC.W .i
-.i	SET .i+40
-	ENDR
+	dc.w -640,-640,-640,-640,-600,-600,-600,-600,-560,-560,-560,-560,-520,-520,-520,-520
+	dc.w -480,-480,-480,-480,-440,-440,-440,-440,-400,-400,-400,-400,-360,-360,-360,-360
+	dc.w -320,-320,-320,-320,-280,-280,-280,-280,-240,-240,-240,-240,-200,-200,-200,-200
+	dc.w -160,-160,-160,-160,-120,-120,-120,-120, -80, -80, -80, -80, -40, -40, -40, -40
+	dc.w    0,   0,   0,   0,  40,  40,  40,  40,  80,  80,  80,  80, 120, 120, 120, 120
+	dc.w  160, 160, 160, 160, 200, 200, 200, 200, 240, 240, 240, 240, 280, 280, 280, 280
+	dc.w  320, 320, 320, 320, 360, 360, 360, 360, 400, 400, 400, 400, 440, 440, 440, 440
+	dc.w  480, 480, 480, 480, 520, 520, 520, 520, 560, 560, 560, 560, 600, 600, 600, 600
+	dc.w  640
 
 	; --- Scopes drawing in real VU-Meters mode (fetch peak) ---
 
@@ -2158,20 +2239,20 @@ rScoDraw
 	TST.B	EdEnable
 	BNE.W	rsdkip
 	ST	D7			; do draw scopes
-rsdkip
-	CMP.B	#64,D5
+rsdkip	LSR.B	#1,D5
+	CMP.B	#32,D5
 	BLS.B	rsdsk1
-	MOVEQ	#64,D5
-rsdsk1	EXT.W	D5
-	NEG.W	D5
-
+	MOVEQ	#32,D5
+rsdsk1	LSL.W	#8,D5
+	LEA	ScopeLUT,A6
+	ADD.W	D5,A6
+	MOVEQ	#0,D5
+	LEA	(64*2)+scopeYTab(PC),A5
+	
 	MOVE.L	ns_sampleptr(A2),A0
 	MOVEQ	#5-1,D2	
-	ADDQ	#6,A4	
-	MOVE.L	D6,-(SP)
-	MOVEQ	#9,D6			; sample shift value
-	LEA	(16*2)+scopeYTab(PC),A5
-
+	ADDQ	#6,A4
+	
 	; --PT2.3D bug fix: scope loop fix
 	MOVE.L	ns_endptr(A2),D4
 	TST.L	ns_repeatptr(A2)	; loop enabled?
@@ -2188,10 +2269,10 @@ rsdlp2LOOP
 	CMP.L	D4,A0			; did we reach sample loop end yet?
 	BHS.B	rWrapLoop		; yes, wrap loop
 rsdlnowrap
-	MOVE.B	(A0)+,D0		; get byte from sample data
-	EXT.W	D0			; extend to word
-	MULS.W	D5,D0			; multiply by volume
-	
+	MOVE.B	(A0)+,D5		; get byte from sample data
+	MOVE.B	(A6,D5.W),D0
+	EXT.W	D0
+
 	MOVE.W	D0,D1			; D1 = amplitude
 	BPL.B 	rnotSigned		; D1 >= 0?
 	NEG.W 	D1			; no, D1 = ABS(D1)
@@ -2202,17 +2283,14 @@ rnotSigned
 rnoNewStore
 	TST.B	D7			; draw scopes or not?
 	BEQ.B	rsdlskip		; nope...
-	
-	ASR.W	D6,D0			; shift down
+
 	ADD.W	D0,D0
-	MOVE.W	(A5,D0.W),D0
-	
+	MOVE.W	(A5,D0.W),D0	
 	BSET	D3,(A1,D0.W)		; set the current bitplane bit
 rsdlskip
 	DBRA	D3,rsdlp2LOOP
 	ADDQ	#1,A1			; we have done 8 bits now, increase bitplane ptr
 	DBRA	D2,rsdlp1LOOP
-	MOVE.L	(SP)+,D6
 	MOVE.L	(SP)+,D4
 	MOVE.L	(SP)+,D7
 	SUBQ	#6,A4
@@ -2230,9 +2308,9 @@ rsdlp2
 	CMP.L	D4,A0			; did we reach sample end yet?
 	BHS.B	rnoNewStore2		; yes, draw empty sample
 	
-	MOVE.B	(A0)+,D0		; get byte from sample data
-	EXT.W	D0			; extend to word
-	MULS.W	D5,D0			; multiply by volume
+	MOVE.B	(A0)+,D5		; get byte from sample data
+	MOVE.B	(A6,D5.W),D0
+	EXT.W	D0
 	
 	MOVE.W	D0,D1			; D1 = amplitude
 	BPL.B 	rnotSigned2		; D1 >= 0?
@@ -2242,7 +2320,6 @@ rnotSigned2
 	BLS.B	rnoupdate		; yes, don't update
 	MOVE.W	D1,(A4)			; store current value for use in real VU-Meter mode
 rnoupdate
-	ASR.W	D6,D0			; shift down
 	ADD.W	D0,D0
 	MOVE.W	(A5,D0.W),D0
 rnoNewStore2
@@ -2253,7 +2330,6 @@ rsdlskip2
 	DBRA	D3,rsdlp2
 	ADDQ	#1,A1			; we have done 8 bits now, increase bitplane ptr
 	DBRA	D2,rsdlp1
-	MOVE.L	(SP)+,D6
 	MOVE.L	(SP)+,D4
 	MOVE.L	(SP)+,D7
 	SUBQ	#6,A4
@@ -2552,31 +2628,20 @@ svumend	RTS
 RealVUMeters
 	LEA	VUSpriteData1,A0
 	LEA	6+audchan1toggle(PC),A1
-	MOVEQ	#-23,D2		; initial sprite value (-23 = 233)
-	MOVE.W	#376,D4		; magical MUL value! ( 65536 / (8192/47) )
-	MOVE.W	#700,D5		; VU-Meter sink value (higher = faster sink)
-	MOVE.L	#65536/2,D6	; rounding bias
-	; ------------------
+	LEA	VUmeterHeights,A2
+	; ------------------------
 	MOVEQ	#4-1,D3
-rvuloop	MOVE.W	(A1),D0		; D0 = 0..8192 (average peak)
-	MULU.W	D4,D0		; D0 *= 384
-	ADD.L	D6,D0		; D0 += 32768
-	SWAP	D0		; D0 /= 65536 (0..47, sprite value)
-	; ------------------
-	MOVE.B	D2,D1		; D1 = 233
-	SUB.B	D0,D1		; D1 -= D0
-	MOVE.B	D1,(A0)		; update sprite value
-	; ------------------
-	SUB.W	D5,(A1)  	; sink VU-meter peak
-	BPL.B	.skip  		; peak >= 0?
-	CLR.W	(A1)		; no, set peak to 0
-	; ------------------
-.skip	ADDQ	#8,A1		; A1 = next VU-meter peak
-	LEA	200(A0),A0	; A0 = next VU-meter sprite value
+rvuloop	MOVE.W	(A1),D0
+	MOVE.B	(A2,D0.W),(A0)
+	SUBQ.W	#5,(A1)
+	BPL.B	.L0
+	CLR.W	(A1)
+.L0	ADDQ	#8,A1
+	LEA	200(A0),A0
 	DBRA	D3,rvuloop
 	RTS
 
-; last value = sample peak from scopes (0..8192, for real VU-meters)
+; last value = sample peak from scopes (0..64, for real VU-meters)
 audchan1toggle	dc.w 1,  78,$00,0
 audchan2toggle	dc.w 1, 518,$16,0
 audchan3toggle	dc.w 1, 958,$2C,0
@@ -24163,7 +24228,8 @@ SetVUMeterHeight			; - PT2.3D change: perfect VU-meters (never buggy at high BPM
 	AND.B   #$0F,D0
 	BEQ.B   vuend			; no active channel...
 	; -------------------------
-	MOVEM.L	A0-A1/D1,-(SP)
+	MOVE.L	A0,-(SP)
+	MOVE.L	D1,-(SP)
 	BTST	#0,D0			; are we on channel #1?
 	BEQ.B	notch1			; no
 	LEA	VUSpriteData1,A0	; yes, get current sprite
@@ -24184,23 +24250,23 @@ vuskip	MOVE.B	n_cmd(A6),D0		; get channel effect
 	MOVE.B	n_cmdlo(A6),D0		; yes, use parameter as VU-meter volume
 	BRA.B	vuskip3
 vuskip2	MOVE.B	n_volume(A6),D0		; get channel volume instead
-vuskip3	CMP.B	#$40,D0			; higher than $40?
+vuskip3	CMP.B	#64,D0			; higher than $40?
 	BLS.B	vuskip4			; no, safe for use!
-	MOVEQ	#$40,D0			; yes, set to $40
-vuskip4	LEA	VUmeterHeights(PC),A1
-	MOVEQ	#-23,D1			; set to 233 (-23 signed)
-	SUB.B	(A1,D0.W),D1		; subtract to get new height
-	MOVE.B	D1,(A0)
-vudone	MOVEM.L	(SP)+,A0-A1/D1
+	MOVEQ	#64,D0			; yes, set to $40
+vuskip4	MOVE.B	(VUmeterHeights,PC,D0.W),(A0)
+	MOVE.L	(SP)+,D1
+	MOVE.L	(SP)+,A0
 vuend	RTS
 	; ------------------
 	
+	; for (i = 0 to 64) x = 233 - round[i * (47.0 / 64.0)]
+	; This table is also used for the "real" VU meter mode.
 VUmeterHeights
-	dc.b	0,0,1,2,2,3,4,5,5,6,7,8,8,9,10,11
-	dc.b	11,12,13,14,14,15,16,17,17,18,19,20,20,21,22,23
-	dc.b	23,24,25,26,26,27,28,29,29,30,31,32,32,33,34,35
-	dc.b	35,36,37,38,38,39,40,41,41,42,43,44,44,45,46,47
-	dc.b	47
+        dc.b 233,232,232,231,230,229,229,228,227,226,226,225,224,223,223,222
+        dc.b 221,221,220,219,218,218,217,216,215,215,214,213,212,212,211,210
+        dc.b 209,209,208,207,207,206,205,204,204,203,202,201,201,200,199,198
+        dc.b 198,197,196,196,195,194,193,193,192,191,190,190,189,188,187,187
+        dc.b 186
 	EVEN
 
 SetDMA
@@ -26546,6 +26612,7 @@ BeamCONTemp	ds.w	2
 WaitRasterLines1	ds.w	1
 WaitRasterLines2	ds.w	1
 VolToolBoxShown	ds.b	1
+ScopeLUT	ds.b	(32+1)*256
 
 END
 
