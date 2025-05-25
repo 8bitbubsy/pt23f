@@ -883,7 +883,7 @@ ResetVBInt
 	RTS
 
 vbint
-	MOVEM.L	D0-D7/A0-A6,-(SP)	
+	MOVEM.L	D0-D7/A0-A6,-(SP)
 	BSR.W	CheckIfProgramIsActive
 	BEQ.W	vbiend
 	BSR.W	Scope ; draw scopes ASAP to lower chance of flicker
