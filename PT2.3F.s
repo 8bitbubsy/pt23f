@@ -1666,6 +1666,7 @@ PlayNoteAnalyze	 ; called by keyboard play (bugfixed in PT2.3F)
 	MOVE.B	3(A6),D2
 	BRA.B	SpecAna2
 
+	; for (i = 0 to 64) x = round[i * (24/64)]
 SpecAnaVolLUT
 	dc.b  0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 5, 6
 	dc.b  6, 6, 7, 7, 8, 8, 8, 9, 9, 9,10,10,11,11,11,12
@@ -1753,7 +1754,7 @@ saend	SF	AnaDrawFlag
 ohno	MOVEM.L	(SP)+,D0-D4/A0
 	RTS
 
-	; for (i = 0 to 743) x = round[(743-x)^2 / (743^2 / 22)] * 2
+	; for (i = 0 to 743) x = round[(743-i)^2 / (743^2 / 22)] * 2
 SpecAnaPeriodTab
 	dc.b 44,44,44,44,44,44,44,44,44,42,42,42,42,42,42,42,42,42,42,42
 	dc.b 42,42,42,42,42,42,40,40,40,40,40,40,40,40,40,40,40,40,40,40
@@ -24259,8 +24260,9 @@ vuskip4	MOVE.B	(VUmeterHeights,PC,D0.W),(A0)
 vuend	RTS
 	; ------------------
 	
-	; for (i = 0 to 64) x = 233 - round[i * (47.0 / 64.0)]
 	; This table is also used for the "real" VU meter mode.
+	;
+	; for (i = 0 to 64) x = 233 - round[i * (47/64)]
 VUmeterHeights
         dc.b 233,232,232,231,230,229,229,228,227,226,226,225,224,223,223,222
         dc.b 221,221,220,219,218,218,217,216,215,215,214,213,212,212,211,210
