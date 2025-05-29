@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;      24th of May, 2025
+;      29th of May, 2025
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -356,7 +356,6 @@ MainLoop
 	BSR.W	CheckPlayKeys
 	BSR.W	CheckHelpKey
 	BSR.W	ArrowKeys2
-	BSR.W	ShowTimer
 	BSR.W	ShowFreeMem
 	BSR.W	CheckBlockPos
 	JSR	CheckSampleLength	; test if we need to alloc more mem
@@ -643,7 +642,24 @@ OpenLotsOfThings
 	MOVE.W	D0,$DFF0C8		; clear voice #3 volume
 	MOVE.W	D0,$DFF0D8		; clear voice #4 volume
 	MOVE.L	4.W,A6
+	; -------------------------------
+	; set song playback counter delta
+	; -------------------------------
+	CMP.B	#60,$0212(A6) 		; 50=PAL, 60=NTSC
+	BEQ.B	.NTSC
+	MOVE.L	#PDELTA_PAL,PlaybackSecsDelta
+	BRA.B	.L1
+.NTSC	MOVE.W	$DFF004,D0
+	LSR.W	#8,D0
+	AND.B	#$3F,D0
+	CMP.B	#20,D0			; Agnus is ECS or AGA?
+	BLO.B	.L0			; nope
+	MOVE.L	#PDELTA_PAL_ON_NTSC,PlaybackSecsDelta
+	BRA.B	.L1
+.L0	MOVE.L	#PDELTA_NTSC,PlaybackSecsDelta
+.L1	; -------------------------------
 	LEA	DOSname(PC),A1		; Open DOS library
+	MOVEQ	#0,D0
 	JSR	_LVOOpenLibrary(A6)
 	MOVE.L	D0,DOSBase
 	LEA	GraphicsName(PC),A1	; Open graphics library
@@ -854,7 +870,7 @@ sdsp2
 	MOVE.L	PointerSpritePtr(PC),SpritePtrsPtr
 	
 	LEA	SpritePtrsPtr,A0	; Set pointers to spritedata
-	LEA	CopList,A1
+	LEA	CopperSpriteList,A1
 	MOVEQ	#16-1,D2
 alotloop2
 	MOVE.W	(A0)+,2(A1)
@@ -884,10 +900,12 @@ ResetVBInt
 
 vbint
 	MOVEM.L	D0-D7/A0-A6,-(SP)
+	; ------------------------------
+	BSR.W	TickPlaybackCounter
 	BSR.W	CheckIfProgramIsActive
 	BEQ.W	vbiend
-	BSR.W	Scope ; draw scopes ASAP to lower chance of flicker
 	BSR.W	UpdatePointerPos
+	BSR.W	Scope ; draw scopes early to lower chance of flickering
 	TST.B	RealVUMetersFlag
 	BEQ.B	.skip2
 	BSR.W	RealVUMeters
@@ -943,10 +961,7 @@ rmbnotheld
 rmbreleased
 	CLR.B	RightMouseButtonHeld
 	BSR.W	CheckScopeMuting	
-vbiend
-	JSR	StackNumberText
-	BSR.W	UpdateTicks
-	JSR	SetBackNumberText
+vbiend	; ------------------------------
 	MOVEM.L	(SP)+,D0-D7/A0-A6
 	RTS
 	
@@ -962,19 +977,17 @@ vbintname	dc.b	'ProTracker VBlank',0
 
 CheckRedraw2
 	MOVEM.L	D0-D7/A0-A6,-(SP)
-	MOVE.W	WordNumber,D0
-	MOVE.W	TextOffset,D1
-	MOVE.L	LongFFFF,D2
-	MOVE.W	TextLength,D3
-	MOVE.L	ShowTextPtr,D4
-	MOVEM.L	D0-D4,-(SP)
+	MOVE.W	WordNumber,-(SP)
+	MOVE.W	TextOffset,-(SP)
+	MOVE.L	LongFFFF,-(SP)
+	MOVE.W	TextLength,-(SP)
+	MOVE.L	ShowTextPtr,-(SP)
 	BSR.W	CheckRedraw
-	MOVEM.L	(SP)+,D0-D4
-	MOVE.W	D0,WordNumber
-	MOVE.W	D1,TextOffset
-	MOVE.L	D2,LongFFFF
-	MOVE.W	D3,TextLength
-	MOVE.L	D4,ShowTextPtr
+	MOVE.L	(SP)+,ShowTextPtr
+	MOVE.W	(SP)+,TextLength
+	MOVE.L	(SP)+,LongFFFF
+	MOVE.W	(SP)+,TextOffset
+	MOVE.W	(SP)+,WordNumber
 	MOVEM.L	(SP)+,D0-D7/A0-A6
 	RTS
 
@@ -987,6 +1000,7 @@ CheckIfProgramIsActive
 	BEQ.B	cipiaskip
 	MOVE.L	D0,WBScreenHandle
 	BSR.B	SetCopList
+	CLR.W	LeftAmigaStatus
 	ST	StopInputFlag
 cipiaskip
 	MOVEQ	#1,D0
@@ -1004,8 +1018,7 @@ cipiaskip3
 ;---- Copper List ----
 
 SetCopList
-	MOVE.L	#CopperData,$DFF080
-	CLR.W	LeftAmigaStatus
+	MOVE.L	#CopperList1,$DFF080	
 	RTS
 
 SetOldCopList
@@ -1156,7 +1169,7 @@ SetCIALoop
 	BEQ.B	WasNTSC
 	MOVE.L	#1773447,D7 ; PAL (= round[709379.0 * (125/50)])
 	BRA.B	sciask
-WasNTSC	MOVE.L	#1789773,D7 ; NTSC (= round[715909.0909 * (125/50)])
+WasNTSC	MOVE.L	#1789773,D7 ; NTSC (= round[715909.09090 * (125/50)])
 sciask	MOVE.L	D7,TimerValue
 	DIVU.W	#125,D7 ; Default to normal 50 Hz timer
 	
@@ -1557,35 +1570,124 @@ RepDown
 	JSR	_LVOSignal(A6)
 	RTS
 	
-;---- Timer ----
+;---- Song Playback Counter ----
 
-UpdateTicks
-	ADDQ.W	#1,PatternTicks
-	MOVE.W	PatternTicks(PC),D0
-	MOVE.L	4.W,A0
-	CMP.B	$0212(A0),D0
-	BNE.W	Return1
-	CLR.W	PatternTicks	
-	CMP.L	#'patp',RunMode
-	BNE.B	ShowTimer
-	ADDQ.L	#1,TimerTicks
-ShowTimer
-	CMP.W	#4,CurrScreen
-	BEQ.W	Return1
-	MOVE.L	TimerTicks(PC),D0
-	DIVU.W	#60,D0
-	MOVE.W	D0,WordNumber
-	SWAP	D0
-	MOVE.W	D0,D7
-	MOVE.W	#4154,TextOffset
-	JSR	Print2DecDigits
-	MOVE.W	D7,WordNumber
-	ADDQ.W	#1,TextOffset
-	JMP	Print2DecDigits
+; 8bitbubsy: less code overhead and improved tick accuracy (less drifting)
+
+; ------------ PAL Amiga video -------------
+; Horizontal clock: 15625.088105727Hz (3546895.0 / 227.0)         
+; Lines: 313
+; Frame rate = 49.9204092835Hz (HorizontalClock / Lines)
+PDELTA_PAL EQU 86036300 ; round[2^32 / FrameRate]
+; ------------------------------------------
+
+; ------------ NTSC Amiga video ------------
+; Horizontal clock: 15734.265734266Hz (3579545.4545454 (recurring) / 227.5)               
+; Lines: 263
+; Frame rate = 59.8261054535Hz (HorizontalClock / Lines)	
+PDELTA_NTSC EQU 71790856 ; round[2^32 / FrameRate]	
+; ------------------------------------------
+
+; --- PAL-on-NTSC Amiga video (ECS/AGA) ----
+; XXX: A little unsure if color-clocks-per-line is 227.0 or 227.5 here...
+;      WinUAE seems to use 227.0, so I'll stick with that.
+;
+; Horizontal clock: 15768.922707249Hz (3579545.4545454 (recurring) / 227.0)
+; Lines: 313
+; Frame rate = 50.3799447516Hz (HorizontalClock / Lines)	
+PDELTA_PAL_ON_NTSC EQU 85251529 ; round[2^32 / FrameRate]	
+; ------------------------------------------
+
+DrawPlaybackCounter
+	MOVE.L	PlaybackSecs(PC),D0
+	BRA.B	DoDrawPlaybackCounter
+DPCEnd	RTS
+
+TickPlaybackCounter
+	CMP.L	#'patp',RunMode	; normal song playback mode?
+	BNE.B	DPCEnd		; nope, don't tick counter
+	MOVE.L	PlaybackSecsDelta(PC),D1
+	ADD.L	D1,PlaybackSecsFrac
+	BCC.B	DPCEnd
+	MOVE.L	PlaybackSecs(PC),D0
+	ADDQ.L	#1,D0
+	MOVE.L	D0,PlaybackSecs
+	; -- fall-through --
+
+DoDrawPlaybackCounter
+	CMP.W	#4,CurrScreen	; pset-ed screen shown?
+	BEQ.W	DDPCEnd		; yep, counter is hidden (no draw)
+	; ---------------------
+	MOVEQ	#0,D1
+	MOVE.W	#(99*60)+59,D1	; 99:59 (limit)
+	CMP.L	D1,D0
+	BLS.B	.OK
+	MOVE.L	D1,D0
+.OK	DIVU.W	#60,D0
+	; ---------------------
+	LEA	FontData,A4
+	MOVEQ	#0,D1
+	; ---------------------
+	ADD.W	D0,D0		; D0.W = minutes (*2 for LUT)
+	MOVE.B	(FastTwoDecTable+0,PC,D0.W),D1
+	LEA	(A4,D1.W),A0
+	MOVE.B	(FastTwoDecTable+1,PC,D0.W),D1
+	LEA	(A4,D1.W),A1
+	; ---------------------
+	SWAP	D0			
+	ADD.W	D0,D0		; D0.W = seconds (*2 for LUT)
+	MOVE.B	(FastTwoDecTable+0,PC,D0.W),D1
+	LEA	(A4,D1.W),A2
+	MOVE.B	(FastTwoDecTable+1,PC,D0.W),D1
+	LEA	(A4,D1.W),A3
+	; ---------------------
+	MOVE.L	TextBplPtr,A4
+	LEA	4154(A4),A4
+	; ---------------------
+	MOVE.B	(A0)+,(A4)+	; draw minutes
+	MOVE.B	(A0)+,40-1(A4)
+	MOVE.B	(A0)+,80-1(A4)
+	MOVE.B	(A0)+,120-1(A4)
+	MOVE.B	(A0),160-1(A4)
+	MOVE.B	(A1)+,(A4)+
+	MOVE.B	(A1)+,40-1(A4)
+	MOVE.B	(A1)+,80-1(A4)
+	MOVE.B	(A1)+,120-1(A4)
+	MOVE.B	(A1),160-1(A4)
+	; ---------------------
+	ADDQ	#1,A4		; draw seconds
+	MOVE.B	(A2)+,(A4)+		
+	MOVE.B	(A2)+,40-1(A4)
+	MOVE.B	(A2)+,80-1(A4)
+	MOVE.B	(A2)+,120-1(A4)
+	MOVE.B	(A2),160-1(A4)
+	MOVE.B	(A3)+,(A4)+
+	MOVE.B	(A3)+,40-1(A4)
+	MOVE.B	(A3)+,80-1(A4)
+	MOVE.B	(A3)+,120-1(A4)
+	MOVE.B	(A3),160-1(A4)	
+DDPCEnd	RTS
+	
+	; (("00" .. "99" (split into two bytes)) - 32) * 8
+FastTwoDecTable
+        dc.w $8080,$8088,$8090,$8098,$80A0,$80A8,$80B0,$80B8
+        dc.w $80C0,$80C8,$8880,$8888,$8890,$8898,$88A0,$88A8
+        dc.w $88B0,$88B8,$88C0,$88C8,$9080,$9088,$9090,$9098
+        dc.w $90A0,$90A8,$90B0,$90B8,$90C0,$90C8,$9880,$9888
+        dc.w $9890,$9898,$98A0,$98A8,$98B0,$98B8,$98C0,$98C8
+        dc.w $A080,$A088,$A090,$A098,$A0A0,$A0A8,$A0B0,$A0B8
+        dc.w $A0C0,$A0C8,$A880,$A888,$A890,$A898,$A8A0,$A8A8
+        dc.w $A8B0,$A8B8,$A8C0,$A8C8,$B080,$B088,$B090,$B098
+        dc.w $B0A0,$B0A8,$B0B0,$B0B8,$B0C0,$B0C8,$B880,$B888
+        dc.w $B890,$B898,$B8A0,$B8A8,$B8B0,$B8B8,$B8C0,$B8C8
+        dc.w $C080,$C088,$C090,$C098,$C0A0,$C0A8,$C0B0,$C0B8
+        dc.w $C0C0,$C0C8,$C880,$C888,$C890,$C898,$C8A0,$C8A8
+        dc.w $C8B0,$C8B8,$C8C0,$C8C8
 
 	CNOP 0,4
-TimerTicks	dc.l	0
-PatternTicks	dc.w	0
+PlaybackSecsFrac	dc.l 0
+PlaybackSecsDelta	dc.l 0
+PlaybackSecs		dc.l 0
 
 ;---- Spectrum Analyzer ----
 
@@ -5167,9 +5269,9 @@ wfbu1	BTST	#6,$BFE001	; left mouse button
 	CLR.B	RawKeyCode
 	CLR.B	SaveKey
 	BSR.W	SetPlayPtrCol
-	CLR.W	PatternTicks
-	CLR.L	TimerTicks
-	BSR.W	ShowTimer
+	CLR.L	PlaybackSecsFrac
+	CLR.L	PlaybackSecs
+	BSR.W	DrawPlaybackCounter
 	MOVE.L	#'patp',RunMode
 	CLR.W	DidQuantize
 	MOVE.L	#-1,LongFFFF
@@ -5270,6 +5372,7 @@ cgloop5	MOVE.B	(A1)+,(A0)+
 	LEA	15(A0),A0
 	DBRA	D0,cgloop4
 	BSR.W	RedrawToggles
+	BSR.W	DrawPlaybackCounter
 	TST.B	EdEnable
 	BNE.W	EditOp
 	MOVEQ	#0,D4
@@ -9141,7 +9244,7 @@ caloop	MOVE.W	D0,(A1)+
 	CLR.L	CurrPos
 	CLR.L	SongPosition
 	CLR.L	PatternPosition
-	CLR.L	TimerTicks
+	CLR.L	PlaybackSecs
 	CLR.W	BlockMarkFlag
 	CLR.B	MetroFlag
 	MOVE.W	#1,EditMoveAdd
@@ -9346,7 +9449,7 @@ RefreshSetup
 	BRA.W	ShowAccidental ; Always last (redraws pattern) !
 
 AdjustVuSprites
-	LEA	CopperData+2,A0
+	LEA	CopperList1+2,A0
 	TST.B	ScreenAdjustFlag
 	BEQ.B	avusskip
 	MOVE.W	#$2C71,(A0)
@@ -19278,30 +19381,6 @@ toobigoverflow
 	MOVE.B	#'K',D0
 	BRA.B	printch
 
-StackNumberText
-	MOVE.L	(SP)+,A1
-	MOVE.L	ShowTextPtr(PC),-(SP)
-	MOVE.W	TextOffset(PC),-(SP)
-	MOVE.W	TextLength(PC),-(SP)
-	MOVE.W	WordNumber(PC),-(SP)
-	LEA	NumberText(PC),A0
-	MOVE.L	(A0),-(SP)
-	MOVE.W	4(A0),-(SP)
-	MOVE.L	A1,-(SP)
-	RTS
-
-SetBackNumberText
-	MOVE.L	(SP)+,A1
-	LEA	NumberText(PC),A0
-	MOVE.W	(SP)+,4(A0)
-	MOVE.L	(SP)+,(A0)
-	MOVE.W	(SP)+,WordNumber
-	MOVE.W	(SP)+,TextLength
-	MOVE.W	(SP)+,TextOffset
-	MOVE.L	(SP)+,ShowTextPtr
-	MOVE.L	A1,-(SP)
-	RTS
-
 	CNOP 0,4
 NumberText	dcb.b	6,0
 	EVEN
@@ -19364,7 +19443,7 @@ PrintHexWord
 	MOVE.B	(A0),D0
 	ADD.W	D0,D0
 	LEA	FastHexTable(PC),A0
-	ADD.L	D0,A0
+	ADD.W	D0,A0
 	MOVE.W	#2,TextLength
 	BSR.W	ShowText2
 PrintHexByte
@@ -19373,7 +19452,7 @@ PrintHexByte
 	MOVE.B	1(A0),D0
 	ADD.W	D0,D0
 	LEA	FastHexTable(PC),A0
-	ADD.L	D0,A0
+	ADD.W	D0,A0
 	MOVE.W	#2,TextLength
 	BSR.B	ShowText2
 	CLR.W	WordNumber
@@ -19403,8 +19482,7 @@ dstloop	MOVEQ	#0,D1
 	MOVE.B	ShowZeroFlag(PC),D1
 dstskip	MOVE.B	(A3,D1.W),D1
 	LSL.W	#3,D1
-	MOVE.L	A4,A2
-	ADD.W	D1,A2
+	LEA	(A4,D1.W),A2
 	MOVE.B	(A2)+,(A1)+
 	MOVE.B	(A2)+,40-1(A1)
 	MOVE.B	(A2)+,80-1(A1)
@@ -19421,7 +19499,7 @@ SpaceShowText
 	MOVE.W	(SP)+,ShowZeroFlag
 	RTS
 
-ShowZeroFlag	dc.b	95,0
+ShowZeroFlag	dc.b '_',0
 
 TextTable
 	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 ; 0
@@ -19440,7 +19518,6 @@ TextTable
 	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 ; 224
 	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	EVEN
 
 ;---- Set Sprite Position ----
 
@@ -21678,7 +21755,7 @@ SamplerScreen
 	LEA	CursorSpriteData,A0
 	BSR.W	SetSpritePos
 	JSR	SetSamSpritePtrs
-	MOVE.W	CopCol0+16,CopList2+18
+	MOVE.W	CopCol0+16,CopperList2+18
 	BSR.W	SwapSamScreen
 	BEQ.B	exisam2
 	BSR.W	ClearSamScr
@@ -21773,7 +21850,7 @@ BjaLop2	MOVE.L	(A0),D0
 	DBRA	D2,BjaLop1
 	
 	LEA	CopListInsPos,A0
-	LEA	CopList2,A1
+	LEA	CopperList2,A1
 	MOVEQ	#30-1,D1
 BjaLoop	MOVE.W	(A0),D0
 	MOVE.W	(A1),(A0)+
@@ -26171,15 +26248,41 @@ TToneData	; Tuning Tone (Sine Wave)
 	dc.b  127, 126, 118, 106,  91,  71,  49,  25
 	dc.b    0, -25, -49, -71, -91,-106,-118,-126
 	dc.b -127,-126,-118,-106, -91, -71, -49, -25
-	
-	; AGA-fixed copper list
-CopperData
-	dc.w	$008E,$2C81,$0090,$2CC1,$0092,$0038
-	dc.w	$0094,$00D0,$0102,$0000,$0104,$0024
-	dc.w	$0106,$0C40,$0108,$0000,$010A,$0000
-	dc.w	$010C,$0011,$01DC,$0020,$01FC,$0000
+
 	CNOP 0,4
-CopList	dc.w	$0120	; Sprite 0 high
+CopperList1
+	; ---------------
+	; video mode
+	; ---------------
+	dc.w	$008E	; DIWSTRT ($DFF08E)
+	dc.w	$2C81	; "Normal" value
+	dc.w	$0090	; DIWSTOP ($DFF090)
+	dc.w	$2CC1	; "Normal" value
+	dc.w	$0092	; DDFSTRT ($DFF092)
+	dc.w	$0038	; "Normal" value
+	dc.w	$0094	; DDFSTOP ($DFF094)
+	dc.w	$00D0	; "Normal" value
+	dc.w	$0102	; BPLCON1 ($DFF102)
+	dc.w	$0000
+	dc.w	$0104	; BPLCON2 ($DFF104)
+	dc.w	$0024
+	dc.w	$0106	; BPLCON3 ($DFF106)
+	dc.w	$0C40
+	dc.w	$0108	; BPL1MOD ($DFF108)
+	dc.w	$0000
+	dc.w	$010A	; BPL2MOD ($DFF10A)
+	dc.w	$0000
+	dc.w	$010C	; BPLCON4 ($DFF10C)
+	dc.w	$0011
+	dc.w	$01DC	; BEAMCON0 ($DFF1DC)
+	dc.w	$0020	; = PAL flag set
+	dc.w	$01FC	; FMODE ($DFF1FC)
+	dc.w	$0000	; slow fetch (AGA compatible)
+	; ---------------
+	; sprites
+	; ---------------
+CopperSpriteList
+	dc.w	$0120	; Sprite 0 high
 	dc.w	0
 	dc.w	$0122	; Sprite 0 low
 	dc.w	0
@@ -26211,37 +26314,42 @@ CopList	dc.w	$0120	; Sprite 0 high
 	dc.w	0
 	dc.w	$013E	; Sprite 7 low
 	dc.w	0
-
+	; ---------------
+	; palette
+	; ---------------
 	dc.w	$0180	; Color 0
-CopCol0 dc.w	0
+CopCol0 dc.w	$000
 	dc.w	$0182	; Color 1
-	dc.w	$0AAA
+	dc.w	$AAA
 	dc.w	$0184	; Color 2
-	dc.w	$0777
+	dc.w	$777
 	dc.w	$0186	; Color 3
-	dc.w	$0444
+	dc.w	$444
 	dc.w	$0188	; Color 4
-	dc.w	$0CCC
+	dc.w	$CCC
 	dc.w	$018A	; Color 5
-	dc.w	$0A00
+	dc.w	$A00
 	dc.w	$018C	; Color 6
-	dc.w	$0000
+	dc.w	$000
 	dc.w	$018E	; Color 7
-	dc.w	$004D
+	dc.w	$04D
 CopCol1 dc.w	$01A2	; Color 1
-	dc.w	$0AAA
+	dc.w	$AAA
 	dc.w	$01A4	; Color 2
-	dc.w	$0888
+	dc.w	$888
 	dc.w	$01A6	; Color 3
-	dc.w	$0666
+	dc.w	$666
 	dc.w	$01A0	; Color 4
-	dc.w	$0000
+	dc.w	$000
 	dc.w	$01BA	; Color 5
-	dc.w	$0C00
+	dc.w	$C00
 	dc.w	$01BC	; Color 6
-	dc.w	$0900
+	dc.w	$900
 	dc.w	$01BE	; Color 7
-	dc.w	$0F00
+	dc.w	$F00
+	; ---------------
+	; bitplane pointers
+	; ---------------
 CopListBitplanes
 	dc.w	$00E0	; Bitplane 0 high
 	dc.w	0
@@ -26257,6 +26365,9 @@ NoteBplptrHigh
 	dc.w	$00EA	; Bitplane 2 low
 NoteBplptrLow
 	dc.w	0
+	; ---------------
+	; misc
+	; ---------------
 	dc.w	$0100
 	dc.w	$3200
 CopListAnalyzer
@@ -26279,7 +26390,6 @@ NoteCol	dc.w	$004D
 	dc.w	$3200
 CopListMark2	
 	dcb.w	672,0
-
 	dc.w	$E907	; Wait for line $E9, pos $07
 	dc.w	$FFFE
 	dc.w	$010A	; bpl2mod
@@ -26377,7 +26487,7 @@ CopListMark2
 	dc.w	$FFFF	; Wait for line $FF, pos $FF
 	dc.w	$FFFE	; End of copperlist
 	
-CopList2
+CopperList2
 	dc.w	$B607	; Wait for line $B6, pos $07
 	dc.w	$FFFE
 	dc.w	$0100	; bplcon0

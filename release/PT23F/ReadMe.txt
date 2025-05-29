@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-               24th of May, 2025
+               29th of May, 2025
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -19,6 +19,11 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+ 
+ == Update 29.05.2025 ===============================================
+ - Optimizations for song playback counter code
+ - Song playback counter now ticks correctly on NTSC Amigas
+ ====================================================================
  
  == Update 24.05.2025 ===============================================
  - Quadrascope and Spectrum Analyzer optimizations
