@@ -1589,9 +1589,6 @@ PDELTA_NTSC EQU 71790856 ; round[2^32 / FrameRate]
 ; ------------------------------------------
 
 ; --- PAL-on-NTSC Amiga video (ECS/AGA) ----
-; XXX: A little unsure if color-clocks-per-line is 227.0 or 227.5 here...
-;      WinUAE seems to use 227.0, so I'll stick with that.
-;
 ; Horizontal clock: 15768.922707249Hz (3579545.4545454 (recurring) / 227.0)
 ; Lines: 313
 ; Frame rate = 50.3799447516Hz (HorizontalClock / Lines)	
