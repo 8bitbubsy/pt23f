@@ -13,9 +13,16 @@
 ; Changelog:
 ; - 13.03.2025: Initial version
 ; - 21.05.2025: Set Sample Offset (9xx) now works on >64kB samples
-
-; Simple test code. Attempts to call mt_music() 50 times a second, but may play
-; at the wrong tempo, especially in some emulator configs.
+;
+; Now comes some simple test code. It expects to call mt_music()
+; ~50 times a second. It might be a better idea to set up a vblank
+; interrupt and call mt_music in there, but this is about as simple
+; as it gets.
+;
+; NOTE:
+;  The test code may play at the wrong tempo, especially in some
+;  emulator configs!
+;
 main
 	BSR.W	mt_init			; setup module
 mloop	; ---------------------------
