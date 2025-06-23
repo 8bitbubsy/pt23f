@@ -28,6 +28,7 @@
 ; - 12.03.2025: mt_LowMask was not initialized correctly (small portamento bug)
 ; - 13.03.2025: Register preserving in mt_end
 ; - 21.05.2025: Set Sample Offset (9xx) now works on >64kB samples
+; - 23.06.2025: Removed 512-byte optimization LUT for E9x (Retrig Note)
 
 ; CIA Version:
 ; Call SetCIAInt to install the interrupt server. Then call mt_init
@@ -1216,16 +1217,13 @@ mt_RetrigNote
 	MOVEQ	#0,D1
 	MOVE.B	mt_Counter(PC),D1
 	BNE.B	mt_rtnskp
-	MOVE.W	n_note(A6),D1
-	AND.W	#$0FFF,D1
+	MOVE.W	n_note(A6),D2
+	AND.W	#$0FFF,D2
 	BNE.B	mt_rtnend
-	MOVEQ	#0,D1
-	MOVE.B	mt_Counter(PC),D1
 mt_rtnskp
-	AND.B	#$1F,D1	; just in case
-	LSL.W	#5,D0
-	ADD.W	D0,D1
-	MOVE.B	mt_RetrigTab(PC,D1.W),D0
+	DIVU.W	D0,D1
+	SWAP	D1
+	TST.W	D1
 	BNE.B	mt_rtnend
 mt_DoRetrig
 	MOVE.W	n_dmabit(A6),$DFF096	; Channel DMA off
@@ -1260,26 +1258,6 @@ waiteol4
 	MOVE.W	n_replen(A6),4(A5)
 mt_rtnend
 	RTS
-	
-	; DIV -> LUT optimization. Maybe a bit extreme, but DIVU is 140+
-	; cycles on a 68000.
-mt_RetrigTab
-	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	dc.b 0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1
-	dc.b 0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1
-	dc.b 0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1
-	dc.b 0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1
-	dc.b 0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1
-	dc.b 0,1,1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1
-	dc.b 0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1
-	dc.b 0,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1,1,1,1
-	dc.b 0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0,1
-	dc.b 0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1
-	dc.b 0,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1
-	dc.b 0,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1
-	dc.b 0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1
-	dc.b 0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1
 
 mt_VolumeFineUp
 	TST.B	mt_Counter
