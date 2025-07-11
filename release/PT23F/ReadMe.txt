@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-               29th of May, 2025
+               11th of July, 2025
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -19,6 +19,11 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+
+ == Update 11.07.2025 ===============================================
+ - Bug-fix: "Play Display" / "Play Range" would sometimes not trigger
+   the cyan sampling line and the quadrascope.
+ ====================================================================
  
  == Update 29.05.2025 ===============================================
  - Optimizations for song playback counter code
