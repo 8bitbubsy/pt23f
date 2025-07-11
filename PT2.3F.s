@@ -22116,10 +22116,12 @@ pdskip	; ----------------------------------------
 	MOVE.L	SamOffset(PC),StartOfs
 	MOVE.L	SamDisplay(PC),D0
 	LSR.L	#1,D0
-	MOVE.W	D0,(A0)
-	CLR.W	4(A0)
-	MOVE.W	#1,6(A0)
-	MOVE.W	PlayInsNum(PC),-(SP)
+	MOVE.W	D0,0(A0)	; length
+	CLR.W	4(A0)		; repeat
+	MOVE.W	#1,6(A0)	; replen
+	MOVE.W	PlayInsNum,D0
+	MOVE.W	D0,-(SP)
+	MOVE.B	D0,PlayInsNum2
 	CLR.W	PlayInsNum
 	JSR	PlayNote
 	MOVE.W	(SP)+,PlayInsNum
@@ -22146,10 +22148,12 @@ prskip	; ----------------------------------------
 	MOVE.L	D1,StartOfs
 	SUB.L	D1,D0
 	LSR.L	#1,D0
-	MOVE.W	D0,(A0)
-	CLR.W	4(A0)
-	MOVE.W	#1,6(A0)
-	MOVE.W	PlayInsNum(PC),-(SP)
+	MOVE.W	D0,0(A0)	; length
+	CLR.W	4(A0)		; repeat
+	MOVE.W	#1,6(A0)	; replen
+	MOVE.W	PlayInsNum,D0
+	MOVE.W	D0,-(SP)
+	MOVE.B	D0,PlayInsNum2
 	CLR.W	PlayInsNum
 	JSR	PlayNote
 	MOVE.W	(SP)+,PlayInsNum
