@@ -19,10 +19,10 @@ MOUSE_SPEED		EQU 11 ; 1..16
 SONG_SIZE_100PAT	EQU 1084+(1024*100)
 SONG_SIZE_64PAT		EQU 1084+(1024*64)
 
-RasterWait1_000		EQU 5-1
-RasterWait1_020		EQU 7-1
-RasterWait2_000		EQU 0
-RasterWait2_020		EQU 40-1
+PaulaDMAWaitScanlines_000		EQU 5-1
+PaulaDMAWaitScanlines_020		EQU 7-1
+GUIDelayScanlines_000		EQU 0 ; no delay needed on 68k
+GUIDelayScanlines_020		EQU 40-1
 
 ; FileFormat
 sd_sampleinfo		EQU 20
@@ -300,27 +300,67 @@ PTStart
 	RTS
 	
 ; ------------------------------------------------------------------------------
-; 32-bit unsigned div/mul routines. Software-based if CPU is 68000.
+; Scanline-wait routines. Used for Paula DMA latch waiting, and GUI interaction
+;
+; Note:
+;  "InitDelayRoutines" has to be called on program init to use these.
 ; ------------------------------------------------------------------------------	
-_CPUIs68000 dc.b 1
-	EVEN
-	
-InitMulDivRoutines
+WaitForPaulaLatch
+	MOVEM.L	D0/D7/A0,-(SP)
+	LEA	$DFF006,A0
+	MOVE.W	PaulaDMAWaitScanlines,D7
+.loop1	MOVE.B	(A0),D0
+.loop2	CMP.B	(A0),D0
+	BEQ.B	.loop2
+	DBRA	D7,.loop1
+	MOVEM.L	(SP)+,D0/D7/A0
+	RTS
+
+GUIDelay
+	TST.W	GUIDelayScanlines	; delay needed at all (68k)?
+	BEQ.B	.end			; nope!
+	MOVEM.L	D0/D7/A0,-(SP)
+	LEA	$DFF006,A0
+	MOVE.W	GUIDelayScanlines,D7
+.loop1	MOVE.B	(A0),D0
+.loop2	CMP.B	(A0),D0
+	BEQ.B	.loop2
+	DBRA	D7,.loop1
+	MOVEM.L	(SP)+,D0/D7/A0
+.end	RTS
+
+InitDelayRoutines
 	MOVE.L	A6,-(SP)
 	MOVE.L	D0,-(SP)
 	MOVE.L	4.W,A6
 	MOVE.W	296(A6),D0
 	BTST	#1,D0
-	SEQ	_CPUIs68000
-	MOVE.L	(SP)+,D0
+	BNE.B	.not68000
+	MOVE.W	#PaulaDMAWaitScanlines_000,PaulaDMAWaitScanlines
+	MOVE.W	#GUIDelayScanlines_000,GUIDelayScanlines
+	BRA.B	.end
+.not68000
+	MOVE.W	#PaulaDMAWaitScanlines_020,PaulaDMAWaitScanlines
+	MOVE.W	#GUIDelayScanlines_020,GUIDelayScanlines
+.end	MOVE.L	(SP)+,D0
 	MOVE.L	(SP)+,A6
-	RTS
+	RTS	
 	
+; ------------------------------------------------------------------------------
+; 32-bit unsigned div/mul routines. Software-based if CPU is 68000.
+;
+; Note:
+;  "InitMulDivRoutines" has to be called on program init to use these.
+; ------------------------------------------------------------------------------	
+
 	; 32x32 -> 32 unsigned multiplication
-	; Note: "InitMulDivRoutines" has to be called on program init to use this.
+	;
+	; Input:
+	;  D0.L - Multiplicand
+	;  D1.L - Multiplier
 	;
 	; Output:
-	;  D0.L = D0.L * D1.L
+	;  D0.L - 32-bit unsigned result
 MULU32
 	TST.B	_CPUIs68000
 	BNE.B	SoftMULU32
@@ -344,11 +384,14 @@ SoftMULU32
 	MOVE.L	(SP)+,D2
 	RTS
 
-	; 32/32 -> 32 (quotient) unsigned division
-	; Note: "InitMulDivRoutines" has to be called on program init to use this.
+	; 32/32 -> 32 unsigned division (without remainder)
+	;
+	; Input:
+	;  D0.L - Dividend
+	;  D1.L - Divisor
 	;
 	; Output:
-	;  D0.L = D0.L / D1.L
+	;  D0.L - 32-bit unsigned quotient
 DIVU32
 	TST.B	_CPUIs68000
 	BNE.B	SoftDIVU32
@@ -389,21 +432,28 @@ SoftDIVU32
 .end	MOVEM.L	(SP)+,D1/D2/D3
 	RTS
 	
+InitMulDivRoutines
+	MOVE.L	A6,-(SP)
+	MOVE.L	D0,-(SP)
+	MOVE.L	4.W,A6
+	MOVE.W	296(A6),D0
+	BTST	#1,D0
+	SEQ	_CPUIs68000
+	MOVE.L	(SP)+,D0
+	MOVE.L	(SP)+,A6
+	RTS
+	
+_CPUIs68000 dc.b 1
+	EVEN
+	
 ; ------------------------------------------------------------------------------
 ; ------------------------------------------------------------------------------
 
 Main
 	MOVE.L	SP,StackSave	; important! (leaking memory without it, for some reason)
 	; ---------------------
-	BSR.W	InitMulDivRoutines ; also sets _CPUIs68000
-	TST.B	_CPUIs68000
-	BEQ.B	not68k
-	MOVE.W	#RasterWait1_000,WaitRasterLines1
-	MOVE.W	#RasterWait2_000,WaitRasterLines2
-	BRA.B	srwskip
-not68k	MOVE.W	#RasterWait1_020,WaitRasterLines1
-	MOVE.W	#RasterWait2_020,WaitRasterLines2
-srwskip	; ---------------------
+	BSR.W	InitDelayRoutines
+	BSR.W	InitMulDivRoutines
 	BSR.W	OpenLotsOfThings
 	BSR.W	SetVBInt
 	BSR.W	SetMusicInt
@@ -520,7 +570,9 @@ PlayRange2
 	MOVE.W	D0,(A0)
 	CLR.W	4(A0)
 	MOVE.W	#1,6(A0)
-	MOVE.W	PlayInsNum,-(SP)
+	MOVE.W	PlayInsNum,D0
+	MOVE.W	D0,-(SP)
+	MOVE.B	D0,PlayInsNum2
 	CLR.W	PlayInsNum
 	JSR	PlayNote
 	MOVE.W	(SP)+,PlayInsNum
@@ -4501,10 +4553,8 @@ FilenameOneUp
 	BNE.B	fnouskip
 	TST.W	Action
 	BEQ.W	Return1
-	TST.W	WaitRasterLines2	; PT2.3D change: wait properly on every scroll
-	BEQ.B	fnouskip2		; --
-	BSR.W	Wait2			; --
-fnouskip2				; --
+	JSR	GUIDelay		; PT2.3D change: wait properly on every scroll
+fnouskip2
 	LEA	FileNamesPtr(PC),A5
 	MOVE.W	FileNameScrollPos(PC),D0
 	BEQ.W	Return1
@@ -4585,10 +4635,8 @@ FilenameOneDown
 	BNE.B	fnodskip
 	TST.W	Action
 	BEQ.W	Return1
-	TST.W	WaitRasterLines2	; PT2.3D change: wait properly on every scroll
-	BEQ.B	fnodskip2		; --
-	BSR.W	Wait2			; --
-fnodskip2				; --
+	JSR	GUIDelay		; PT2.3D change: wait properly on every scroll
+fnodskip2
 	LEA	FileNamesPtr(PC),A5
 	MOVE.W	FileNameScrollPos(PC),D0
 	ADDQ.W	#1,D0
@@ -8323,50 +8371,35 @@ dpn3	MOVEQ	#0,D1
 dpnvolok
 	; --END OF FIX--------------------------------
 	MOVE.W	D1,8(A5)			; Set volume
-	MOVE.B	D1,n_volumeout(A4)		; Set scope volume
+	MOVE.B	D1,n_volumeout(A4)		; Set quadrascope volume
 	MOVE.B	D1,n_volume(A4)
 	MOVE.W	CurrentPlayNote,6(A5)		; Set period
-	MOVE.W	CurrentPlayNote,n_periodout(A4)	; Set scope period
+	MOVE.W	CurrentPlayNote,n_periodout(A4)	; Set quadrascope period
 	MOVE.W	CurrentPlayNote,n_period(A4)
+
 	MOVE.W	n_dmabit(A4),$DFF096		; Turn off all voice DMAs
 	MOVE.L	8(A6),D1
 	ADD.L	StartOfs,D1
 	MOVE.L	D1,(A5)				; Set sampledata pointer
 	CLR.L	StartOfs
 	MOVE.L	D1,n_start(A4)
-	MOVE.L	D1,n_oldstart(A4)
+	MOVE.L	D1,n_oldstart(A4)		; for quadrascope
 	MOVE.W	D0,4(A5)			; Set length
 	MOVE.W	D0,n_length(A4)
-	MOVE.W	D0,n_oldlength(A4)
+	MOVE.W	D0,n_oldlength(A4)		; for quadrascope
 	BNE.B	dpnnz
 	MOVEQ	#1,D0
 	MOVE.W	D0,4(A5)
 	MOVE.W	D0,n_length(A4)
+	
 dpnnz	MOVE.W	CurrentPlayNote,D0
 	BSR.W	PlayNoteAnalyze
-
-	MOVE.L	A0,-(SP)
-	LEA	$DFF006,A0
-	MOVE.W	WaitRasterLines1,D1
-lineloop1
-	MOVE.B	(A0),D0
-waiteol1
-	CMP.B	(A0),D0
-	BEQ.B	waiteol1
-	DBRA	D1,lineloop1
 	
+	JSR	WaitForPaulaLatch
 	MOVE.W	n_dmabit(A4),D0
 	OR.W	#$8000,D0	; Set bits
-	MOVE.W	D0,$DFF096	; Turn DMAs back on
-	
-	MOVE.W	WaitRasterLines1,D1
-lineloop2
-	MOVE.B	(A0),D0
-waiteol2
-	CMP.B	(A0),D0
-	BEQ.B	waiteol2
-	DBRA	D1,lineloop2
-	MOVE.L	(SP)+,A0
+	MOVE.W	D0,$DFF096	; Turn DMAs back on	
+	JSR	WaitForPaulaLatch
 
 	MOVEQ	#0,D1
 	MOVE.W	4(A6),D1 	; repeat*2
@@ -8377,6 +8410,7 @@ waiteol2
 	MOVE.L	D1,n_loopstart(A4)
 	MOVE.W	6(A6),4(A5)	; Set loop length
 	MOVE.W	6(A6),n_replen(A4)
+
 	ST	n_trigger(A4)
 	BRA.W	testmul
 
@@ -9464,7 +9498,7 @@ reefsub	CLR.B	n_wavecontrol(A0)
 	CLR.B	n_glissfunk(A0)
 	CLR.B	n_finetune(A0)
 	CLR.B	n_loopcount(A0)
-	CLR.B	n_sampleoffset2(A0)	; used for scopes/sample pos line
+	CLR.B	n_sampleoffset2(A0)	; used for quadrascope/sample pos line
 	RTS
 
 RestoreFKeyPos
@@ -12714,19 +12748,6 @@ vodoskp	TST.B	3(A0)
 	BPL.W	ftuskip
 	CLR.B	3(A0)
 	BRA.W	ftuskip
-	
-Wait2
-	MOVEM.L	A0/D0-D1,-(SP)
-	LEA	$DFF006,A0
-	MOVE.W	WaitRasterLines2,D0
-lineloop8
-	MOVE.B	(A0),D1
-waiteol8
-	CMP.B	(A0),D1
-	BEQ.B	waiteol8
-	DBRA	D0,lineloop8
-	MOVEM.L	(SP)+,A0/D0-D1
-	RTS
 
 SampleLengthGadg
 	MOVE.W	#1,SampleLengthFlag
@@ -12748,10 +12769,7 @@ SampleLengthUp
 	CMP.L	#$0000FFF0,D0
 	BHS.B	sluskip
 	ADDQ.L	#7,D0
-sluskip
-	TST.W	WaitRasterLines2
-	BEQ.B	sluskip2
-	BSR.B	Wait2
+sluskip	JSR	GUIDelay
 sluskip2
 	CMP.L	#$FFFF,D0
 	BLS.W	sluskip3
@@ -12785,9 +12803,7 @@ sldskip2
 sldskip3
 	MOVE.W	D1,(A0)
 sldskip5
-	TST.W	WaitRasterLines2
-	BEQ.B	sldskip4
-	BSR.W	Wait2
+	JSR	GUIDelay
 sldskip4
 	BRA.W	ShowSampleInfo
 
@@ -12898,10 +12914,7 @@ ruskip
 	BRA.B	repdone
 ruskip2
 	MOVE.W	D2,4(A0)
-repdone
-	TST.W	WaitRasterLines2
-	BEQ.B	ruskip3
-	BSR.W	Wait2
+repdone	JSR	GUIDelay
 ruskip3
 	BSR.W	ShowSampleInfo
 	BSR.W	UpdateRepeats
@@ -15214,9 +15227,7 @@ shposkip
 	BPL.B	shposkip2
 	MOVEQ	#0,D2
 shposkip2
-	TST.W	WaitRasterLines2
-	BEQ.B	shposkip4
-	BSR.W	Wait2
+	JSR	GUIDelay
 shposkip4
 	MOVE.L	D2,SamplePos
 	BRA.B	ShowPos
@@ -23234,23 +23245,14 @@ TuningTone
 	ADD.W	D1,D1
 	MOVE.W	(A1,D1.W),D1
 	LEA	TToneData,A2
-	MOVE.W	D0,$DFF096 ; DMACON
+	MOVE.W	D0,$DFF096	; turn off DMA
 	MOVE.L	A2,(A0)
-	MOVE.W	#16,4(A0) ; 32 bytes
+	MOVE.W	#16,4(A0) 	; 32 bytes
 	MOVE.W	D1,6(A0)
 	MOVE.W	TToneVol,8(A0)
-	
-	LEA	$DFF006,A0
-	MOVE.W	WaitRasterLines1,D1
-lineloop3
-	MOVE.B	(A0),D2
-waiteol3
-	CMP.B	(A0),D2
-	BEQ.B	waiteol3
-	DBRA	D1,lineloop3
-
+	JSR	WaitForPaulaLatch
 	BSET	#15,D0
-	MOVE.W	D0,$DFF096
+	MOVE.W	D0,$DFF096	; turn DMA on
 ttrts
 	RTS
 
@@ -24108,7 +24110,7 @@ GetNewNote
 	MOVEQ	#0,D0
 	MOVE.B	n_volume(A6),D0
 	MOVE.W	D0,8(A5)
-	MOVE.B	D0,n_volumeout(A6)	; Set scope volume
+	MOVE.B	D0,n_volumeout(A6)	; set quadrascope volume
 .l2
 	LEA	$DFF0B0,A5
 	LEA	audchan2temp(PC),A6
@@ -24119,7 +24121,7 @@ GetNewNote
 	MOVEQ	#0,D0
 	MOVE.B	n_volume(A6),D0
 	MOVE.W	D0,8(A5)
-	MOVE.B	D0,n_volumeout(A6)	; Set scope volume
+	MOVE.B	D0,n_volumeout(A6)	; set quadrascope volume
 .l3
 	LEA	$DFF0C0,A5
 	LEA	audchan3temp(PC),A6
@@ -24130,20 +24132,73 @@ GetNewNote
 	MOVEQ	#0,D0
 	MOVE.B	n_volume(A6),D0
 	MOVE.W	D0,8(A5)
-	MOVE.B	D0,n_volumeout(A6)	; Set scope volume
+	MOVE.B	D0,n_volumeout(A6)	; set quadrascope volume
 .l4
 	LEA	$DFF0D0,A5
 	LEA	audchan4temp(PC),A6
 	MOVEQ	#4,D2
-	BSR.B	PlayVoice
+	BSR.W	PlayVoice
 	TST.B	n_muted(A6)		; --PT2.3D bug fix: instant channel muting
 	BNE.W	.l5
 	MOVEQ	#0,D0
 	MOVE.B	n_volume(A6),D0
 	MOVE.W	D0,8(A5)
-	MOVE.B	D0,n_volumeout(A6)	; Set scope volume
+	MOVE.B	D0,n_volumeout(A6)	; set quadrascope volume
 .l5
 	BRA.W	SetDMA
+	
+SetVUMeterHeight			; - PT2.3D change: perfect VU-meters (never buggy at high BPMs)
+	TST.B	RealVUMetersFlag	; real VU-meters mode?
+	BNE.B	vuend			; yes, don't use this routine
+	; -------------------------
+	TST.B	n_muted(A6)		; is this channel muted?
+	BNE.B	vuend			; yes, don't set VU-meter height for this channel		
+	MOVEQ	#0,D0
+	MOVE.B	n_dmabit+1(A6),D0	; check temp dmacon to find out what channel we're on
+	AND.B   #$0F,D0
+	BEQ.B   vuend			; no active channel...
+	; -------------------------
+	MOVE.L	A0,-(SP)
+	MOVE.L	D1,-(SP)
+	BTST	#0,D0			; are we on channel #1?
+	BEQ.B	notch1			; no
+	LEA	VUSpriteData1,A0	; yes, get current sprite
+	BRA.B   vuskip
+notch1	BTST	#1,D0			; are we on channel #2?
+	BEQ.B	notch2			; no
+	LEA	VUSpriteData2,A0	; yes, get current sprite
+	BRA.B   vuskip
+notch2	BTST	#2,D0			; are we on channel #3?
+	BEQ.B	notch3			; no
+	LEA	VUSpriteData3,A0	; yes, get current sprite
+	BRA.B   vuskip
+notch3	LEA	VUSpriteData4,A0	; we are on channel #4
+vuskip	MOVE.B	n_cmd(A6),D0		; get channel effect
+	AND.B	#$0F,D0			; mask
+	CMP.B   #$0C,D0			; is current effect 'C' (set vol)?
+	BNE.B	vuskip2			; no
+	MOVE.B	n_cmdlo(A6),D0		; yes, use parameter as VU-meter volume
+	BRA.B	vuskip3
+vuskip2	MOVE.B	n_volume(A6),D0		; get channel volume instead
+vuskip3	CMP.B	#64,D0			; higher than $40?
+	BLS.B	vuskip4			; no, safe for use!
+	MOVEQ	#64,D0			; yes, set to $40
+vuskip4	MOVE.B	(VUmeterHeights,PC,D0.W),(A0)
+	MOVE.L	(SP)+,D1
+	MOVE.L	(SP)+,A0
+vuend	RTS
+	; ------------------
+	
+	; This table is also used for the "real" VU meter mode.
+	;
+	; for (i = 0 to 64) x = 233 - round[i * (47/64)]
+VUmeterHeights
+        dc.b 233,232,232,231,230,229,229,228,227,226,226,225,224,223,223,222
+        dc.b 221,221,220,219,218,218,217,216,215,215,214,213,212,212,211,210
+        dc.b 209,209,208,207,207,206,205,204,204,203,202,201,201,200,199,198
+        dc.b 198,197,196,196,195,194,193,193,192,191,190,190,189,188,187,187
+        dc.b 186
+	EVEN
 
 CheckMetronome
 	TST.B	MetroFlag
@@ -24199,7 +24254,7 @@ plvskip	MOVE.L	(A0,D1.L),(A6)	; Read note from pattern
 	LSL.L	#2,D2
 	MULU.W	#30,D4
 	MOVE.L	(A1,D2.L),n_start(A6)
-	MOVE.L	n_start(A6),n_oldstart(A6)	; for scopes
+	MOVE.L	n_start(A6),n_oldstart(A6)	; for quadrascope
 	MOVE.W	(A3,D4.L),n_length(A6)
 	
 	MOVEQ	#0,D0
@@ -24226,12 +24281,12 @@ plvskip	MOVE.L	(A0,D1.L),(A6)	; Read note from pattern
 	MOVE.W	4(A3,D4.L),D0			; Get repeat
 	ADD.W	6(A3,D4.L),D0			; Add replen
 	MOVE.W	D0,n_length(A6)
-	MOVE.W	D0,n_oldlength(A6)		; for scopes
+	MOVE.W	D0,n_oldlength(A6)		; for quadrascope
 	MOVE.W	6(A3,D4.L),n_replen(A6)		; Save replen
 	BRA.B	SetRegisters
 
 NoLoop
-	MOVE.W	n_length(A6),n_oldlength(A6)	; for scopes
+	MOVE.W	n_length(A6),n_oldlength(A6)	; for quadrascope
 	MOVE.L	n_start(A6),D2
 	ADD.L	D3,D2
 	MOVE.L	D2,n_loopstart(A6)
@@ -24305,93 +24360,20 @@ trenoc
 sdmaskp
 	MOVE.W	n_period(A6),D0
 	MOVE.W	D0,6(A5)		; Set period
-	MOVE.W	D0,n_periodout(A6)	; Set scope period
-	ST	n_trigger(A6)		; Trigger scopes
+	MOVE.W	D0,n_periodout(A6)	; Set quadrascope period
+	ST	n_trigger(A6)		; Trigger quadrascope
 	JSR	SpectrumAnalyzer	; Do the analyzer
-	BSR.B	SetVUMeterHeight	; Set VU-meter height
+	BSR.W	SetVUMeterHeight	; Set VU-meter height
 	MOVE.W	n_dmabit(A6),D0
 	OR.W	D0,DMACONtemp
 	BRA.W	CheckMoreEffects
-	
-SetVUMeterHeight			; - PT2.3D change: perfect VU-meters (never buggy at high BPMs)
-	TST.B	RealVUMetersFlag	; real VU-meters mode?
-	BNE.B	vuend			; yes, don't use this routine
-	; -------------------------
-	TST.B	n_muted(A6)		; is this channel muted?
-	BNE.B	vuend			; yes, don't set VU-meter height for this channel		
-	MOVEQ	#0,D0
-	MOVE.B	n_dmabit+1(A6),D0	; check temp dmacon to find out what channel we're on
-	AND.B   #$0F,D0
-	BEQ.B   vuend			; no active channel...
-	; -------------------------
-	MOVE.L	A0,-(SP)
-	MOVE.L	D1,-(SP)
-	BTST	#0,D0			; are we on channel #1?
-	BEQ.B	notch1			; no
-	LEA	VUSpriteData1,A0	; yes, get current sprite
-	BRA.B   vuskip
-notch1	BTST	#1,D0			; are we on channel #2?
-	BEQ.B	notch2			; no
-	LEA	VUSpriteData2,A0	; yes, get current sprite
-	BRA.B   vuskip
-notch2	BTST	#2,D0			; are we on channel #3?
-	BEQ.B	notch3			; no
-	LEA	VUSpriteData3,A0	; yes, get current sprite
-	BRA.B   vuskip
-notch3	LEA	VUSpriteData4,A0	; we are on channel #4
-vuskip	MOVE.B	n_cmd(A6),D0		; get channel effect
-	AND.B	#$0F,D0			; mask
-	CMP.B   #$0C,D0			; is current effect 'C' (set vol)?
-	BNE.B	vuskip2			; no
-	MOVE.B	n_cmdlo(A6),D0		; yes, use parameter as VU-meter volume
-	BRA.B	vuskip3
-vuskip2	MOVE.B	n_volume(A6),D0		; get channel volume instead
-vuskip3	CMP.B	#64,D0			; higher than $40?
-	BLS.B	vuskip4			; no, safe for use!
-	MOVEQ	#64,D0			; yes, set to $40
-vuskip4	MOVE.B	(VUmeterHeights,PC,D0.W),(A0)
-	MOVE.L	(SP)+,D1
-	MOVE.L	(SP)+,A0
-vuend	RTS
-	; ------------------
-	
-	; This table is also used for the "real" VU meter mode.
-	;
-	; for (i = 0 to 64) x = 233 - round[i * (47/64)]
-VUmeterHeights
-        dc.b 233,232,232,231,230,229,229,228,227,226,226,225,224,223,223,222
-        dc.b 221,221,220,219,218,218,217,216,215,215,214,213,212,212,211,210
-        dc.b 209,209,208,207,207,206,205,204,204,203,202,201,201,200,199,198
-        dc.b 198,197,196,196,195,194,193,193,192,191,190,190,189,188,187,187
-        dc.b 186
-	EVEN
 
 SetDMA
-	MOVE.L	A0,-(SP)
-	MOVE.L	D1,-(SP)
-	LEA	$DFF006,A0
-	MOVE.W	WaitRasterLines1,D1
-lineloop4
-	MOVE.B	(A0),D0
-waiteol4
-	CMP.B	(A0),D0
-	BEQ.B	waiteol4
-	DBRA	D1,lineloop4
-
+	JSR	WaitForPaulaLatch
 	MOVE.W	DMACONtemp(PC),D0
-	OR.W	#$8000,D0	; Set bits
+	OR.W	#$8000,D0	; Set DMA bits
 	MOVE.W	D0,$DFF096
-	
-	; scanline-wait (wait for Paula DMA to latch)
-	MOVE.W	WaitRasterLines1,D1
-lineloop5
-	MOVE.B	(A0),D0
-waiteol5
-	CMP.B	(A0),D0
-	BEQ.B	waiteol5
-	DBRA	D1,lineloop5
-	MOVE.L	(SP)+,D1
-	MOVE.L	(SP)+,A0
+	JSR	WaitForPaulaLatch
 	
 	LEA	$DFF000,A5
 	LEA	audchan4temp(PC),A6
@@ -25092,39 +25074,22 @@ rtnskp	DIVU.W	D0,D1
 	TST.W	D1
 	BNE.B	rtnend
 DoRetrg	MOVE.W	n_dmabit(A6),$DFF096		; Channel DMA off
-	MOVE.L	n_start(A6),(A5)		; Set sampledata pointer
+	MOVE.L	n_start(A6),0(A5)		; Set sampledata pointer
 	MOVE.W	n_length(A6),4(A5)		; Set length
 	MOVE.W	n_period(A6),6(A5)		; Set period
-	MOVE.W	n_period(A6),n_periodout(A6)	; Set scope period
-	
-	; -- PT2.3D bug fix: update scopes/VU-meters on note retrig
-	ST	n_trigger(A6)			; Trigger scope
+	MOVE.W	n_period(A6),n_periodout(A6)	; Set quadrascope period
+	JSR	WaitForPaulaLatch
+	MOVE.W	n_dmabit(A6),D0
+	BSET	#15,D0				; Set DMA bits
+	MOVE.W	D0,$DFF096
+	JSR	WaitForPaulaLatch
+	MOVE.L	n_loopstart(A6),0(A5)
+	MOVE.W	n_replen(A6),4(A5)	
+	; -- PT2.3D bug fix: update analyzer/scope/VU-meters on note retrig
+	JSR	SpectrumAnalyzer
+	ST	n_trigger(A6)			; Trigger quadrascope
 	BSR.W	SetVUMeterHeight		; Set VU-meter height
 	; ---------------------------------------------------------
-
-	LEA	$DFF006,A0
-	MOVE.W	WaitRasterLines1,D1
-lineloop6
-	MOVE.B	(A0),D0
-waiteol6
-	CMP.B	(A0),D0
-	BEQ.B	waiteol6
-	DBRA	D1,lineloop6
-  
-	MOVE.W	n_dmabit(A6),D0
-	BSET	#15,D0	; Set bits
-	MOVE.W	D0,$DFF096
-	
-	MOVE.W	WaitRasterLines1,D1
-lineloop7
-	MOVE.B	(A0),D0
-waiteol7
-	CMP.B	(A0),D0
-	BEQ.B	waiteol7
-	DBRA	D1,lineloop7
-
-	MOVE.L	n_loopstart(A6),(A5)
-	MOVE.W	n_replen(A6),4(A5)
 rtnend	MOVE.L	(SP)+,D1
 	MOVE.L	(SP)+,A0
 	RTS
@@ -25162,11 +25127,6 @@ NoteDelay
 	MOVE.W	(A6),D0
 	AND.W	#$0FFF,D0
 	BEQ.W	Return3
-	; -- PT2.3D bug fix: update analyzer/scopes on note delay
-	JSR	SpectrumAnalyzer	; Trigger spectrum analyzer
-	ST	n_trigger(A6)		; Trigger scope
-	BSR.W	SetVUMeterHeight	; Set VU-meter height
-	; -------------------------------------------------------
 	MOVE.L	A0,-(SP)
 	MOVE.L	D1,-(SP)
 	BRA.W	DoRetrg
@@ -26738,8 +26698,8 @@ NewInputName	ds.b	DirNameLength
 TempSampArea	ds.w	380
 SaveColors	ds.w	40+48
 BeamCONTemp	ds.w	2
-WaitRasterLines1	ds.w	1
-WaitRasterLines2	ds.w	1
+PaulaDMAWaitScanlines	ds.w	1
+GUIDelayScanlines	ds.w	1
 VolToolBoxShown	ds.b	1
 ScopeLUT	ds.b	(32+1)*256
 
