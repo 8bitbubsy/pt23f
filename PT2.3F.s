@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;      29th of May, 2025
+;      11th of July, 2025
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -284,7 +284,7 @@ PTStart
 	MOVE.L	D0,PTProcess
 	MOVE.L	D0,A0
 	MOVE.L	$B8(A0),PTProcessTmp
-	BSR.B	Main
+	BSR.W	Main
 	MOVE.L	PTProcess(PC),A0
 	MOVE.L	PTProcessTmp(PC),$B8(A0)
 	MOVE.L	4.W,A6
@@ -298,21 +298,111 @@ PTStart
 	JSR	_LVOUnLoadSeg(A6)
 	MOVEQ	#0,D0
 	RTS
+	
+; ------------------------------------------------------------------------------
+; 32-bit unsigned div/mul routines. Software-based if CPU is 68000.
+; ------------------------------------------------------------------------------	
+_CPUIs68000 dc.b 1
+	EVEN
+	
+InitMulDivRoutines
+	MOVE.L	A6,-(SP)
+	MOVE.L	D0,-(SP)
+	MOVE.L	4.W,A6
+	MOVE.W	296(A6),D0
+	BTST	#1,D0
+	SEQ	_CPUIs68000
+	MOVE.L	(SP)+,D0
+	MOVE.L	(SP)+,A6
+	RTS
+	
+	; 32x32 -> 32 unsigned multiplication
+	; Note: "InitMulDivRoutines" has to be called on program init to use this.
+	;
+	; Output:
+	;  D0.L = D0.L * D1.L
+MULU32
+	TST.B	_CPUIs68000
+	BNE.B	SoftMULU32
+	MULU.L	D1,D0
+	RTS
+SoftMULU32
+	MOVE.L	D2,-(SP)
+	MOVE.L	D3,-(SP)
+	MOVE.L	D0,D2
+	MOVE.L	D1,D3
+	SWAP	D2
+	SWAP	D3
+	MULU.W	D1,D2
+	MULU.W	D0,D3
+	MULU.W	D1,D0
+	ADD.W	D3,D2
+	SWAP	D2
+	CLR.W	D2
+	ADD.L	D2,D0
+	MOVE.L	(SP)+,D3
+	MOVE.L	(SP)+,D2
+	RTS
+
+	; 32/32 -> 32 (quotient) unsigned division
+	; Note: "InitMulDivRoutines" has to be called on program init to use this.
+	;
+	; Output:
+	;  D0.L = D0.L / D1.L
+DIVU32
+	TST.B	_CPUIs68000
+	BNE.B	SoftDIVU32
+	DIVU.L	D1,D0
+	RTS
+SoftDIVU32
+	MOVEM.L	D1/D2/D3,-(SP)
+	SWAP	D1
+	TST.W	D1
+	BNE.B	.L1
+	SWAP	D1
+	MOVE.L	D1,D3
+	SWAP	D0
+	MOVE.W	D0,D3
+	BEQ.B	.L0
+	DIVU.W	D1,D3
+	MOVE.W	D3,D0
+.L0	SWAP	D0
+	MOVE.W	D0,D3
+	DIVU.W	D1,D3
+	MOVE.W	D3,D0
+	BRA.B	.end
+.L1	SWAP	D1
+	MOVE.L	D1,D2
+	MOVE.L	D0,D1
+	CLR.W	D1
+	SWAP	D1
+	SWAP	D0
+	CLR.W	D0
+	MOVEQ	#16-1,D3
+.loop	ADD.L	D0,D0
+	ADDX.L	D1,D1
+	CMP.L	D1,D2
+	BHI.B	.L2
+	SUB.L	D2,D1
+	ADDQ.L	#1,D0
+.L2	DBRA	D3,.loop
+.end	MOVEM.L	(SP)+,D1/D2/D3
+	RTS
+	
+; ------------------------------------------------------------------------------
+; ------------------------------------------------------------------------------
 
 Main
 	MOVE.L	SP,StackSave	; important! (leaking memory without it, for some reason)
 	; ---------------------
-	MOVE.L	4.W,A6
-	MOVE.W	296(A6),D0
-	BTST	#1,D0		; CPU is 68000?
-	BNE.B	not68k
+	BSR.W	InitMulDivRoutines ; also sets _CPUIs68000
+	TST.B	_CPUIs68000
+	BEQ.B	not68k
 	MOVE.W	#RasterWait1_000,WaitRasterLines1
 	MOVE.W	#RasterWait2_000,WaitRasterLines2
-	ST	CPUIs68000
 	BRA.B	srwskip
 not68k	MOVE.W	#RasterWait1_020,WaitRasterLines1
-	MOVE.W	#RasterWait2_020,WaitRasterLines2	
-	SF	CPUIs68000
+	MOVE.W	#RasterWait2_020,WaitRasterLines2
 srwskip	; ---------------------
 	BSR.W	OpenLotsOfThings
 	BSR.W	SetVBInt
@@ -8226,10 +8316,10 @@ dpnplay	MOVE.B	PlayInsNum2(PC),n_samplenum(A4)
 dpn2	ADD.W	6(A6),D0 ; add replen
 dpn3	MOVEQ	#0,D1
 	MOVE.B	3(A6),D1
-	; --PT2.3D bug fix: limit sample volume to $40
-	CMP.B	#$40,D1
+	; --PT2.3D bug fix: limit sample volume to 64
+	CMP.B	#64,D1
 	BLS.B	dpnvolok
-	MOVE.B	#$40,D1
+	MOVEQ	#64,D1
 dpnvolok
 	; --END OF FIX--------------------------------
 	MOVE.W	D1,8(A5)			; Set volume
@@ -15385,7 +15475,7 @@ FadeUp
 	; --------------------
 	MOVE.L	#32768<<16,D0
 	MOVE.L	D5,D1
-	BSR.W	DIVU32
+	JSR	DIVU32
 	MOVE.L	D0,D3		; 16.16fp delta
 	; --------------------
 	MOVEQ	#0,D2
@@ -15431,7 +15521,7 @@ FadeDown
 	; --------------------
 	MOVE.L	#32768<<16,D0
 	MOVE.L	D5,D1
-	BSR.W	DIVU32
+	JSR	DIVU32
 	MOVE.L	D0,D3		; 16.16fp delta
 	; --------------------
 	MOVEQ	#0,D2
@@ -16460,7 +16550,7 @@ GetDeltaFromChordNote
 	MOVE.W	(A0,D0.W),D0	; D0.L = ref. period
 	SWAP	D0
 	CLR.W	D0
-	BSR.W	DIVU32
+	JSR	DIVU32
 	; -----------------------
 	MOVEM.L	(SP)+,D1/D2/A0
 	RTS
@@ -16490,13 +16580,13 @@ GetSmpLenFromChordNote
 	MOVEQ	#0,D0
 	MOVE.W	12(A0,D2.W),D0	; length
 	ADD.L	D0,D0
-	BSR.W	MULU32
+	JSR	MULU32
 	MOVEQ	#0,D1
 	MOVE.W	TuneNote,D1
 	ADD.W	D1,D1
 	LEA	PeriodTable(PC),A1
 	MOVE.W	(A1,D1.W),D1	; D1.L = ref. period
-	BSR.W	DIVU32
+	JSR	DIVU32
 	BCLR	#0,D0
 	CMP.L	#$1FFFE,D0
 	BLS.B	.L1
@@ -21999,79 +22089,6 @@ SamMenu4
 	BLO.W	Resample
 	BRA.W	SetResamNote
 
-	; 32x32 -> 32 unsigned multiplication
-	; Note: Don't use this if CPUIs68000 wasn't properly set!
-	;
-	; Output:
-	;  D0.L = D0.L * D1.L
-MULU32
-	TST.B	CPUIs68000
-	BNE.B	SoftMULU32
-	MULU.L	D1,D0
-	RTS
-SoftMULU32
-	MOVE.L	D2,-(SP)
-	MOVE.L	D3,-(SP)
-	MOVE.L	D0,D2
-	MOVE.L	D1,D3
-	SWAP	D2
-	SWAP	D3
-	MULU.W	D1,D2
-	MULU.W	D0,D3
-	MULU.W	D1,D0
-	ADD.W	D3,D2
-	SWAP	D2
-	CLR.W	D2
-	ADD.L	D2,D0
-	MOVE.L	(SP)+,D3
-	MOVE.L	(SP)+,D2
-	RTS
-
-	; 32/32 -> 32 (quotient) unsigned division
-	; Note: Don't use this if CPUIs68000 wasn't properly set!
-	;
-	; Output:
-	;  D0.L = D0.L / D1.L
-DIVU32
-	TST.B	CPUIs68000
-	BNE.B	SoftDIVU32
-	DIVU.L	D1,D0
-	RTS
-SoftDIVU32
-	MOVEM.L	D1/D2/D3,-(SP)
-	SWAP	D1
-	TST.W	D1
-	BNE.B	.L1
-	SWAP	D1
-	MOVE.L	D1,D3
-	SWAP	D0
-	MOVE.W	D0,D3
-	BEQ.B	.L0
-	DIVU.W	D1,D3
-	MOVE.W	D3,D0
-.L0	SWAP	D0
-	MOVE.W	D0,D3
-	DIVU.W	D1,D3
-	MOVE.W	D3,D0
-	BRA.B	.end
-.L1	SWAP	D1
-	MOVE.L	D1,D2
-	MOVE.L	D0,D1
-	CLR.W	D1
-	SWAP	D1
-	SWAP	D0
-	CLR.W	D0
-	MOVEQ	#16-1,D3
-.loop	ADD.L	D0,D0
-	ADDX.L	D1,D1
-	CMP.L	D1,D2
-	BHI.B	.L2
-	SUB.L	D2,D1
-	ADDQ.L	#1,D0
-.L2	DBRA	D3,.loop
-.end	MOVEM.L	(SP)+,D1/D2/D3
-	RTS
-
 PlayWaveform
 	; --PT2.3D bug fix: instant channel muting
 	LEA	audchan1toggle,A0
@@ -22152,7 +22169,7 @@ SetSamPosDelta
 	MOVEQ	#15,D1			; max fractional bits (32-17)
 	LSL.L	D1,D0
 	MOVE.L	#314,D1
-	BSR.W	DIVU32
+	JSR	DIVU32
 	MOVE.L	D0,SamPosDelta		; sample pos delta (17.15 fixed-point)
 	MOVEM.L	(SP)+,D0-D1
 	RTS
@@ -22456,15 +22473,15 @@ rssmpok
 	MOVE.L	D5,D0
 	SWAP	D0
 	CLR.W	D0
-	BSR.W	DIVU32
+	JSR	DIVU32
 	MOVE.L	D0,D4	
 	; D4.L = 16.16fp resampling delta
 
 	; calculate new sample length (write length)
 	MOVE.L	D6,D0
-	BSR.W	MULU32
+	JSR	MULU32
 	MOVE.L	D5,D1
-	BSR.W	DIVU32
+	JSR	DIVU32
 	MOVE.L	D0,D7
 	AND.L	#~1,D7		; evenify
 	CMP.L	#$1FFFE,D7
@@ -23087,13 +23104,13 @@ drvskip	JSR	StorePtrCol
 	MOVE.L	D6,D0
 	LSL.L	D3,D0
 	MOVE.L	D7,D1
-	BSR.W	DIVU32
+	JSR	DIVU32
 	MOVE.L	D0,A5		; 10.22fp delta from Vol2
 	; --------------------
 	MOVE.L	D5,D0
 	LSL.L	D3,D0
 	MOVE.L	D7,D1
-	BSR.W	DIVU32
+	JSR	DIVU32
 	MOVE.L	D0,A6		; 10.22fp delta from Vol1
 	; --------------------
 	MOVE.L	D5,D6
@@ -23406,9 +23423,9 @@ lsdmsk1	CMP.W	#314,D1
 	MOVE.W	#314,D1
 lsdmsk2	MOVE.L	SamDisplay(PC),D0
 
-	BSR.W	MULU32
+	JSR	MULU32
 	MOVE.L	#314,D1
-	BSR.W	DIVU32
+	JSR	DIVU32
 	MOVE.L	D0,D1
 	
 	MOVE.L	SamOffset(PC),D0
@@ -23492,9 +23509,9 @@ sdrlop1	BTST	#6,$BFE001	; left mouse button
 sdrskp1	MOVE.L	SamLength(PC),D1
 	BEQ.W	Return3
 	
-	BSR.W	MULU32
+	JSR	MULU32
 	MOVE.L	#311,D1
-	BSR.W	DIVU32
+	JSR	DIVU32
 	
 	BSR.B	dragchk
 	MOVEQ	#0,D0
@@ -23531,9 +23548,9 @@ MarkToOffset
 	BEQ.W	Return3
 	SUBQ.W	#3,D0
 	MOVE.L	SamDisplay(PC),D1		
-	BSR.W	MULU32
+	JSR	MULU32
 	MOVE.L	#314,D1
-	BSR.W	DIVU32
+	JSR	DIVU32
 	ADD.L	SamOffset(PC),D0
 	MOVE.L	D0,MarkStartOfs
 	; ------------------------
@@ -23546,9 +23563,9 @@ MarkToOffset
 	BRA.B	mtoexit
 mtosome	SUBQ.W	#3,D0
 	MOVE.L	SamDisplay(PC),D1	
-	BSR.W	MULU32
+	JSR	MULU32
 	MOVE.L	#314,D1
-	BSR.W	DIVU32	
+	JSR	DIVU32	
 	ADD.L	SamOffset(PC),D0
 mtoexit	MOVE.L	D0,MarkEndOfs
 	RTS
@@ -23565,9 +23582,9 @@ OffsetToMark
 	SUB.L	SamOffset(PC),D0
 	BMI.B	otmskip	; set to start if before offset
 	MOVE.L	#314,D1
-	BSR.W	MULU32
+	JSR	MULU32
 	MOVE.L	D2,D1
-	BSR.W	DIVU32	
+	JSR	DIVU32	
 	CMP.W	#314,D0
 	BHI.B	otmout	; if start after display
 	ADD.W	D0,MarkStart
@@ -23576,9 +23593,9 @@ otmskip	; ------------------------
 	SUB.L	SamOffset(PC),D0
 	BMI.B	otmout	; if end before offset	
 	MOVE.L	#314,D1
-	BSR.W	MULU32
+	JSR	MULU32
 	MOVE.L	D2,D1
-	BSR.W	DIVU32	
+	JSR	DIVU32	
 	CMP.W	#313,D0
 	BLS.B	otmok
 	MOVE.W	#313,D0	; set to end if after display
@@ -23692,21 +23709,21 @@ rdsdoit
 
 	MOVE.L	D2,D0
 	MOVE.L	#314,D1
-	BSR.W	MULU32
+	JSR	MULU32
 	MOVE.L	D3,D1
-	BSR.W	DIVU32	
+	JSR	DIVU32	
 	MOVE.L	D0,D3
 	
 	MOVE.L	D7,D1
 	AND.L	#32767,D1	; D1.L = sample delta frac
-	BSR.W	MULU32	
+	JSR	MULU32	
 	MOVE.L	D0,D6
 	
 	MOVEQ	#15,D2
 	MOVE.L	D7,D1
 	LSR.L	D2,D1		; D1.L = sample delta integer	
 	MOVE.L	D3,D0
-	BSR.W	MULU32
+	JSR	MULU32
 	LSL.L	D2,D0
 	ADD.L	D0,D6
 rdsskp3
@@ -23772,17 +23789,17 @@ SetDragBar
 	; ------------------------
 	MOVE.L	D4,D0
 	MOVE.L	#311,D1
-	BSR.W	MULU32
+	JSR	MULU32
 	MOVE.L	D3,D1
-	BSR.W	DIVU32
+	JSR	DIVU32
 	ADDQ.W	#4,D0
 	MOVE.W	D0,DragStart
 	; ------------------------
 	MOVE.L	D5,D0
 	MOVE.L	#311,D1
-	BSR.W	MULU32
+	JSR	MULU32
 	MOVE.L	D3,D1
-	BSR.W	DIVU32	
+	JSR	DIVU32	
 	ADDQ.W	#5,D0	
 	MOVE.W	D0,DragEnd	
 	; ------------------------
@@ -25703,7 +25720,6 @@ StopInputFlag	dc.b	0
 NoSampleInfo	dc.b	0,0
 PosEdNames	dcb.b	16*100,' '
 AskBoxShown	dc.b	0,0
-CPUIs68000	dc.b	0
 AboutScreenShown	dc.b	0
 RightMouseButtonHeld	dc.b	0
 SmpConvLUT	dcb.b 256,0
