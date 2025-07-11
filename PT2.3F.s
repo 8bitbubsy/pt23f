@@ -19,8 +19,8 @@ MOUSE_SPEED		EQU 11 ; 1..16
 SONG_SIZE_100PAT	EQU 1084+(1024*100)
 SONG_SIZE_64PAT		EQU 1084+(1024*64)
 
-PaulaDMAWaitScanlines_000		EQU 5-1
-PaulaDMAWaitScanlines_020		EQU 7-1
+PaulaDMAWaitScanlines_000	EQU 5-1
+PaulaDMAWaitScanlines_020	EQU 7-1
 GUIDelayScanlines_000		EQU 0 ; no delay needed on 68k
 GUIDelayScanlines_020		EQU 40-1
 
