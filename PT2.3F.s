@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;      11th of July, 2025
+;    13th of September, 2025
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -23490,7 +23490,6 @@ ledskp1	MOVE.L	D1,D0	; 128kB-fixed by 8bitbubsy
 DragType	dc.w	0
 
 SamDragBar
-	AND.L	#$FFFF,D0	; needed for MULU32
 	CMP.W	#4,D0
 	BLO.W	Return3
 	CMP.W	#316,D0
@@ -23498,30 +23497,28 @@ SamDragBar
 	CMP.W	DragStart(PC),D0
 	BLO.B	draglo
 	CMP.W	DragEnd(PC),D0
-	BHI.B	draghi
+	BHS.B	draghi
 	MOVE.W	MouseX(PC),D0
-	MOVE.W	D0,D1
-	SUB.W	DragStart(PC),D1
-	MOVE.W	D1,SaveMX
+	MOVE.W	D0,LastMouseX
+	SUB.W	DragStart(PC),D0
+	ADDQ.W	#3,D0
+	MOVE.W	D0,DragOffset
 sdrlop1	BTST	#6,$BFE001	; left mouse button
 	BNE.W	Return3
-	MOVE.W	MouseX(PC),D1
-	CMP.W	D0,D1
+	MOVEQ	#0,D0
+	MOVE.W	MouseX(PC),D0
+	CMP.W	LastMouseX(PC),D0
 	BEQ.B	sdrlop1
-	SUB.W	SaveMX(PC),D0
-	SUBQ.W	#4,D0
+	MOVE.W	D0,LastMouseX
+	SUB.W	DragOffset(PC),D0
 	BPL.B	sdrskp1
 	MOVEQ	#0,D0
 sdrskp1	MOVE.L	SamLength(PC),D1
 	BEQ.W	Return3
-	
 	JSR	MULU32
 	MOVE.L	#311,D1
 	JSR	DIVU32
-	
 	BSR.B	dragchk
-	MOVEQ	#0,D0
-	MOVE.W	MouseX(PC),D0
 	BRA.B	sdrlop1
 	
 draglo	MOVE.L	SamOffset(PC),D0
@@ -23544,8 +23541,8 @@ dragchk	MOVE.L	D0,D1
 	SUB.L	SamDisplay(PC),D0
 	BRA.B	draglo2
 
-SaveMX	dc.w	0
-
+DragOffset	dc.w	0
+LastMouseX	dc.w	0
 ;----
 
 MarkToOffset

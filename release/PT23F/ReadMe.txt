@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-               11th of July, 2025
+             13th of September, 2025
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -19,6 +19,11 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+ 
+ == Update 13.09.2025 ===============================================
+ - Sampler screen: Fixed some minor position offset issues when
+   moving the scroll bar with the mouse
+ ====================================================================
 
  == Update 11.07.2025 ===============================================
  - Bug-fix: "Play Display" / "Play Range" would sometimes not trigger
