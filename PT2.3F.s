@@ -26510,6 +26510,7 @@ PlayPosSpriteData
 
 	SECTION ptbssc,BSS_C
 	
+	CNOP 0,4
 TextBitplane	ds.b (320*685)/8 ; 685 scanlines (exactly enough!)
 
 ; -----------------------------------------------------------------------------
