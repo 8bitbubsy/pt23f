@@ -2252,12 +2252,13 @@ ScoDraw
 	BLS.B	sdsk1
 	MOVEQ	#64,D5
 sdsk1	EXT.W	D5
-	LSL.W	#7,D5
-	NEG.W	D5
+	LSL.W	#8,D5
+	ADD.W	D5,D5			; D5.W =  0..32768
+	NEG.W	D5			; D5.W = -0..32768
 
 	MOVE.L	ns_sampleptr(A2),A0
 	MOVEQ	#5-1,D2
-	LEA	(16*2)+scopeYTab(PC),A5
+	LEA	(64*2)+scopeYTab(PC),A5
 	
 	; --PT2.3D bug fix: scope loop fix
 	MOVE.L	ns_endptr(A2),A4	; sample end
@@ -2278,7 +2279,7 @@ sdlnowrap
 	MOVE.B	(A0)+,D0		; get byte from sample data	
 	EXT.W	D0			; extend to word
 	MULS.W	D5,D0			; multiply by volume
-	SWAP	D0			; D0.W = -15..16
+	SWAP	D0			; D0.W = -63..64
 	ADD.W	D0,D0
 	MOVE.W	(A5,D0.W),D0
 	BSET	D3,(A1,D0.W)		; set the current bitplane bit
@@ -2303,7 +2304,7 @@ sdlp2
 	MOVE.B	(A0)+,D0		; get byte from sample data
 	EXT.W	D0			; extend to word
 	MULS.W	D5,D0			; multiply by volume
-	SWAP	D0			; D0.W = -15..16
+	SWAP	D0			; D0.W = -63..64
 	ADD.W	D0,D0
 	MOVE.W	(A5,D0.W),D0
 .drawit	BSET	D3,(A1,D0.W)		; set the current bitplane bit
@@ -2423,10 +2424,14 @@ sconorep
 	RTS
 
 scopeYTab
-	dc.w -640, -600, -560, -520, -480, -440, -400, -360
-	dc.w -320, -280, -240, -200, -160, -120,  -80,  -40
-	dc.w    0,   40,   80,  120,  160,  200,  240,  280
-	dc.w  320,  360,  400,  440,  480,  520,  560,  600
+	dc.w -640,-640,-640,-640,-600,-600,-600,-600,-560,-560,-560,-560,-520,-520,-520,-520
+	dc.w -480,-480,-480,-480,-440,-440,-440,-440,-400,-400,-400,-400,-360,-360,-360,-360
+	dc.w -320,-320,-320,-320,-280,-280,-280,-280,-240,-240,-240,-240,-200,-200,-200,-200
+	dc.w -160,-160,-160,-160,-120,-120,-120,-120, -80, -80, -80, -80, -40, -40, -40, -40
+	dc.w    0,   0,   0,   0,  40,  40,  40,  40,  80,  80,  80,  80, 120, 120, 120, 120
+	dc.w  160, 160, 160, 160, 200, 200, 200, 200, 240, 240, 240, 240, 280, 280, 280, 280
+	dc.w  320, 320, 320, 320, 360, 360, 360, 360, 400, 400, 400, 400, 440, 440, 440, 440
+	dc.w  480, 480, 480, 480, 520, 520, 520, 520, 560, 560, 560, 560, 600, 600, 600, 600
 	dc.w  640
 
 	; --- Scopes drawing in real VU-Meters mode (fetch peak) ---
@@ -2442,17 +2447,18 @@ rScoDraw
 	TST.B	EdEnable
 	BNE.W	rsdkip
 	ST	D7			; do draw scopes
-rsdkip
-	CMP.B	#64,D5
+rsdkip	CMP.B	#64,D5
 	BLS.B	rsdsk1
 	MOVEQ	#64,D5
 rsdsk1	EXT.W	D5
-	NEG.W	D5
+	LSL.W	#8,D5
+	ADD.W	D5,D5			; D5.W =  0..32768
+	NEG.W	D5			; D5.W = -0..32768
 
 	MOVE.L	ns_sampleptr(A2),A0
 	MOVEQ	#5-1,D2	
 	ADDQ	#6,A4
-	LEA	(16*2)+scopeYTab(PC),A5
+	LEA	(64*2)+scopeYTab(PC),A5
 
 	; --PT2.3D bug fix: scope loop fix
 	MOVE.L	ns_endptr(A2),D4
@@ -2473,7 +2479,7 @@ rsdlnowrap
 	MOVE.B	(A0)+,D0		; get byte from sample data
 	EXT.W	D0			; extend to word
 	MULS.W	D5,D0			; multiply by volume
-	ASR.W	#7,D0			; -8128..8192 -> -63..64
+	SWAP	D0			; D0.W = -63..64
 	
 	MOVE.W	D0,D1			; D1 = amplitude
 	BPL.B 	rnotSigned		; D1 >= 0?
@@ -2486,7 +2492,6 @@ rnoNewStore
 	TST.B	D7			; draw scopes or not?
 	BEQ.B	rsdlskip		; nope...
 
-	ASR.W	#2,D0			; -63..64 -> -15..16
 	ADD.W	D0,D0
 	MOVE.W	(A5,D0.W),D0	
 	BSET	D3,(A1,D0.W)		; set the current bitplane bit
@@ -2514,7 +2519,7 @@ rsdlp2
 	MOVE.B	(A0)+,D0		; get byte from sample data
 	EXT.W	D0			; extend to word
 	MULS.W	D5,D0			; multiply by volume
-	ASR.W	#7,D0			; -8128..8192 -> -63..64
+	SWAP	D0			; D0.W = -63..64
 
 	MOVE.W	D0,D1			; D1 = amplitude
 	BPL.B 	rnotSigned2		; D1 >= 0?
@@ -2525,7 +2530,6 @@ rnotSigned2
 	MOVE.W	D1,(A4)			; store current value for use in real VU-Meter mode
 rnoupdate
 
-	ASR.W	#2,D0			; -63..64 -> -15..16
 	ADD.W	D0,D0
 	MOVE.W	(A5,D0.W),D0
 rnoNewStore2
