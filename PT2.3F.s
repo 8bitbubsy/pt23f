@@ -18,7 +18,6 @@ MOUSE_SPEED		EQU 11 ; 1..16
 
 SONG_SIZE_100PAT	EQU 1084+(1024*100)
 SONG_SIZE_64PAT		EQU 1084+(1024*64)
-TEXTBPL_ALLOC_SIZE	EQU (320*685)/8 ; 685 scanlines (exactly enough!)
 
 PaulaDMAWaitScanlines_000	EQU 5-1
 PaulaDMAWaitScanlines_020	EQU 7-1
@@ -736,18 +735,12 @@ errorexit1
 	BEQ.B	exex1			; no, don't attempt to close it
 	MOVE.L	PPLibBase,A1
 	JSR	_LVOCloseLibrary(A6)
-exex1
-	MOVE.L	TextBplPtr,D1
+exex1	MOVE.L	SongDataPtr,D1
 	BEQ.B	exex2
-	MOVE.L	D1,A1
-	MOVE.L	#TEXTBPL_ALLOC_SIZE,D0
-	JSR	PTFreeMem
-exex2	MOVE.L	SongDataPtr,D1
-	BEQ.B	exex3
 	MOVE.L	D1,A1
 	MOVE.L	SongAllocSize,D0
 	JSR	PTFreeMem
-exex3	BSR.W	FreeDirMem
+exex2	BSR.W	FreeDirMem
 	BSR.W	GiveBackInstrMem
 	JSR	FreePLST
 	JSR	TurnOffVoices
@@ -775,7 +768,6 @@ SetDefaultSampleReplens
 	RTS
 
 OpenLotsOfThings
-	BSR.W	ScopeInitLUT
 	MOVE.B	$BFE001,LEDStatus
 	BSET	#1,$BFE001
 	JSR	TurnOffVoices
@@ -820,12 +812,8 @@ OpenLotsOfThings
 	MOVE.L	DOSBase,A6
 	MOVE.L	rb_CurrentDir(PC),D1
 	JSR	_LVOCurrentDir(A6)
-	
-	MOVE.L	#TEXTBPL_ALLOC_SIZE,D0		; Alloc CHIP textbpl
-	MOVE.L	#MEMF_CHIP!MEMF_CLEAR,D1
-	JSR	PTAllocMem
-	MOVE.L	D0,TextBplPtr
-	BEQ.W	errorexit1
+
+	MOVE.L	#TextBitplane,D0
 	MOVE.W	D0,NoteBplptrLow	; set low word
 	SWAP	D0
 	MOVE.W	D0,NoteBplptrHigh	; set high word
@@ -1781,8 +1769,7 @@ DoDrawPlaybackCounter
 	MOVE.B	(FastTwoDecTable+1,PC,D0.W),D1
 	LEA	(A4,D1.W),A3
 	; ---------------------
-	MOVE.L	TextBplPtr,A4
-	LEA	4154(A4),A4
+	LEA	TextBitplane+4154,A4
 	; ---------------------
 	MOVE.B	(A0)+,(A4)+	; draw minutes
 	MOVE.B	(A0)+,40-1(A4)
@@ -1844,8 +1831,7 @@ SpecAnaInt
 	LEA	AnalyzerHeights,A0
 	LEA	AnalyzerOpplegg,A1
 	LEA	AnalyzerOffsets(PC),A2
-	MOVE.L	TextBplPtr,A3
-	LEA	1976(A3),A3
+	LEA	TextBitplane+1976,A3
 	MOVEQ	#23-1,D7
 spanlab1
 	MOVE.W	(A0)+,D0
@@ -2062,23 +2048,6 @@ ns_posfrac	= 20 ; W
 
 ScopeInfoSize	= 24 ; should be a multiple of 4!
 
-ScopeInitLUT
-	MOVE.W	#(32+1)*256,D7
-	LEA	ScopeLUT,A0
-	ADD.W	D7,A0
-	ADDQ.W	#1,A0
-.loop	MOVE.B	D7,D0
-	EXT.W	D0		; D0.W = -128..127 (sample value)
-	MOVE.W	D7,D1
-	LSR.W	#8,D1		; D1.W = 0..32 (volume)
-	NEG.W	D1
-	MULS.W	D1,D0	
-	ASR.W	#6,D0		; D0.B = -63..64 (bigger range for real VU-meter scan)
-	MOVE.B	D0,-(A0)
-	SUBQ.W	#1,D7
-	BPL.B	.loop	
-	RTS
-
 Scope
 	LEA	audchan1temp,A0
 	LEA	ScopeSamInfo,A1
@@ -2185,8 +2154,7 @@ ScoNextChan
 	BNE.B	clsnot
 	
 	; clear scopes (slightly optimized in PT2.3F)
-	MOVE.L	TextBplPtr,A0
-	LEA	2256(A0),A0
+	LEA	TextBitplane+2256,A0
 	MOVEQ	#(33/3)-1,D0
 	MOVEQ	#0,D1
 	MOVEQ	#0,D2
@@ -2210,8 +2178,7 @@ ScoNClr	MOVEQ	#0,D7
 	MOVE.W	$DFF002,D6 ; dmaconr
 	
 	MOVEQ	#0,D5
-	MOVE.L	TextBplPtr,A1
-	LEA	72*40+16(A1),A1
+	LEA	TextBitplane+(72*40+16),A1
 	LEA	xBlankSample,A2
 	LEA	audchan1toggle(PC),A4
 	TST.B	TToneCh1Flag
@@ -2225,8 +2192,7 @@ ScoNClr	MOVEQ	#0,D7
 ScoSkp1	BSR.W	ScoDraw
 
 	MOVEQ	#0,D5
-	MOVE.L	TextBplPtr,A1
-	LEA	72*40+22(A1),A1
+	LEA	TextBitplane+(72*40+22),A1
 	LEA	xBlankSample,A2
 	LEA	audchan2toggle(PC),A4
 	TST.B	TToneCh2Flag
@@ -2240,8 +2206,7 @@ ScoSkp1	BSR.W	ScoDraw
 ScoSkp2	BSR.B	ScoDraw
 
 	MOVEQ	#0,D5
-	MOVE.L	TextBplPtr,A1
-	LEA	72*40+28(A1),A1
+	LEA	TextBitplane+(72*40+28),A1
 	LEA	xBlankSample,A2
 	LEA	audchan3toggle(PC),A4
 	TST.B	TToneCh3Flag
@@ -2255,8 +2220,7 @@ ScoSkp2	BSR.B	ScoDraw
 ScoSkp3	BSR.B	ScoDraw
 
 	MOVEQ	#0,D5
-	MOVE.L	TextBplPtr,A1
-	LEA	72*40+34(A1),A1
+	LEA	TextBitplane+(72*40+34),A1
 	LEA	xBlankSample,A2
 	LEA	audchan4toggle(PC),A4
 	TST.B	TToneCh4Flag
@@ -2284,19 +2248,17 @@ ScoDraw
 	BNE.W	sdlpos
 	TST.B	EdEnable
 	BNE.W	sdlpos
-	LSR.W	#1,D5		; D5 = 0..64 -> 0..32
-	CMP.B	#32,D5
+	CMP.B	#64,D5
 	BLS.B	sdsk1
-	MOVEQ	#32,D5
-sdsk1	LSL.W	#8,D5
-	LEA	ScopeLUT,A6
-	ADD.W	D5,A6
-	MOVEQ	#0,D5
-	LEA	(64*2)+scopeYTab(PC),A5
+	MOVEQ	#64,D5
+sdsk1	EXT.W	D5
+	LSL.W	#7,D5
+	NEG.W	D5
 
 	MOVE.L	ns_sampleptr(A2),A0
 	MOVEQ	#5-1,D2
-
+	LEA	(16*2)+scopeYTab(PC),A5
+	
 	; --PT2.3D bug fix: scope loop fix
 	MOVE.L	ns_endptr(A2),A4	; sample end
 	TST.L	ns_repeatptr(A2)	; loop enabled?
@@ -2313,9 +2275,10 @@ sdlp2LOOP
 	CMP.L	A4,A0			; did we reach sample loop end yet?
 	BHS.B	sWrapLoop		; yes, wrap loop
 sdlnowrap
-	MOVE.B	(A0)+,D5		; get byte from sample data
-	MOVE.B	(A6,D5.W),D0
-	EXT.W	D0
+	MOVE.B	(A0)+,D0		; get byte from sample data	
+	EXT.W	D0			; extend to word
+	MULS.W	D5,D0			; multiply by volume
+	SWAP	D0			; D0.W = -15..16
 	ADD.W	D0,D0
 	MOVE.W	(A5,D0.W),D0
 	BSET	D3,(A1,D0.W)		; set the current bitplane bit
@@ -2338,8 +2301,9 @@ sdlp2
 	BHS.B	.drawit			; yes, draw empty sample
 	; -----------------------------
 	MOVE.B	(A0)+,D0		; get byte from sample data
-	MOVE.B	(A6,D0.W),D0
-	EXT.W	D0
+	EXT.W	D0			; extend to word
+	MULS.W	D5,D0			; multiply by volume
+	SWAP	D0			; D0.W = -15..16
 	ADD.W	D0,D0
 	MOVE.W	(A5,D0.W),D0
 .drawit	BSET	D3,(A1,D0.W)		; set the current bitplane bit
@@ -2459,14 +2423,10 @@ sconorep
 	RTS
 
 scopeYTab
-	dc.w -640,-640,-640,-640,-600,-600,-600,-600,-560,-560,-560,-560,-520,-520,-520,-520
-	dc.w -480,-480,-480,-480,-440,-440,-440,-440,-400,-400,-400,-400,-360,-360,-360,-360
-	dc.w -320,-320,-320,-320,-280,-280,-280,-280,-240,-240,-240,-240,-200,-200,-200,-200
-	dc.w -160,-160,-160,-160,-120,-120,-120,-120, -80, -80, -80, -80, -40, -40, -40, -40
-	dc.w    0,   0,   0,   0,  40,  40,  40,  40,  80,  80,  80,  80, 120, 120, 120, 120
-	dc.w  160, 160, 160, 160, 200, 200, 200, 200, 240, 240, 240, 240, 280, 280, 280, 280
-	dc.w  320, 320, 320, 320, 360, 360, 360, 360, 400, 400, 400, 400, 440, 440, 440, 440
-	dc.w  480, 480, 480, 480, 520, 520, 520, 520, 560, 560, 560, 560, 600, 600, 600, 600
+	dc.w -640, -600, -560, -520, -480, -440, -400, -360
+	dc.w -320, -280, -240, -200, -160, -120,  -80,  -40
+	dc.w    0,   40,   80,  120,  160,  200,  240,  280
+	dc.w  320,  360,  400,  440,  480,  520,  560,  600
 	dc.w  640
 
 	; --- Scopes drawing in real VU-Meters mode (fetch peak) ---
@@ -2482,20 +2442,18 @@ rScoDraw
 	TST.B	EdEnable
 	BNE.W	rsdkip
 	ST	D7			; do draw scopes
-rsdkip	LSR.B	#1,D5
-	CMP.B	#32,D5
+rsdkip
+	CMP.B	#64,D5
 	BLS.B	rsdsk1
-	MOVEQ	#32,D5
-rsdsk1	LSL.W	#8,D5
-	LEA	ScopeLUT,A6
-	ADD.W	D5,A6
-	MOVEQ	#0,D5
-	LEA	(64*2)+scopeYTab(PC),A5
-	
+	MOVEQ	#64,D5
+rsdsk1	EXT.W	D5
+	NEG.W	D5
+
 	MOVE.L	ns_sampleptr(A2),A0
 	MOVEQ	#5-1,D2	
 	ADDQ	#6,A4
-	
+	LEA	(16*2)+scopeYTab(PC),A5
+
 	; --PT2.3D bug fix: scope loop fix
 	MOVE.L	ns_endptr(A2),D4
 	TST.L	ns_repeatptr(A2)	; loop enabled?
@@ -2512,10 +2470,11 @@ rsdlp2LOOP
 	CMP.L	D4,A0			; did we reach sample loop end yet?
 	BHS.B	rWrapLoop		; yes, wrap loop
 rsdlnowrap
-	MOVE.B	(A0)+,D5		; get byte from sample data
-	MOVE.B	(A6,D5.W),D0
-	EXT.W	D0
-
+	MOVE.B	(A0)+,D0		; get byte from sample data
+	EXT.W	D0			; extend to word
+	MULS.W	D5,D0			; multiply by volume
+	ASR.W	#7,D0			; -8128..8192 -> -63..64
+	
 	MOVE.W	D0,D1			; D1 = amplitude
 	BPL.B 	rnotSigned		; D1 >= 0?
 	NEG.W 	D1			; no, D1 = ABS(D1)
@@ -2527,6 +2486,7 @@ rnoNewStore
 	TST.B	D7			; draw scopes or not?
 	BEQ.B	rsdlskip		; nope...
 
+	ASR.W	#2,D0			; -63..64 -> -15..16
 	ADD.W	D0,D0
 	MOVE.W	(A5,D0.W),D0	
 	BSET	D3,(A1,D0.W)		; set the current bitplane bit
@@ -2551,10 +2511,11 @@ rsdlp2
 	CMP.L	D4,A0			; did we reach sample end yet?
 	BHS.B	rnoNewStore2		; yes, draw empty sample
 	
-	MOVE.B	(A0)+,D5		; get byte from sample data
-	MOVE.B	(A6,D5.W),D0
-	EXT.W	D0
-	
+	MOVE.B	(A0)+,D0		; get byte from sample data
+	EXT.W	D0			; extend to word
+	MULS.W	D5,D0			; multiply by volume
+	ASR.W	#7,D0			; -8128..8192 -> -63..64
+
 	MOVE.W	D0,D1			; D1 = amplitude
 	BPL.B 	rnotSigned2		; D1 >= 0?
 	NEG.W 	D1			; no, D1 = ABS(D1)
@@ -2563,6 +2524,8 @@ rnotSigned2
 	BLS.B	rnoupdate		; yes, don't update
 	MOVE.W	D1,(A4)			; store current value for use in real VU-Meter mode
 rnoupdate
+
+	ASR.W	#2,D0			; -63..64 -> -15..16
 	ADD.W	D0,D0
 	MOVE.W	(A5,D0.W),D0
 rnoNewStore2
@@ -3531,8 +3494,7 @@ lbC0027CA
 	CLR.L	4(A0)
 ChangePath
 	SF	DiskOpWasJustOpened
-	MOVE.L	TextBplPtr,A0
-	LEA	178(A0),A0
+	LEA	TextBitplane+178,A0
 	MOVEQ	#0,D2
 	MOVEQ	#27-1,D1
 chpalop	MOVE.W	D2,(A0)
@@ -3560,8 +3522,8 @@ chpalop	MOVE.W	D2,(A0)
 	BEQ.B	chpaski
 	LEA	ModulesPath2,A4
 	MOVE.W	#178,D1
-chpaski	MOVE.L	TextBplPtr,A0
-	LEA	(A0,D1.W),A0
+chpaski	LEA	TextBitplane,A0
+	ADD.W	D1,A0
 	MOVE.W	#$0100,(A0)
 	MOVE.W	#$0F80,40(A0)
 	MOVE.W	#$0FC0,80(A0)
@@ -5555,8 +5517,7 @@ cgscope	ST	ScopeEnable
 ClearFileNames
 	MOVE.W	#145,D0
 	BSR.W	WaitForVBlank
-	MOVE.L	TextBplPtr,A1
-	LEA	1800(A1),A1
+	LEA	TextBitplane+1800,A1
 	MOVE.W	#550-1,D0
 	MOVEQ	#0,D1
 cfnloop	MOVE.L	D1,(A1)+
@@ -5564,8 +5525,7 @@ cfnloop	MOVE.L	D1,(A1)+
 	RTS
 
 ClearRightArea
-	MOVE.L	TextBplPtr,A0
-	LEA	55(A0),A0
+	LEA	TextBitplane+55,A0
 	MOVEQ	#0,D2
 	MOVEQ	#99-1,D0
 cnblloop1
@@ -5578,7 +5538,7 @@ cnblloop2
 	RTS
 
 Clear100Lines
-	MOVE.L	TextBplPtr,A0
+	LEA	TextBitplane,A0
 	MOVE.W	#1000-1,D0
 	MOVEQ	#0,D1
 chlloop	MOVE.L	D1,(A0)+
@@ -5697,8 +5657,7 @@ ssbmloop2
 	LEA	$001B(A0),A0
 	ADDQ	#1,A1
 	DBRA	D0,ssbmloop1
-	MOVE.L	TextBplPtr,A0
-	LEA	2100(A0),A0
+	LEA	TextBitplane+2100,A0
 	LEA	TextDataBuffer,A1
 	MOVEQ	#39-1,D0
 ssbmloop3
@@ -10437,19 +10396,16 @@ gcpskip	CMP.W	#7,CurrScreen
 
 ShowColSliders
 	LEA	ColSliders(PC),A2
-	MOVE.L	TextBplPtr,A1
-	LEA	3282(A1),A1
+	LEA	TextBitplane+3282,A1
 	BSR.B	gcpskip
 	AND.W	#$000F,D1
 	BSR.B	ShowOneSlider
-	MOVE.L	TextBplPtr,A1
-	LEA	2842(A1),A1
+	LEA	TextBitplane+2842,A1
 	BSR.B	gcpskip
 	AND.W	#$00F0,D1
 	LSR.W	#4,D1
 	BSR.B	ShowOneSlider
-	MOVE.L	TextBplPtr,A1
-	LEA	2402(A1),A1
+	LEA	TextBitplane+2402,A1
 	BSR.B	gcpskip
 	AND.W	#$0F00,D1
 	LSR.W	#8,D1
@@ -10494,8 +10450,7 @@ ColSliders
 SelectColor
 	CMP.W	#84,D1
 	BHS.B	ColorRTS
-	MOVE.L	TextBplPtr,A0
-	LEA	2410(A0),A0
+	LEA	TextBitplane+2410,A0
 	MOVEQ	#25-1,D2
 slcloop	CLR.L	(A0)
 	LEA	40(A0),A0	
@@ -10521,8 +10476,8 @@ MarkColor
 	MOVE.W	D0,D1
 	AND.W	#$0003,D1
 	MULU.W	#6*40,D1
-	MOVE.L	TextBplPtr,A0
-	ADD.L	D1,A0
+	LEA	TextBitplane,A0
+	ADD.W	D1,A0
 	LEA	2410(A0),A0
 	BTST	#2,D0
 	BNE.B	slcskip
@@ -10543,8 +10498,7 @@ slclop3	LEA	40(A0),A0
 	BRA.W	WaitForButtonUp
 
 BlockColors
-	MOVE.L	TextBplPtr,A0
-	LEA	2452(A0),A0
+	LEA	TextBitplane+2452,A0
 	MOVEQ	#4-1,D1
 suploop2
 	MOVEQ	#5-1,D0
@@ -11810,8 +11764,7 @@ ColCrossfade
 	RTS
 
 ShowRainbow
-	MOVE.L	TextBplPtr,A0
-	LEA	1490(A0),A0
+	LEA.L	TextBitplane+1490,A0
 	MOVEQ	#0,D1
 	MOVE.L	#$00FFE000,D2
 	MOVE.W	RainbowPos(PC),D3
@@ -13062,9 +13015,7 @@ ssppskip
 	BNE.B	Return2
 	MOVE.W	D0,PlayFromPos
 	MULU.W	#7*40,D0
-	MOVE.L	TextBplPtr,A0
-	LEA	$15B8(A0),A0
-	ADD.L	A0,D0
+	ADD.L	#TextBitplane+5560,D0
 	MOVE.L	CopListBpl4Ptr,A1
 	MOVE.W	D0,6(A1)
 	SWAP	D0
@@ -19051,8 +19002,7 @@ ShowAllRight
 
 ShowStatusText
 	MOVEM.L	D0/D1/A1,-(SP)
-	MOVE.L	TextBplPtr(PC),A1
-	LEA	5131(A1),A1
+	LEA	TextBitplane+5131,A1
 	MOVEQ	#5-1,D0
 stloop1	MOVEQ	#17-1,D1
 stloop2	CLR.B	(A1)+
@@ -19569,9 +19519,8 @@ ShowText
 	LEA	TextTable(PC),A3
 	LEA	FontData,A4
 	MOVE.W	TextLength(PC),D0
-	MOVE.L	TextBplPtr(PC),A1
-	MOVE.W	TextOffset(PC),D1
-	LEA	(A1,D1.W),A1
+	LEA	TextBitplane,A1
+	ADD.W	TextOffset(PC),A1
 	ADD.W	D0,TextOffset
 	MOVE.L	ShowTextPtr(PC),A0
 	SUBQ.W	#1,D0
@@ -20312,7 +20261,7 @@ PresetEditor
 	BEQ.W	pedexi2
 PED_Refresh
 	CLR.W	PED_Action
-	MOVE.L	TextBplPtr(PC),A0	
+	LEA	TextBitplane,A0	
 	MOVE.W	#1220-1,D0
 	MOVEQ	#0,D1
 pedloop	MOVE.L	D1,(A0)+
@@ -20323,8 +20272,7 @@ pedloop	MOVE.L	D1,(A0)+
 	BRA.W	ShowPresetNames
 
 ClearPEDText
-	MOVE.L	TextBplPtr(PC),A0
-	LEA	2240(A0),A0
+	LEA	TextBitplane+2240,A0
 	MOVE.W	#660-1,D0
 	MOVEQ	#0,D1
 cpedtextloop
@@ -20409,7 +20357,7 @@ PED_Exit
 	JSR	WaitForButtonUp
 	BSR.W	PLSTCheckNum
 	BSR.W	SwapPresEdScreen
-	MOVE.L	TextBplPtr(PC),A0
+	LEA	TextBitplane,A0
 	MOVE.W	#1220-1,D0
 	MOVEQ	#0,D1
 pedeloop
@@ -20608,8 +20556,7 @@ pediloop
 PossibleEdit
 	JSR	StorePtrCol
 	JSR	SetWaitPtrCol
-	MOVE.L	TextBplPtr(PC),A0
-	LEA	2320(A0),A0
+	LEA	TextBitplane+2320,A0
 	MOVEQ	#60-1,D0
 	MOVEQ	#0,D1
 pediloop2
@@ -21839,10 +21786,8 @@ SamplerScreen
 	MOVE.W	#1,SamScrEnable
 	MOVE.L	EditMode(PC),SaveEditMode
 	CLR.L	EditMode
-	
-	MOVE.L	TextBplPtr(PC),A0
-	LEA	$15B8(A0),A0
-	MOVE.L	A0,D0
+
+	MOVE.L	#TextBitplane+5560,D0
 	LEA	CopList2Bpl4Ptr,A1
 	MOVE.W	D0,6(A1)
 	SWAP	D0
@@ -21968,8 +21913,7 @@ ClearSamScr
 	BSR.W	ShowText
 
 	MOVE.L	#(130*10)-1,D0
-	MOVE.L	TextBplPtr(PC),A0
-	LEA	$15B8(A0),A0
+	LEA	TextBitplane+5560,A0
 	MOVE.L	A0,LineScreenPtr
 	MOVEQ	#0,D1
 clrsslp
@@ -21985,8 +21929,7 @@ ClearSamArea
 	MOVEM.L	ClearRegs(PC),D0-D7
 
 	; clear scrollbar background
-	MOVE.L	TextBplPtr(PC),A0
-	LEA	$15B8+2760+(40*3)(A0),A0
+	LEA	TextBitplane+(5560+2760+(40*3)),A0
 	MOVEM.L	D0-D7,-(A0)
 	MOVEM.L	D0-D7,-(A0)
 	MOVEM.L	D0-D7,-(A0)
@@ -22009,10 +21952,9 @@ ClearSamArea
 
 	; clear sample view
 	MOVE.W	#((64*10)/8)/4,ClearCounter
-	MOVE.L	TextBplPtr(PC),A0
-	LEA	$15B8(A0),A0
+	LEA	TextBitplane+5560,A0
 	MOVE.L	A0,LineScreenPtr
-	ADD.W	#64*10*4,A0
+	LEA	64*10*4(A0),A0
 clrsare	MOVEM.L	D0-D7,-(A0)
 	MOVEM.L	D0-D7,-(A0)
 	MOVEM.L	D0-D7,-(A0)
@@ -22870,8 +22812,7 @@ sapaski	MOVE.L	D1,D0
 RampVolume
 	BSR.W	HideLoopSprites		; -PT2.3D bug fix
 	ST	VolToolBoxShown		; --
-	MOVE.L	TextBplPtr(PC),A0
-	LEA	6209(A0),A0
+	LEA	TextBitplane+6209,A0
 	MOVEQ	#33-1,D3
 ravlap2	MOVEQ	#17-1,D2
 ravlap1	CLR.B	(A0)+
@@ -23029,8 +22970,7 @@ sru2	BSR.B	ShowVolSliders
 	BRA.W	ravloop
 
 ShowVolSliders
-	MOVE.L	TextBplPtr(PC),A0
-	LEA	6209(A0),A0
+	LEA	TextBitplane+6209,A0
 	MOVEQ	#22-1,D3
 ravlip2	MOVEQ	#13-1,D2
 ravlip1	CLR.B	(A0)+
@@ -25576,7 +25516,6 @@ SaveEditMode	dc.l	0
 EditMode	dc.l	0
 RunMode		dc.l	0
 CurrCmds	dc.l	0
-TextBplPtr	dc.l	0
 ShowTextPtr	dc.l	0
 PatternNumber	dc.l	0
 CurrPos		dc.l	0
@@ -25852,8 +25791,7 @@ Sampler CLR.B	RawKeyCode
 	MOVE.B	#0,$BFE301
 	LEA	GraphOffsets(PC),A0
 	LEA	TempSampArea,A1
-	MOVE.L	TextBplPtr(PC),A2
-	LEA	$09E8-40(A2),A2
+	LEA	TextBitplane+(2536-40),A2
 	LEA	$BFE101,A3
 	LEA	$DFF01E,A4		; _custom+intreqr
 	MOVE.W	#$0180,D7
@@ -26563,6 +26501,14 @@ PlayPosSpriteData
 	dc.w	0,0
 
 ; -----------------------------------------------------------------------------
+;                                   CHIPMEM BSS DATA
+; -----------------------------------------------------------------------------
+
+	SECTION ptbssc,BSS_C
+	
+TextBitplane	ds.b (320*685)/8 ; 685 scanlines (exactly enough!)
+
+; -----------------------------------------------------------------------------
 ;                                   BSS DATA
 ; -----------------------------------------------------------------------------
 
@@ -26699,7 +26645,6 @@ BeamCONTemp	ds.w	2
 PaulaDMAWaitScanlines	ds.w	1
 GUIDelayScanlines	ds.w	1
 VolToolBoxShown	ds.b	1
-ScopeLUT	ds.b	(32+1)*256
 
 END
 

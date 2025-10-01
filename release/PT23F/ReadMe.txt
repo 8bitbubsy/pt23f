@@ -24,6 +24,8 @@
  - Free'd up 360 bytes (whoa...) of chipmem. The original code
    allocated slightly more memory than needed for the text/pattern
    bitplane buffer.
+ - Free'd up around 8kB of memory (no more scope LUT optimization)
+ - Code cleanup
  ====================================================================
  
  == Update 13.09.2025 ===============================================
