@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-             13th of September, 2025
+              1st of October, 2025
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -19,6 +19,12 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+ 
+ == Update 01.10.2025 ===============================================
+ - Free'd up 360 bytes (whoa...) of chipmem. The original code
+   allocated slightly more memory than needed for the text/pattern
+   bitplane buffer.
+ ====================================================================
  
  == Update 13.09.2025 ===============================================
  - Sampler screen: Fixed some minor position offset issues when

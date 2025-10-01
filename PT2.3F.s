@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;    13th of September, 2025
+;     1st of October, 2025
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -18,6 +18,7 @@ MOUSE_SPEED		EQU 11 ; 1..16
 
 SONG_SIZE_100PAT	EQU 1084+(1024*100)
 SONG_SIZE_64PAT		EQU 1084+(1024*64)
+TEXTBPL_ALLOC_SIZE	EQU (320*685)/8 ; 685 scanlines (exactly enough!)
 
 PaulaDMAWaitScanlines_000	EQU 5-1
 PaulaDMAWaitScanlines_020	EQU 7-1
@@ -739,7 +740,7 @@ exex1
 	MOVE.L	TextBplPtr,D1
 	BEQ.B	exex2
 	MOVE.L	D1,A1
-	MOVE.L	#27760,D0
+	MOVE.L	#TEXTBPL_ALLOC_SIZE,D0
 	JSR	PTFreeMem
 exex2	MOVE.L	SongDataPtr,D1
 	BEQ.B	exex3
@@ -820,7 +821,7 @@ OpenLotsOfThings
 	MOVE.L	rb_CurrentDir(PC),D1
 	JSR	_LVOCurrentDir(A6)
 	
-	MOVE.L	#27760,D0		; Alloc 27k CHIP textbpl
+	MOVE.L	#TEXTBPL_ALLOC_SIZE,D0		; Alloc CHIP textbpl
 	MOVE.L	#MEMF_CHIP!MEMF_CLEAR,D1
 	JSR	PTAllocMem
 	MOVE.L	D0,TextBplPtr
