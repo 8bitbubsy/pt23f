@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;     1st of October, 2025
+;     2nd of October, 2025
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -1754,19 +1754,20 @@ DoDrawPlaybackCounter
 .OK	DIVU.W	#60,D0
 	; ---------------------
 	LEA	FontData,A4
+	LEA	FastTwoDecTable,A3
 	MOVEQ	#0,D1
 	; ---------------------
 	ADD.W	D0,D0		; D0.W = minutes (*2 for LUT)
-	MOVE.B	(FastTwoDecTable+0,PC,D0.W),D1
+	MOVE.B	0(A3,D0.W),D1
 	LEA	(A4,D1.W),A0
-	MOVE.B	(FastTwoDecTable+1,PC,D0.W),D1
+	MOVE.B	1(A3,D0.W),D1
 	LEA	(A4,D1.W),A1
 	; ---------------------
 	SWAP	D0			
 	ADD.W	D0,D0		; D0.W = seconds (*2 for LUT)
-	MOVE.B	(FastTwoDecTable+0,PC,D0.W),D1
+	MOVE.B	0(A3,D0.W),D1
 	LEA	(A4,D1.W),A2
-	MOVE.B	(FastTwoDecTable+1,PC,D0.W),D1
+	MOVE.B	1(A3,D0.W),D1
 	LEA	(A4,D1.W),A3
 	; ---------------------
 	LEA	TextBitplane+4154,A4
@@ -1794,22 +1795,6 @@ DoDrawPlaybackCounter
 	MOVE.B	(A3)+,120-1(A4)
 	MOVE.B	(A3),160-1(A4)	
 DDPCEnd	RTS
-	
-	; (("00" .. "99" (split into two bytes)) - 32) * 8
-FastTwoDecTable
-        dc.w $8080,$8088,$8090,$8098,$80A0,$80A8,$80B0,$80B8
-        dc.w $80C0,$80C8,$8880,$8888,$8890,$8898,$88A0,$88A8
-        dc.w $88B0,$88B8,$88C0,$88C8,$9080,$9088,$9090,$9098
-        dc.w $90A0,$90A8,$90B0,$90B8,$90C0,$90C8,$9880,$9888
-        dc.w $9890,$9898,$98A0,$98A8,$98B0,$98B8,$98C0,$98C8
-        dc.w $A080,$A088,$A090,$A098,$A0A0,$A0A8,$A0B0,$A0B8
-        dc.w $A0C0,$A0C8,$A880,$A888,$A890,$A898,$A8A0,$A8A8
-        dc.w $A8B0,$A8B8,$A8C0,$A8C8,$B080,$B088,$B090,$B098
-        dc.w $B0A0,$B0A8,$B0B0,$B0B8,$B0C0,$B0C8,$B880,$B888
-        dc.w $B890,$B898,$B8A0,$B8A8,$B8B0,$B8B8,$B8C0,$B8C8
-        dc.w $C080,$C088,$C090,$C098,$C0A0,$C0A8,$C0B0,$C0B8
-        dc.w $C0C0,$C0C8,$C880,$C888,$C890,$C898,$C8A0,$C8A8
-        dc.w $C8B0,$C8B8,$C8C0,$C8C8
 
 	CNOP 0,4
 PlaybackSecsFrac	dc.l 0
@@ -1941,14 +1926,17 @@ SpecAna2
 	BHS.B	.L1
 	MOVE.W	D4,D0
 .L1	; --------------------
-	SUB.W	D4,D0		; Subtract 113 (highest rate)
-	MOVE.B	(SpecAnaPeriodTab,PC,D0.W),D0
-	EXT.W	D0		; D0.W = (0..22)<<1 (for word LUT)
+	SUB.W	D4,D0		; Subtract 113 (highest rate)	
+	MOVE.W	#743,D1
+	SUB.W	D0,D1		; Invert range 0-743
+	MULU.W	D1,D1		; 0 - 743^2
+	DIVU.W	#25093,D1	; 0 - 743^2 -> 0..22 (25093 = round[743^2 / 22])
+	MOVE.W	D1,D0
 	; --------------------
 	; --------------------
 	MOVEQ	#36,D1
 	LEA	AnalyzerHeights+1,A0
-	;ADD.W	D0,D0
+	ADD.W	D0,D0
 	ADD.W	D0,A0
 	; --------------------
 	MOVE.B	(A0),D4		; cache it (for safety)
@@ -1981,48 +1969,6 @@ saskip5	MOVE.B	D4,(A0)
 saend	SF	AnaDrawFlag
 ohno	MOVEM.L	(SP)+,D0-D4/A0
 	RTS
-
-	; for (i = 0 to 743) x = round[(743-i)^2 / (743^2 / 22)] * 2
-SpecAnaPeriodTab
-	dc.b 44,44,44,44,44,44,44,44,44,42,42,42,42,42,42,42,42,42,42,42
-	dc.b 42,42,42,42,42,42,40,40,40,40,40,40,40,40,40,40,40,40,40,40
-	dc.b 40,40,40,40,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38
-	dc.b 38,38,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36
-	dc.b 36,34,34,34,34,34,34,34,34,34,34,34,34,34,34,34,34,34,34,34
-	dc.b 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32
-	dc.b 30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30
-	dc.b 28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28
-	dc.b 28,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26
-	dc.b 26,26,26,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24
-	dc.b 24,24,24,24,24,24,22,22,22,22,22,22,22,22,22,22,22,22,22,22
-	dc.b 22,22,22,22,22,22,22,22,22,22,20,20,20,20,20,20,20,20,20,20
-	dc.b 20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,18,18,18,18,18
-	dc.b 18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18
-	dc.b 18,18,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16
-	dc.b 16,16,16,16,16,16,16,16,16,16,14,14,14,14,14,14,14,14,14,14
-	dc.b 14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14
-	dc.b 12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12
-	dc.b 12,12,12,12,12,12,12,12,12,12,12,12,10,10,10,10,10,10,10,10
-	dc.b 10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10
-	dc.b 10,10,10,10,10,10,10, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
-	dc.b  8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
-	dc.b  8, 8, 8, 8, 8, 8, 8, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6
-	dc.b  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6
-	dc.b  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 4, 4, 4, 4, 4, 4, 4
-	dc.b  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
-	dc.b  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
-	dc.b  4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
-	dc.b  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
-	dc.b  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
-	dc.b  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
-	dc.b  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	dc.b  0, 0, 0, 0
-	EVEN
 
 AnalyzerOffsets
 	dc.w $0730,$0708,$06E0,$06B8,$0690,$0668,$0640,$0618
@@ -8520,7 +8466,7 @@ PatternOneUp
 	BLE.B	pouskip
 	CLR.L	PatternNumber
 pouskip
-	BSR.W	Wait_4000
+	;BSR.W	Wait_4000
 	JMP	RedrawPattern
 
 MoveOneRight
@@ -8546,7 +8492,7 @@ PatternOneDown
 	BPL.B	podskip
 	MOVE.L	MaxPattern(PC),PatternNumber
 podskip
-	BSR.W	Wait_4000
+	;BSR.W	Wait_4000
 	JMP	RedrawPattern
 
 MoveOneLeft
@@ -17011,9 +16957,9 @@ ResetLocalLabels
 	CMP.L	#2,ChordLen
 	BLO.W	LenTooSmallError
 	; ---------------------
-	MOVE.W	InsNum(PC),D0
+	MOVE.W	InsNum,D0
 	BNE.B	.L0
-	MOVE.W	LastInsNum(PC),D0
+	MOVE.W	LastInsNum,D0
 .L0	MOVE.W	D0,ChordSrcSmpNum
 	MOVEQ	#0,D1
 	MOVE.W	D0,D1
@@ -19040,18 +18986,18 @@ RedrawPattern
 	ADD.L	D6,A6
 	MOVE.W	#7521,TextOffset
 	CLR.W	PPattPos
-	LEA	PeriodTable(PC),A2
+	MOVE.L	NoteNamesPtr(PC),D3
+	MOVE.L	#PeriodTable,D4
 	LEA	RedrawBuffer(PC),A3
 	LEA	FastHexTable(PC),A4
-	MOVEQ	#'0',D4
 	MOVE.B	BlankZeroFlag,D5
 
-	MOVEQ	#64-1,D6
-rpnxpos	MOVEQ	#3,D7
+	MOVEQ	#64-1,D6	; row counter
+rpnxpos	MOVEQ	#4-1,D7		; channel counter
 	MOVE.W	PPattPos(PC),WordNumber
+	ADDQ.W	#1,PPattPos
 	BSR.W	Print2DecDigits ; Print PatternPosition
 	ADDQ.W	#1,TextOffset
-	ADDQ.W	#1,PPattPos
 rploop	
 	MOVE.W	(A6),D1
 	AND.W	#$0FFF,D1
@@ -19059,18 +19005,19 @@ rploop
 	MOVE.L	#'--- ',(A3)
 	BRA.B	rpskip
 rpfind
-	MOVEQ	#0,D0
 	MOVEQ	#37-1,D2
+	MOVE.L	D4,A5	; A5 = PeriodTable
 rpfindloop
-	CMP.W	(A2,D0.W),D1
+	CMP.W	(A5)+,D1
 	BEQ.B	rpfound
-	ADDQ.B	#2,D0
 	DBRA	D2,rpfindloop
 	MOVE.L	#'??? ',(A3)
 	BRA.B	rpskip
-rpfound
+rpfound	MOVEQ	#37-1,D0
+	SUB.W	D2,D0
 	ADD.W	D0,D0
-	ADD.L	NoteNamesPtr(PC),D0
+	ADD.W	D0,D0
+	ADD.L	D3,D0	; D3 = NoteNamesPtr
 	MOVE.L	D0,A0
 	MOVE.L	(A0),(A3)
 rpskip	MOVE.B	(A6)+,D0
@@ -19087,22 +19034,43 @@ rpskip	MOVE.B	(A6)+,D0
 	MOVE.B	(A6)+,D0
 	ADD.W	D0,D0
 	MOVE.W	(A4,D0.W),6(A3)
-	
-	TST.B	D5
+
+	TST.B	D5	; BlankZeroFlag set?
 	BEQ.B	rpskp3
-	CMP.B	3(A3),D4
+	CMP.B	#'0',3(A3)
 	BNE.B	rpskp3
 	MOVE.B	#' ',3(A3)
 rpskp3
-	MOVE.W	#9,TextLength
+
+	; 8bitbubsy: print note data (slightly faster than calling ShowText)
+	LEA	TextBitplane,A1
+	ADD.W	TextOffset(PC),A1
+	LEA	TextTable(PC),A5
+	LEA	FontData,A0
 	MOVE.L	A3,ShowTextPtr
-	BSR.W	ShowText
+	MOVEQ	#8-1,D1
+rploop2	MOVEQ	#0,D0
+	MOVE.B	(A3)+,D0
+	MOVE.B	(A5,D0.W),D0
+	LSL.W	#3,D0
+	LEA	(A0,D0.W),A2
+	MOVE.B	(A2)+,(A1)+
+	MOVE.B	(A2)+,40-1(A1)
+	MOVE.B	(A2)+,80-1(A1)
+	MOVE.B	(A2)+,120-1(A1)
+	MOVE.B	(A2),160-1(A1)
+	DBRA	D1,rploop2
+	ADD.W	#8+1,TextOffset
+	SUBQ	#8,A3
+	
 	DBRA	D7,rploop  ; Next Channel
 	ADD.W	#241,TextOffset
 	DBRA	D6,rpnxpos ; Next PattPos
+	
 	RTS
 
-RedrawBuffer	dc.b	'---00000 ',0
+	CNOP 0,4
+RedrawBuffer	dc.b	'---00000'
 	EVEN
 
 ShowPosition
@@ -19295,12 +19263,51 @@ FineTuneSign	dc.b ' '
 
 ;---- Print Decimal Digits ----
 
-Print2DecDigits
-	MOVE.W	#2,TextLength
+Print2DecDigits ; 8bb: optimized
+	; we can safely trash D0/D1/A0/A1
+	MOVE.L	A2,-(SP) 
+	MOVE.W	WordNumber(PC),D0
+	CMP.W	#99,D0
+	BLS.B	.OK
+	MOVEQ	#99,D0
+.OK	ADD.W	D0,D0		; *2 for LUT index
 	MOVEQ	#0,D1
-	MOVE.W	WordNumber(PC),D1
-	LEA	NumberText(PC),A0
-	BRA.B	pdig
+	LEA	FontData,A2
+	MOVE.B	(FastTwoDecTable+0,PC,D0.W),D1
+	LEA	(A2,D1.W),A0
+	MOVE.B	(FastTwoDecTable+1,PC,D0.W),D1
+	LEA	(A2,D1.W),A1
+	LEA	TextBitplane,A2
+	ADD.W	TextOffset(PC),A2
+	ADDQ.W	#2,TextOffset
+	MOVE.B	(A0)+,(A2)+
+	MOVE.B	(A0)+,40-1(A2)
+	MOVE.B	(A0)+,80-1(A2)
+	MOVE.B	(A0)+,120-1(A2)
+	MOVE.B	(A0),160-1(A2)
+	MOVE.B	(A1)+,(A2)+
+	MOVE.B	(A1)+,40-1(A2)
+	MOVE.B	(A1)+,80-1(A2)
+	MOVE.B	(A1)+,120-1(A2)
+	MOVE.B	(A1),160-1(A2)
+	MOVE.L	(SP)+,A2
+	RTS
+
+	; (("00" .. "99" (split into two bytes)) - 32) * 8
+FastTwoDecTable
+        dc.w $8080,$8088,$8090,$8098,$80A0,$80A8,$80B0,$80B8
+        dc.w $80C0,$80C8,$8880,$8888,$8890,$8898,$88A0,$88A8
+        dc.w $88B0,$88B8,$88C0,$88C8,$9080,$9088,$9090,$9098
+        dc.w $90A0,$90A8,$90B0,$90B8,$90C0,$90C8,$9880,$9888
+        dc.w $9890,$9898,$98A0,$98A8,$98B0,$98B8,$98C0,$98C8
+        dc.w $A080,$A088,$A090,$A098,$A0A0,$A0A8,$A0B0,$A0B8
+        dc.w $A0C0,$A0C8,$A880,$A888,$A890,$A898,$A8A0,$A8A8
+        dc.w $A8B0,$A8B8,$A8C0,$A8C8,$B080,$B088,$B090,$B098
+        dc.w $B0A0,$B0A8,$B0B0,$B0B8,$B0C0,$B0C8,$B880,$B888
+        dc.w $B890,$B898,$B8A0,$B8A8,$B8B0,$B8B8,$B8C0,$B8C8
+        dc.w $C080,$C088,$C090,$C098,$C0A0,$C0A8,$C0B0,$C0B8
+        dc.w $C0C0,$C0C8,$C880,$C888,$C890,$C898,$C8A0,$C8A8
+        dc.w $C8B0,$C8B8,$C8C0,$C8C8
 
 Print3DecDigits
 	MOVE.W	#3,TextLength

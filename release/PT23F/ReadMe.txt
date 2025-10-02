@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-              1st of October, 2025
+              2nd of October, 2025
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -20,11 +20,17 @@
 
  -- PT2.3F changelog: --
  
+ == Update 02.10.2025 ===============================================
+ - Small optimizations to pattern data drawing code
+ - Shorter delays when using ALT+left/right (change edit pattern)
+ ====================================================================
+ 
  == Update 01.10.2025 ===============================================
  - Free'd up 360 bytes (whoa...) of chipmem. The original code
    allocated slightly more memory than needed for the text/pattern
    bitplane buffer.
  - Free'd up around 8kB of memory (no more scope LUT optimization)
+ - Free'd up another ~800 bytes of memory (unneeded spectrum ana. LUT)
  - Code cleanup
  ====================================================================
  
