@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-              2nd of October, 2025
+              9th of October, 2025
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -19,6 +19,10 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+
+ == Update 09.10.2025 ===============================================
+ - Further optimizations for pattern data rendering
+ ====================================================================
  
  == Update 02.10.2025 ===============================================
  - Small optimizations to pattern data drawing code
