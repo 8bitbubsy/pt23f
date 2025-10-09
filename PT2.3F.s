@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;     2nd of October, 2025
+;     9th of October, 2025
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -483,6 +483,7 @@ Main
 MainLoop
 	JSR	CheckMIDIin
 	BSR.W	DoKeyBuffer
+	BSR.W	CheckToggleRasterbarKeys
 	BSR.W	CheckSamplerScreenKeys	
 	BSR.W	CheckPatternInvertKeys
 	BSR.W	CheckTransKeys
@@ -499,7 +500,7 @@ MainLoop
 	BSR.W	ShowFreeMem
 	BSR.W	CheckBlockPos
 	JSR	CheckSampleLength	; test if we need to alloc more mem
-	BSR.W	CheckRedraw
+	BSR.W	CheckPatternRedraw
 	TST.B	SetSignalFlag
 	BNE.B	.skip
 	MOVE.L	4.W,A6
@@ -516,6 +517,17 @@ MainLoop
 .skip2	BSR.W	ArrowKeys
 	BRA.W	CheckGadgets	
 	BRA.W	MainLoop
+	
+CheckToggleRasterbarKeys
+	TST.W	LeftAmigaStatus
+	BEQ.W	Return1
+	TST.W	CtrlKeyStatus
+	BEQ.W	Return1
+	MOVE.B	RawKeyCode,D0
+	CMP.B	#48,D0	; '<'
+	BNE.W	Return1
+	EOR.B	#1,ShowRasterbar
+	RTS
 
 	; used stop further key/mouse input for a while
 StopInputLoop	
@@ -663,7 +675,7 @@ cieskp3
 	BSR.W	SetNormalPtrCol
 	BRA.W	StorePtrCol
 
-CheckRedraw
+CheckPatternRedraw
 	TST.B	UpdateTempo
 	BEQ.B	chkredr
 	CLR.B	UpdateTempo
@@ -1030,6 +1042,10 @@ ResetVBInt
 	RTS
 
 vbint
+	TST.B	ShowRasterbar
+	BEQ.B	.skip1
+	MOVE.W	#$125,$DFF180	; rasterbars to measure frame time left
+.skip1
 	MOVEM.L	D0-D7/A0-A6,-(SP)
 	; ------------------------------
 	BSR.W	TickPlaybackCounter
@@ -1094,6 +1110,10 @@ rmbreleased
 	BSR.W	CheckScopeMuting	
 vbiend	; ------------------------------
 	MOVEM.L	(SP)+,D0-D7/A0-A6
+	TST.B	ShowRasterbar
+	BEQ.B	.skip2
+	MOVE.W	#0,$DFF180 	; rasterbars to measure frame time left
+.skip2
 	RTS
 	
 	CNOP 0,4
@@ -1106,14 +1126,14 @@ VBIntServer
 vbintname	dc.b	'ProTracker VBlank',0
 	EVEN
 
-CheckRedraw2
+CheckPatternRedraw2
 	MOVEM.L	D0-D7/A0-A6,-(SP)
 	MOVE.W	WordNumber,-(SP)
 	MOVE.W	TextOffset,-(SP)
 	MOVE.L	LongFFFF,-(SP)
 	MOVE.W	TextLength,-(SP)
 	MOVE.L	ShowTextPtr,-(SP)
-	BSR.W	CheckRedraw
+	BSR.W	CheckPatternRedraw
 	MOVE.L	(SP)+,ShowTextPtr
 	MOVE.W	(SP)+,TextLength
 	MOVE.L	(SP)+,LongFFFF
@@ -4058,7 +4078,7 @@ dssaloop2
 	MOVE.B	RawKeyCode,D0
 	CMP.B	#69,D0	; ESC
 	BEQ.B	AbortSampleCrunchBox
-	BSR.W	CheckRedraw2
+	BSR.W	CheckPatternRedraw2
 	BTST	#6,$BFE001	; left mouse button
 	BNE.B	dssaloop2
 	MOVE.W	MouseX,D0
@@ -5523,7 +5543,7 @@ surebuttoncheck
 	ST	AskBoxShown
 	BTST	#2,$DFF016	; right mouse button
 	BEQ.B	SureAnswerNo
-	BSR.W	CheckRedraw2
+	BSR.W	CheckPatternRedraw2
 	BSR.W	DoKeyBuffer
 	MOVE.B	RawKeyCode,D0
 	CMP.B	#21,D0 ; Pressed Y
@@ -7589,7 +7609,7 @@ GetHexKey
 	MOVE.B	#128,D1
 	BTST	#2,$DFF016	; right mouse button
 	BEQ.B	ghkreturn
-	BSR.W	CheckRedraw2
+	BSR.W	CheckPatternRedraw2
 	MOVEQ	#0,D0
 	BSR.W	DoKeyBuffer
 	MOVE.B	RawKeyCode,D0
@@ -8794,7 +8814,7 @@ fmtbuttonchk
 	MOVE.B	RawKeyCode,D0
 	CMP.B	#69,D0		; ESC
 	BEQ.B	fmtbend
-	BSR.W	CheckRedraw2
+	BSR.W	CheckPatternRedraw2
 	BTST	#6,$BFE001	; left mouse button
 	BNE.B	fmtbuttonchk
 	MOVE.W	MouseX(PC),D0
@@ -9142,7 +9162,7 @@ clbskip	LEA	ClearBoxData,A1
 clearbuttoncheck
 	BTST	#2,$DFF016	; right mouse button
 	BEQ.W	ClrCancel
-	BSR.W	CheckRedraw2
+	BSR.W	CheckPatternRedraw2
 	BSR.W	DoKeyBuffer
 	MOVE.B	RawKeyCode,D0
 	CMP.B	#33,D0		; Pressed S
@@ -13004,7 +13024,7 @@ twexit	BRA.W	RedrawPattern
 GetKey0_9
 	BTST	#2,$DFF016	; right mouse button
 	BEQ.B	gk_ret
-	JSR	CheckRedraw2
+	JSR	CheckPatternRedraw2
 	MOVEQ	#0,D0
 	JSR	DoKeyBuffer
 	MOVE.B	RawKeyCode,D0
@@ -13067,7 +13087,7 @@ WaitForKey
 	BEQ.W	AbortGetLine
 	BTST	#6,$BFE001	; left mouse button
 	BEQ.W	LineClicked
-	JSR	CheckRedraw2
+	JSR	CheckPatternRedraw2
 	JSR	DoKeyBuffer
 	MOVEQ	#0,D1
 	MOVE.B	RawKeyCode,D1
@@ -13994,7 +14014,7 @@ lososkip5
 	JSR	DoShowFreeMem
 	BSR.W	CheckInstrLengths
 	BSR.W	ShowSampleInfo
-	BRA.W	RedrawSample
+	JMP	RedrawSample
 
 SortDisks
 	MOVEM.L	D0-D4/A0/A1,-(SP)
@@ -16456,7 +16476,7 @@ GetDeltaFromChordNote
 	MOVEQ	#0,D1
 	MOVE.W	(A0,D0.W),D1	; D1.L = dst. period
 	; -----------------------
-	LEA	PeriodTable(PC),A0
+	LEA	PeriodTable,A0
 	MOVEQ	#0,D0
 	MOVE.W	TuneNote,D0
 	ADD.W	D0,D0
@@ -18405,7 +18425,7 @@ ShowModCrunchBox
 	LEA	AreYouSureText(PC),A0
 	BSR.W	ShowStatusText
 dsmloop3
-	JSR	CheckRedraw2
+	JSR	CheckPatternRedraw2
 	JSR	DoKeyBuffer
 	MOVE.B	RawKeyCode(PC),D0
 	CMP.B	#69,D0	; ESC
@@ -18690,7 +18710,7 @@ cruiskip
 	MOVEQ	#0,D0
 	RTS
 cruiskip2
-	JSR	CheckRedraw2
+	JSR	CheckPatternRedraw2
 	MOVEM.L	RegBackup(PC),D0-D7/A0-A6
 	RTS
 
@@ -18986,10 +19006,10 @@ RedrawPattern
 	ADD.L	D6,A6
 	MOVE.W	#7521,TextOffset
 	CLR.W	PPattPos
-	MOVE.L	NoteNamesPtr(PC),D3
-	MOVE.L	#PeriodTable,D4
 	LEA	RedrawBuffer(PC),A3
 	LEA	FastHexTable(PC),A4
+	MOVE.L	NoteNamesPtr(PC),A5
+	MOVE.L	#Period2Note,D4
 	MOVE.B	BlankZeroFlag,D5
 
 	MOVEQ	#64-1,D6	; row counter
@@ -18999,28 +19019,24 @@ rpnxpos	MOVEQ	#4-1,D7		; channel counter
 	BSR.W	Print2DecDigits ; Print PatternPosition
 	ADDQ.W	#1,TextOffset
 rploop	
+
+	; convert period to note number string
 	MOVE.W	(A6),D1
-	AND.W	#$0FFF,D1
+	AND.W	#$0FFF,D1	; D1.W = period
 	BNE.B	rpfind
 	MOVE.L	#'--- ',(A3)
-	BRA.B	rpskip
-rpfind
-	MOVEQ	#37-1,D2
-	MOVE.L	D4,A5	; A5 = PeriodTable
-rpfindloop
-	CMP.W	(A5)+,D1
-	BEQ.B	rpfound
-	DBRA	D2,rpfindloop
-	MOVE.L	#'??? ',(A3)
-	BRA.B	rpskip
-rpfound	MOVEQ	#37-1,D0
-	SUB.W	D2,D0
-	ADD.W	D0,D0
-	ADD.W	D0,D0
-	ADD.L	D3,D0	; D3 = NoteNamesPtr
-	MOVE.L	D0,A0
-	MOVE.L	(A0),(A3)
-rpskip	MOVE.B	(A6)+,D0
+	BRA.B	rpskip2
+rpfind	MOVEQ	#0,D0
+	SUB.W	#113,D1
+	BLT.W	rplo
+	CMP.W	#856-113,D1
+	BHI.B	rpskip1
+	MOVE.L	D4,A1		; A1 = Period2Note
+	MOVE.B	(A1,D1.W),D0	; note*4, for NoteNamesPtr (A0) dword look-up
+rpskip1	MOVE.L	(A5,D0.W),(A3)
+rpskip2
+
+	MOVE.B	(A6)+,D0
 	LSR.B	#4,D0
 	AND.B	#$01,D0	; --PT2.3D bug fix: mask high nybble of sample num for broken MODs
 	ADD.B	#'0',D0
@@ -19045,15 +19061,25 @@ rpskp3
 	; 8bitbubsy: print note data (slightly faster than calling ShowText)
 	LEA	TextBitplane,A1
 	ADD.W	TextOffset(PC),A1
-	LEA	TextTable(PC),A5
-	LEA	FontData,A0
+	MOVE.L	#FontData,D2
+	LEA	FontDataOffsets(PC),A0
 	MOVE.L	A3,ShowTextPtr
-	MOVEQ	#8-1,D1
+	MOVEQ	#(8/2)-1,D1	; 2x loop unroll
 rploop2	MOVEQ	#0,D0
 	MOVE.B	(A3)+,D0
-	MOVE.B	(A5,D0.W),D0
-	LSL.W	#3,D0
-	LEA	(A0,D0.W),A2
+	ADD.W	D0,D0
+	MOVE.W	(A0,D0.W),A2
+	ADD.L	D2,A2
+	MOVE.B	(A2)+,(A1)+
+	MOVE.B	(A2)+,40-1(A1)
+	MOVE.B	(A2)+,80-1(A1)
+	MOVE.B	(A2)+,120-1(A1)
+	MOVE.B	(A2),160-1(A1)
+	MOVEQ	#0,D0
+	MOVE.B	(A3)+,D0
+	ADD.W	D0,D0
+	MOVE.W	(A0,D0.W),A2
+	ADD.L	D2,A2
 	MOVE.B	(A2)+,(A1)+
 	MOVE.B	(A2)+,40-1(A1)
 	MOVE.B	(A2)+,80-1(A1)
@@ -19068,6 +19094,9 @@ rploop2	MOVEQ	#0,D0
 	DBRA	D6,rpnxpos ; Next PattPos
 	
 	RTS
+	
+rplo	MOVE.L	#'??? ',(A3)
+	BRA.W    rpskip2
 
 	CNOP 0,4
 RedrawBuffer	dc.b	'---00000'
@@ -19527,56 +19556,71 @@ ShowText2
 	MOVE.L	A0,ShowTextPtr
 ShowText
 	MOVEM.L	A2-A4,-(SP)
-	LEA	TextTable(PC),A3
 	LEA	FontData,A4
+	LEA	FontDataOffsets(PC),A3
 	MOVE.W	TextLength(PC),D0
 	LEA	TextBitplane,A1
 	ADD.W	TextOffset(PC),A1
 	ADD.W	D0,TextOffset
 	MOVE.L	ShowTextPtr(PC),A0
 	SUBQ.W	#1,D0
-dstloop	MOVEQ	#0,D1
+.loop	MOVEQ	#0,D1
 	MOVE.B	(A0)+,D1
-	BNE.B	dstskip
-	MOVE.B	ShowZeroFlag(PC),D1
-dstskip	MOVE.B	(A3,D1.W),D1
-	LSL.W	#3,D1
-	LEA	(A4,D1.W),A2
+	ADD.W	D1,D1
+	MOVE.W	(A3,D1.W),A2
+	ADD.L	A4,A2
 	MOVE.B	(A2)+,(A1)+
 	MOVE.B	(A2)+,40-1(A1)
 	MOVE.B	(A2)+,80-1(A1)
 	MOVE.B	(A2)+,120-1(A1)
 	MOVE.B	(A2),160-1(A1)
-dstlope	DBRA	D0,dstloop
+	DBRA	D0,.loop
 	MOVEM.L	(SP)+,A2-A4
 	RTS
 
 SpaceShowText
-	MOVE.W	ShowZeroFlag(PC),-(SP)
-	MOVE.B	#' ',ShowZeroFlag
-	BSR.B	ShowText
-	MOVE.W	(SP)+,ShowZeroFlag
+	MOVEM.L	A2-A4,-(SP)
+	LEA	FontData,A4
+	LEA	FontDataOffsets(PC),A3
+	MOVE.W	TextLength(PC),D0
+	LEA	TextBitplane,A1
+	ADD.W	TextOffset(PC),A1
+	ADD.W	D0,TextOffset
+	MOVE.L	ShowTextPtr(PC),A0
+	SUBQ.W	#1,D0
+.loop	MOVEQ	#0,D1
+	MOVE.B	(A0)+,D1
+	BNE.B	.skip
+	MOVEQ	#' ',D1
+.skip	ADD.W	D1,D1
+	MOVE.W	(A3,D1.W),A2
+	ADD.L	A4,A2
+	MOVE.B	(A2)+,(A1)+
+	MOVE.B	(A2)+,40-1(A1)
+	MOVE.B	(A2)+,80-1(A1)
+	MOVE.B	(A2)+,120-1(A1)
+	MOVE.B	(A2),160-1(A1)
+	DBRA	D0,.loop
+	MOVEM.L	(SP)+,A2-A4
 	RTS
 
-ShowZeroFlag	dc.b '_',0
-
-TextTable
-	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 ; 0
-	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	dc.b 00,01,02,03,04,05,06,07,08,09,10,11,12,13,14,15 ; 32
-	dc.b 16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
-	dc.b 32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47 ; 64
-	dc.b 48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63
-	dc.b 69,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47 ; 96
-	dc.b 48,49,50,51,52,53,54,55,56,57,58,65,66,67,68,63
-	dc.b 69,70,0,0,0,0,0,0,0,0,0,0,0,0,0,0 ; 128
-	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	dc.b 0,64,0,0,0,0,0,0,0,0,0,0,0,0,0,0 ; 160
-	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 ; 192
-	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 ; 224
-	dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+FontDataOffsets
+        dc.w 504,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+        dc.w   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+        dc.w   0,  8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96,104,112,120
+        dc.w 128,136,144,152,160,168,176,184,192,200,208,216,224,232,240,248
+        dc.w 256,264,272,280,288,296,304,312,320,328,336,344,352,360,368,376
+        dc.w 384,392,400,408,416,424,432,440,448,456,464,472,480,488,496,504
+        dc.w 552,264,272,280,288,296,304,312,320,328,336,344,352,360,368,376
+        dc.w 384,392,400,408,416,424,432,440,448,456,464,520,528,536,544,504
+        dc.w 552,560,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+        dc.w   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+        dc.w   0,512,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+        dc.w   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+        dc.w   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+        dc.w   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+        dc.w   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+        dc.w   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 
 ;---- Set Sprite Position ----
 
@@ -22277,7 +22321,7 @@ swabuf2	MOVE.W	D0,2(A0)
 	BSR.W	TurnOffVoices
 	BSR.W	ValidateLoops
 	BSR.W	ShowSampleInfo
-	BSR.W	UpdateRepeats
+	JSR	UpdateRepeats
 	BSR.W	RedrawSample
 	JMP	WaitForButtonUp
 
@@ -25366,12 +25410,14 @@ NoteNames1
 	dc.b	'C-3 C#3 D-3 D#3 E-3 F-3 F#3 G-3 G#3 A-3 A#3 B-3 '
 SpcNoteText
 	dc.b	'--- '
+	dc.b	'??? '
 NoteNames2
 	dc.b	'C-1 D¡1 D-1 E¡1 E-1 F-1 G¡1 G-1 A¡1 A-1 B¡1 B-1 '
 	dc.b	'C-2 D¡2 D-2 E¡2 E-2 F-2 G¡2 G-2 A¡2 A-2 B¡2 B-2 '
 	dc.b	'C-3 D¡3 D-3 E¡3 E-3 F-3 G¡3 G-3 A¡3 A-3 B¡3 B-3 '
 	dc.b	'--- '
-	
+	dc.b	'??? '
+
 	; Optimization: prevents MULU for getting correct finetuned period
 	CNOP 0,4
 ftunePerTab
@@ -26150,6 +26196,57 @@ C_BoxData	EQU	S_BoxData+110
 N_BoxData	EQU	S_BoxData+132
 O_BoxData	EQU	S_BoxData+154
 
+	; Converts pattern-period to LUT index for NotesNames1/NoteNames2 (dword)
+Period2Note:
+        dc.b 140,148,148,148,148,148,148,136,148,148,148,148,148,148,132,148
+        dc.b 148,148,148,148,148,148,128,148,148,148,148,148,148,148,124,148
+        dc.b 148,148,148,148,148,148,120,148,148,148,148,148,148,148,148,116
+        dc.b 148,148,148,148,148,148,148,148,148,112,148,148,148,148,148,148
+        dc.b 148,148,148,108,148,148,148,148,148,148,148,148,148,104,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,100,148,148,148,148,148,148
+        dc.b 148,148,148,148,148, 96,148,148,148,148,148,148,148,148,148,148
+        dc.b 148, 92,148,148,148,148,148,148,148,148,148,148,148,148,148, 88
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148, 84,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148, 80,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148, 76,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148, 72,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148, 68
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148, 64,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148, 60,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148, 56,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148, 52,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148, 48,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148, 44,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148, 40
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148, 36,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148, 32,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148, 28,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148, 24,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148, 20
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148, 16,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148, 12
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,  8,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,  4,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+        dc.b 148,148,148,148,148,148,148,  0
+	EVEN
+
 ; -----------------------------------------------------------------------------
 ;                                 CHIPMEM DATA
 ; -----------------------------------------------------------------------------
@@ -26657,6 +26754,7 @@ BeamCONTemp	ds.w	2
 PaulaDMAWaitScanlines	ds.w	1
 GUIDelayScanlines	ds.w	1
 VolToolBoxShown	ds.b	1
+ShowRasterbar	ds.b	1
 
 END
 
