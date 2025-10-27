@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-              9th of October, 2025
+             27th of October, 2025
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -19,6 +19,11 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+ 
+ == Update 27.10.2025 ===============================================
+ - Fixed a memory leak issue when loading IFF samples (would go out
+   of memory after a while)
+ ====================================================================
 
  == Update 09.10.2025 ===============================================
  - Further optimizations for pattern data rendering
