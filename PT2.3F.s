@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;    27th of October, 2025
+;    4th of December, 2025
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -13,6 +13,8 @@
 ; Re-source job and PT2.3E/PT2.3F version by Olav "8bitbubsy" Sorensen (me)
 ;
 
+SCREEN_W		EQU 320
+SCREEN_H		EQU 256
 ERR_WAIT_TIME		EQU 40
 MOUSE_SPEED		EQU 11 ; 1..16
 
@@ -1542,38 +1544,93 @@ inpevname
 	EVEN
 
 InputHandler ; A0-InputEvent, A1-Data Area
-	MOVEM.L	D1/A0-A3,-(SP)
+	MOVEM.L	D1/D2/A0-A3,-(SP)
 	TST.B	StopInputFlag
 	BEQ.B	inphend
 	SUB.L	A2,A2
 	MOVE.L	A0,A1
-	MOVE.B	4(A1),D0	; ie_Class
-	CMP.B	#1,D0		; RAWKEY
-	BEQ.B	InpRawkey
-	CMP.B	#2,D0		; RAWMOUSE
-	BEQ.W	xInpRawMouse
+inploop	MOVE.B	4(A1),D0	; ie_Class
+	CMP.B	#1,D0		; IECLASS_RAWKEY
+	BEQ.W	InpRawkey
+	CMP.B	#2,D0		; IECLASS_RAWMOUSE
+	BEQ.B	InpRawmouse
 	MOVE.L	A1,A2
-InpNext	MOVE.L	(A1),A1
-	MOVE.L	A1,D0
-	BNE.B	InputHandler
+InpNext	MOVE.L	0(A1),A1	; ie_NextEvent
+	MOVE.L	A1,D0		; pointer == NULL?	
+	BNE.B	inploop
 inphend	MOVE.L	A0,D0
-	MOVEM.L	(SP)+,D1/A0-A3
+	MOVEM.L	(SP)+,D1/D2/A0-A3
 	RTS
-
-; InpRawmouse is way further down in the source code
-xInpRawMouse	JMP InpRawmouse
-
+	
+InpUnchain
+	MOVE.L	A2,D0
+	BNE.B	InpUnc2
+	MOVE.L	0(A1),A0
+	RTS
+InpUnc2	MOVE.L	0(A1),0(A2)
+	RTS
+	
+	; Changed the mouse code as PT2.3A introduced crude acceleration,
+	; which made the mouse very annoying during precise sliding.
+InpRawmouse
+	BSR.B	InpUnchain
+	; ----------------------
+	TST.B	DiskDriveBusy	; is floppy drive accessing?
+	BNE.B	InpNext
+	; ----------------------
+	MOVEQ	#MOUSE_SPEED,D0
+	MULS.W	10(A1),D0	; ie_x (mouse pointer pos)
+	MOVE.W	MouseX,D1
+	LSL.W	#4,D1
+	ADD.W	MouseXFrac,D1
+	ADD.W	D1,D0
+	BPL.B	.L0
+	MOVEQ	#0,D0
+	MOVE.W	D0,MouseXFrac
+	BRA.B	.L2
+.L0	CMP.W	#(SCREEN_W-1)<<4,D0
+	BLE.B	.L1
+	MOVE.W	#(SCREEN_W-1)<<4,D0
+.L1	MOVE.W	D0,D1
+	AND.W	#15,D1
+	MOVE.W	D1,MouseXFrac
+	LSR.W	#4,D0
+	SWAP	D0
+	; ----------------------
+.L2	MOVEQ	#MOUSE_SPEED,D1
+	MULS.W	12(A1),D1	; ie_y (mouse pointer pos)
+	MOVE.W	MouseY,D2
+	LSL.W	#4,D2	
+	ADD.W	MouseYFrac,D2
+	ADD.W	D2,D1
+	BPL.B	.L3
+	CLR.W	D0
+	MOVE.W	D0,MouseYFrac
+	BRA.B	.L5
+.L3	CMP.W	#(SCREEN_H-1)<<4,D1
+	BLE.B	.L4
+	MOVE.W	#(SCREEN_H-1)<<4,D1
+.L4	MOVE.W	D1,D2
+	AND.W	#15,D2
+	MOVE.W	D2,MouseYFrac
+	LSR.W	#4,D1
+	MOVE.W	D1,D0
+	; ----------------------
+.L5	MOVE.L	D0,MouseX	; writes to X and Y in one go (safer)
+	; ----------------------
+	BRA.W	InpNext
+	
 InpRawkey
-	JSR	InpUnchain
-	MOVE.W	6(A1),D0
+	BSR.W	InpUnchain
+	MOVE.W	6(A1),D0	; ie_Code
 	BSR.W	ProcessRawkey
-	BRA.B	InpNext
+	BRA.W	InpNext
 	
 ;---- Process rawkey code from the keyboard ----
 
 ProcessRawkey
 	CMP.B	LastRawkey(PC),D0
-	BEQ.W	Return1
+	BEQ.W	kbintDone
 	MOVE.B	D0,LastRawkey	
 	; -------------------------
 	CMP.B	#96,D0
@@ -1619,10 +1676,11 @@ kbintSetKey
 kbintDoSet
 	MOVE.W	KeyBufPos(PC),D1
 	CMP.W	#KeyBufSize,D1
-	BHS.W	Return1
+	BHS.B	kbintDone
 	LEA	KeyBuffer(PC),A3
 	MOVE.B	D0,(A3,D1.W)
 	ADDQ.W	#1,KeyBufPos
+kbintDone
 	RTS
 
 ShiftOff2
@@ -1675,7 +1733,7 @@ LeftAmigaOff
 
 DoKeyBuffer
 	MOVE.W	KeyBufPos(PC),D0
-	BEQ.W	Return1
+	BEQ.B	dkbend
 	SUBQ.W	#1,D0
 	LEA	KeyBuffer(PC),A0
 	MOVE.B	(A0,D0.W),D1
@@ -14099,69 +14157,14 @@ xilSkip2
 	DBRA	D1,xilloop
 	RTS
 	
-	; Added new mouse code.
-	; PT2.3A added crude acceleration, which made the
-	; mouse very annoying during precise sliding.
-	
+	; Mouse variables have been moved here
+	; to be mostly PC-addressing capable.
+
 	CNOP 0,4
 MouseX		dc.w 0	; do not change order
 MouseY		dc.w 0	; do not change order
 MouseXFrac	dc.w 0
 MouseYFrac	dc.w 0
-
-InpUnchain
-	MOVE.L	A2,D0
-	BNE.B	InpUnc2
-	MOVE.L	(A1),A0
-	RTS
-InpUnc2	MOVE.L	(A1),(A2)
-	RTS
-	
-InpRawmouse
-	BSR.B	InpUnchain
-	; ----------------------
-	TST.B	DiskDriveBusy	; is floppy drive accessing?
-	BNE.B	.next
-	; ----------------------
-	MOVEQ	#15,D3		; AND mask for frac
-	; ----------------------
-	MOVEQ	#MOUSE_SPEED,D0
-	MULS.W	10(A1),D0
-	MOVE.W	MouseX(PC),D1
-	LSL.W	#4,D1
-	ADD.W	MouseXFrac(PC),D1
-	ADD.W	D1,D0
-	BPL.B	.L0
-	MOVEQ	#0,D0
-.L0	CMP.W	#319<<4,D0
-	BLE.B	.L1
-	MOVE.W	#319<<4,D0
-.L1	MOVE.W	D0,D1
-	AND.W	D3,D1
-	MOVE.W	D1,MouseXFrac
-	LSR.W	#4,D0
-	SWAP	D0
-	; ----------------------
-	MOVEQ	#MOUSE_SPEED,D1
-	MULS.W	12(A1),D1
-	MOVE.W	MouseY(PC),D2
-	LSL.W	#4,D2	
-	ADD.W	MouseYFrac(PC),D2
-	ADD.W	D2,D1
-	BPL.B	.L2
-	MOVEQ	#0,D1
-.L2	CMP.W	#255<<4,D1
-	BLE.B	.L3
-	MOVE.W	#255<<4,D1
-.L3	MOVE.W	D1,D2
-	AND.W	D3,D2
-	MOVE.W	D2,MouseYFrac
-	LSR.W	#4,D1
-	MOVE.W	D1,D0
-	; ----------------------
-	MOVE.L	D0,MouseX	; writes to X and Y in one go
-	; ----------------------
-.next	JMP	InpNext
 
 CheckAbort
 	BTST	#2,$DFF016	; right mouse button
