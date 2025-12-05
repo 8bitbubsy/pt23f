@@ -1,23 +1,27 @@
 ; ProTracker v2.3F source code
 ; ============================
-;    4th of December, 2025
+;    5th of December, 2025
 ;
-;    (tab width = 8 spaces)
+;    (tab width = 8+ spaces)
 ;
-; If you find any bugs, please email me at the email/Discord found on
-; the website 16-bits.org.
+; If you find any bugs, please contact me through the email/Discord
+; found at 16-bits.org.
 ;
-; Original PT2.3D by Peter "CRAYON" Hanning, Detron and Lars "ZAP" Hamre
+; Original PT2.3D by Peter "CRAYON" Hanning and Detron,
+; which is based on PT2.0A by Lars "ZAP" Hamre.
 ;
-; PT2.3D raw disassemble by Per "Super-Hans" Johansson
-; Re-source job and PT2.3E/PT2.3F version by Olav "8bitbubsy" Sorensen (me)
+; PT2.3D raw disassemble by Per "Super-Hans" Johansson.
+; Re-source job and PT2.3E/PT2.3F version by 8bitbubsy (me).
 ;
+
+; mouse movement speed (1..16)
+MOUSE_SPEED	EQU 11
+
+; video frames to wait during "error" (red mouse cursor)
+ERR_WAIT_TIME	EQU 40
 
 SCREEN_W		EQU 320
 SCREEN_H		EQU 256
-ERR_WAIT_TIME		EQU 40
-MOUSE_SPEED		EQU 11 ; 1..16
-
 SONG_SIZE_100PAT	EQU 1084+(1024*100)
 SONG_SIZE_64PAT		EQU 1084+(1024*64)
 
