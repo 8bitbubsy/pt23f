@@ -10799,26 +10799,26 @@ PrintSong3
 	MOVE.L	SavIt(PC),A0
 	MOVE.W	22(A0),D0
 	ADD.W	D0,D0
-	LEA	ascii.MSG4,A0
+	LEA	Prafs+2+4,A0
 	JSR	IntToHexASCII
 	MOVE.L	SavIt(PC),A0
 	MOVE.W	26(A0),D0
 	ADD.W	D0,D0
-	LEA	ascii.MSG5,A0
+	LEA	Prafs+8+4,A0
 	JSR	IntToHexASCII
 	MOVE.L	SavIt(PC),A0
 	MOVE.W	28(A0),D0
 	ADD.W	D0,D0
-	LEA	ascii.MSG6,A0
+	LEA	Prafs+14+4,A0
 	JSR	IntToHexASCII
 	MOVE.L	DOSBase,A6
 	MOVE.L	FileHandle,D1
 	MOVE.L	#PtotText,D2
-	MOVEQ	#$34,D3
+	MOVEQ	#52,D3
 	JSR	_LVOWrite(A6)
 	MOVE.L	(SP)+,D7
 	ADDQ.W	#1,D7
-	CMP.W	#$20,D7
+	CMP.W	#$0020,D7
 	BNE.W	ps2_2
 PrintSongRTS
 	RTS
@@ -25328,10 +25328,8 @@ PattNumText2	dc.b	'0',$D,$A,$D,$A
 PtotText	dc.b	9
 PattXText1	dc.b	"0"
 PattXText2	dc.b	"0 : "
-PpText		dc.b	'                        0000'
-ascii.MSG4	dc.b	'  0000'
-ascii.MSG5	dc.b	'  0000'
-ascii.MSG6	dc.b	'    ',$D,$A
+PpText		dc.b	"                      "
+Prafs		dc.b	"  0000  0000  0000    ",$D,$A
 PnText2		dc.b	"        "
 	CNOP 0,2
 		dc.b	0
