@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;    5th of December, 2025
+;    11th of December, 2025
 ;
 ;    (tab width = 8+ spaces)
 ;
@@ -24314,13 +24314,14 @@ SetPeriod
 	MOVE.W	(A6),D1
 	AND.W	#$0FFF,D1
 	LEA	PeriodTable(PC),A1
-	MOVEQ	#0,D0
 	MOVEQ	#37-1,D7
-ftuloop	CMP.W	(A1,D0.W),D1
+ftuloop	CMP.W	(A1)+,D1
 	BHS.B	ftufound
-	ADDQ.W	#2,D0
 	DBRA	D7,ftuloop
 ftufound
+	MOVEQ	#37-1,D0
+	SUB.W	D7,D0	 ; 0..37
+	ADD.W	D0,D0
 	MOVE.L	n_peroffset(A6),A1
 	MOVE.W	(A1,D0.W),n_period(A6)
 	MOVEM.L	(SP)+,D0/D1/A0/A1
@@ -24535,7 +24536,6 @@ Arpeggio2
 ArpeggioFind
 	ADD.W	D0,D0
 	MOVE.L	n_peroffset(A6),A0
-	MOVEQ	#0,D1
 	MOVE.W	n_period(A6),D1
 	MOVEQ	#37-1,D7
 arploop	CMP.W	(A0)+,D1
@@ -24599,21 +24599,19 @@ SetTonePorta
 	MOVE.W	(A6),D2
 	AND.W	#$0FFF,D2
 	MOVE.L	n_peroffset(A6),A4
-	MOVEQ	#0,D0
-StpLoop	CMP.W	(A4,D0.W),D2
+	MOVEQ	#37-1,D0
+StpLoop	CMP.W	(A4)+,D2
 	BHS.B	StpFound
-	ADDQ.W	#2,D0
-	CMP.W	#37*2,D0
-	BLO.B	StpLoop
-	MOVEQ	#35*2,D0
+	DBRA	D0,StpLoop
+	SUBQ.W	#4,A4			; a4 = &periods[35]
 StpFound
 	MOVE.B	n_finetune(A6),D2
 	AND.B	#8,D2
 	BEQ.B	StpGoss
-	TST.W	D0
+	CMP.W	#37-1,D0		; a4 = &periods[0]?
 	BEQ.B	StpGoss
-	SUBQ.W	#2,D0
-StpGoss	MOVE.W	(A4,D0.W),D2
+	SUBQ.W	#2,A4			; nope, dec ptr
+StpGoss	MOVE.W	-2(A4),D2
 	MOVE.W	D2,n_wantedperiod(A6)
 	MOVE.W	n_period(A6),D0
 	CLR.B	n_toneportdirec(A6)
@@ -24662,16 +24660,14 @@ TonePortaSetPer
 	AND.B	#$0F,D0
 	BEQ.B	GlissSkip
 	MOVE.L	n_peroffset(A6),A0
-	MOVEQ	#0,D0
+	MOVEQ	#37-1,D0
 GlissLoop
-	CMP.W	(A0,D0.W),D2
+	CMP.W	(A0)+,D2
 	BHS.B	GlissFound
-	ADDQ.W	#2,D0
-	CMP.W	#37*2,D0
-	BLO.B	GlissLoop
-	MOVEQ	#35*2,D0
+	DBRA	D0,GlissLoop
+	SUBQ.W	#4,A0			; A0 = &periods[35]
 GlissFound
-	MOVE.W	(A0,D0.W),D2
+	MOVE.W	-2(A0),D2
 GlissSkip
 	MOVE.W	D2,6(A5) 		; Set period
 	MOVE.W	D2,n_periodout(A6)	; Set scope period

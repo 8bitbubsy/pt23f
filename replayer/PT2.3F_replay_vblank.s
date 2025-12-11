@@ -14,6 +14,7 @@
 ; - 13.03.2025: Initial version
 ; - 21.05.2025: Set Sample Offset (9xx) now works on >64kB samples
 ; - 23.06.2025: Removed 512-byte optimization LUT for E9x (Retrig Note)
+; - 11.12.2025: Small optimizations
 
 ; Now comes some simple test code. It expects to call mt_music()
 ; ~50 times a second. It might be a better idea to set up a vblank
@@ -338,14 +339,15 @@ mt_SetPeriod
 	MOVE.W	(A6),D1
 	AND.W	#$0FFF,D1
 	LEA	mt_PeriodTable(PC),A1
-	MOVEQ	#0,D0
 	MOVEQ	#37-1,D7
 mt_ftuloop
-	CMP.W	(A1,D0.W),D1
+	CMP.W	(A1)+,D1
 	BHS.B	mt_ftufound
-	ADDQ.W	#2,D0
 	DBRA	D7,mt_ftuloop
 mt_ftufound
+	MOVEQ	#37-1,D0
+	SUB.W	D7,D0	; 0..37
+	ADD.W	D0,D0
 	MOVE.L	n_peroffset(A6),A1
 	MOVE.W	(A1,D0.W),n_period(A6)
 
@@ -535,7 +537,6 @@ mt_Arpeggio2
 mt_ArpeggioFind
 	ADD.W	D0,D0
 	MOVE.L	n_peroffset(A6),A0
-	MOVEQ	#0,D1
 	MOVE.W	n_period(A6),D1
 	MOVEQ	#37-1,D3
 mt_arploop
@@ -607,23 +608,21 @@ mt_SetTonePorta
 	MOVE.W	(A6),D2
 	AND.W	#$0FFF,D2
 	MOVE.L	n_peroffset(A6),A4
-	MOVEQ	#0,D0
+	MOVEQ	#37-1,D0
 mt_StpLoop
-	CMP.W	(A4,D0.W),D2
+	CMP.W	(A4)+,D2
 	BHS.B	mt_StpFound
-	ADDQ.W	#2,D0
-	CMP.W	#37*2,D0
-	BLO.B	mt_StpLoop
-	MOVEQ	#35*2,D0
+	DBRA	D0,mt_StpLoop
+	SUBQ.W	#4,A4			; a4 = &periods[35]
 mt_StpFound
 	MOVE.B	n_finetune(A6),D2
 	AND.B	#8,D2
 	BEQ.B	mt_StpGoss
-	TST.W	D0
+	CMP.W	#37-1,D0		; a4 = &periods[0]?
 	BEQ.B	mt_StpGoss
-	SUBQ.W	#2,D0
+	SUBQ.W	#2,A4			; nope, dec ptr
 mt_StpGoss
-	MOVE.W	(A4,D0.W),D2
+	MOVE.W	-2(A4),D2
 	MOVE.W	D2,n_wantedperiod(A6)
 	MOVE.W	n_period(A6),D0
 	CLR.B	n_toneportdirec(A6)
@@ -672,16 +671,14 @@ mt_TonePortaSetPer
 	AND.B	#$0F,D0
 	BEQ.B	mt_GlissSkip
 	MOVE.L	n_peroffset(A6),A0	
-	MOVEQ	#0,D0
+	MOVEQ	#37-1,D0
 mt_GlissLoop
-	CMP.W	(A0,D0.W),D2
+	CMP.W	(A0)+,D2
 	BHS.B	mt_GlissFound
-	ADDQ.W	#2,D0
-	CMP.W	#37*2,D0
-	BLO.B	mt_GlissLoop
-	MOVEQ	#35*2,D0
+	DBRA	D0,mt_GlissLoop
+	SUBQ.W	#4,A0			; A0 = &periods[35]
 mt_GlissFound
-	MOVE.W	(A0,D0.W),D2
+	MOVE.W	-2(A0),D2
 mt_GlissSkip
 	MOVE.W	D2,6(A5) ; Set period
 	RTS
