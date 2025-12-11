@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-             27th of October, 2025
+             11th of December, 2025
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -12,13 +12,17 @@
 
  PT2.3D by:
  - Peter "CRAYON" Hanning
- - Lars "ZAP" Hamre
  - Detron
+ (based on PT2.0A by Lars "ZAP" Hamre)
 
  PT2.3E/PT2.3F by:
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+ 
+ == Update 11.12.2025 ===============================================
+ - Small replayer optimizations
+ ====================================================================
  
  == Update 27.10.2025 ===============================================
  - Fixed a memory leak issue when loading IFF samples (would go out
