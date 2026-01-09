@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;    11th of December, 2025
+;     9th of January, 2026
 ;
 ;    (tab width = 8+ spaces)
 ;
@@ -21986,20 +21986,6 @@ ClearSamArea
 	MOVEM.L	D0-D7,-(A0)
 	MOVEM.L	D0-D7,-(A0)
 	MOVEM.L	D0-D7,-(A0)
-
-	; clear dotted center pattern (different bitplanes)
-	LEA	BitplaneData+6800+40,A0
-	LEA	BitplaneData+10240+6800+40,A1
-	MOVEM.L	D0-D4,-(A0)
-	MOVEM.L	D0-D4,-(A1)
-	MOVEM.L	D0-D4,-(A0)
-	MOVEM.L	D0-D4,-(A1)
-
-	; fix trashed frame pixels on left and right edge
-	MOVE.B	#%00000101,39(A0)
-	MOVE.B	#%00000011,39(A1)
-	MOVE.B	#%10100000,(A0)
-	MOVE.B	#%01100000,(A1)
 
 	; clear sample view
 	MOVE.W	#((64*10)/8)/4,ClearCounter
