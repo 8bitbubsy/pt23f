@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          ==============================
-             11th of December, 2025
+              9th of January, 2026
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -19,6 +19,10 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+ 
+ == Update 09.01.2026 ===============================================
+ - Removed unneeded code during sample waveform display in Smp. Ed.
+ ====================================================================
  
  == Update 11.12.2025 ===============================================
  - Small replayer optimizations
