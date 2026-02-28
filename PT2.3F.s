@@ -2987,7 +2987,7 @@ CheckDirGadgets
 	BRA.W	CheckDirGadgets2
 
 ExtrasMenu
-	CLR.W	SelectDiskFlag
+	CLR.W	ShowDrivesFlag
 	MOVEM.L	D0/D1,-(SP)
 	BSR.W	ClearFileNames
 	LEA	FileNamesPtr(PC),A5
@@ -3056,7 +3056,7 @@ smpmskp	MOVEQ	#3,D0
 	BRA.W	WaitForButtonUp
 
 ChangeDiskOpMode
-	CLR.W	SelectDiskFlag
+	CLR.W	ShowDrivesFlag
 	NOT.W	DiskOpScreen2	
 	CMP.W	#1,DirPathNum
 	BNE.B	.L0
@@ -3194,10 +3194,10 @@ CheckDirGadgets2
 	BLO.B	ExitFromDir
 	CMP.W	#91,D1
 	BLO.W	FilenameOneDown
-	BRA.W	lbC003926
+	BRA.W	FileNameToBottom
 
 ExitFromDir
-	CLR.W	SelectDiskFlag
+	CLR.W	ShowDrivesFlag
 	BSR.W	WaitForButtonUp
 	CLR.B	RawKeyCode
 	BSR.W	RestoreMainPic
@@ -3224,55 +3224,48 @@ DirBrowseGadg2
 	MOVEQ	#0,D0
 	MOVE.B	(A0),D0
 	ADDQ.B	#1,D0
-	MOVE.B	lbB002386(PC),D1
+	MOVE.B	NumDrives(PC),D1
 	CMP.B	D1,D0
-	BLO.B	lbC002264
+	BLO.B	.L0
 	MOVEQ	#0,D0
-lbC002264	MOVE.B	D0,(A0)
+.L0	MOVE.B	D0,(A0)
 	MOVE.L	PathPtr,A0
-	MOVEQ	#64-1,D1
-	MOVEQ	#0,D2
-lbC002270	MOVE.B	D2,(A0)+
-	DBRA	D1,lbC002270
-	TST.W	D0
-	BEQ.B	lbC00227E
-	BSR.B	lbC0022E0
-	BRA.B	lbC0022C8
 
-lbC00227E
-	LEA	ModulesPath,A0
+	MOVEQ	#64-1,D1
+	MOVEQ	#0,D2	
+.loop1	MOVE.B	D2,(A0)+
+	DBRA	D1,.loop1
+
+	TST.W	D0
+	BEQ.B	.L1
+	BSR.B	.L4
+	BRA.B	.L3
+.L1	LEA	ModulesPath,A0
 	TST.W	D3
-	BEQ.B	lbC0022BE
+	BEQ.B	.L2
 	LEA	SongsPath,A0
 	CMP.W	#1,D3
-	BEQ.B	lbC0022BE
+	BEQ.B	.L2
 	LEA	SamplePath,A0
 	CMP.W	#2,D3
-	BEQ.B	lbC0022BE
+	BEQ.B	.L2
 	LEA	TrackPath,A0
 	CMP.W	#3,D3
-	BEQ.B	lbC0022BE
+	BEQ.B	.L2
 	LEA	PattPath,A0
 	CMP.W	#4,D3
-	BEQ.B	lbC0022BE
+	BEQ.B	.L2
 	LEA	ModulesPath,A0
-lbC0022BE
-	MOVE.L	PathPtr,A1
-lbC0022C4
-	MOVE.B	(A0)+,(A1)+
-	BNE.B	lbC0022C4
-lbC0022C8
-	BSR.W	ShowDirPath
+.L2	MOVE.L	PathPtr,A1
+
+.loop2	MOVE.B	(A0)+,(A1)+
+	BNE.B	.loop2
+
+.L3	BSR.W	ShowDirPath
 	MOVE.W	#3,WaitTime
 	BRA.W	WaitALittle
 
-	CNOP 0,4
-dpnum	dc.l 0
-	dc.w 0
-DirPathNum
-	dc.w 5
-
-lbC0022E0	MOVE.L	A2,-(SP)
+.L4	MOVE.L	A2,-(SP)
 	MOVE.B	D0,D3
 	MOVE.L	DOSBase,A0
 	MOVE.L	34(A0),A0
@@ -3284,80 +3277,83 @@ lbC0022E0	MOVE.L	A2,-(SP)
 	MOVE.L	D1,A0
 	MOVEQ	#1,D0
 	MOVEQ	#0,D2
-lbC002302	CMP.L	#2,4(A0)
-	BEQ.B	lbC002322
-	;CMP.L	#0,4(A0)
+
+.L5	CMP.L	#2,4(A0)
+	BEQ.B	.L7
 	TST.L	4(A0)
-	BEQ.B	lbC002334
-lbC002316	MOVE.L	(A0),D1
-	BEQ.B	lbC002362
+	BEQ.B	.L8
+.L6	MOVE.L	(A0),D1
+	BEQ.B	.L9
 	LSL.L	#2,D1
 	MOVE.L	D1,A0
-	BRA.B	lbC002302
+	BRA.B	.L5
 
-lbC002322	ADDQ.W	#1,D0
+.L7	ADDQ.W	#1,D0
 	TST.L	D2
-	BNE.B	lbC002316
+	BNE.B	.L6
 	SUBQ.B	#1,D3
-	BNE.B	lbC002316
+	BNE.B	.L6
 	MOVE.L	40(A0),D2
 	LSL.L	#2,D2
-	BRA.B	lbC002316
+	BRA.B	.L6
 
-lbC002334	MOVE.L	40(A0),D1
-	BEQ.B	lbC002316
+.L8	MOVE.L	40(A0),D1
+	BEQ.B	.L6
 	LSL.L	#2,D1
 	MOVE.L	D1,A2
-	CMP.B	#3,(A2)+
-	BNE.B	lbC002316
+	CMP.B	#$03,(A2)+
+	BNE.B	.L6
 	CMP.B	#$44,(A2)+
-	BNE.B	lbC002316
+	BNE.B	.L6
 	CMP.B	#$46,(A2)
-	BNE.B	lbC002316
+	BNE.B	.L6
 	ADDQ.W	#1,D0
 	TST.L	D2
-	BNE.B	lbC002316
+	BNE.B	.L6
 	SUBQ.B	#1,D3
-	BNE.B	lbC002316
+	BNE.B	.L6
 	MOVE.L	40(A0),D2
 	LSL.L	#2,D2
-	BRA.B	lbC002316
+	BRA.B	.L6
 
-lbC002362	MOVE.L	PathPtr,A1
+.L9	MOVE.L	PathPtr,A1
 	MOVE.L	D2,A0
-	MOVE.B	D0,lbB002386
+	MOVE.B	D0,NumDrives
 	MOVE.B	(A0)+,D1
-	BEQ.B	lbC002382
-	AND.B	#$1F,D1
-lbC002378	MOVE.B	(A0)+,(A1)+
+	BEQ.B	.L10
+	AND.B	#31,D1
+.loop	MOVE.B	(A0)+,(A1)+
 	SUBQ.B	#1,D1
-	BNE.B	lbC002378
-	MOVE.B	#$3A,(A1)+
-lbC002382	MOVE.L	(SP)+,A2
+	BNE.B	.loop
+	MOVE.B	#':',(A1)+
+.L10	MOVE.L	(SP)+,A2
 	RTS
-
-ActionTemp	dc.w	0
-lbB002386	dc.b	2
-DiskOpWasJustOpened	dc.b	0
-SelectDiskText	dc.b	'Select disk',0
-OldDiskOpMode	dc.b	0
+	
+	CNOP 0,4
+dpnum	dc.l 0
+	dc.w 0
+DirPathNum
+	dc.w 5
+LastAction		dc.w 0
+DiskOpWasJustOpened	dc.b 0
+OldDiskOpMode		dc.b 0
 	EVEN
 
 ShowDiskDrives
 	BSR.W	WaitForButtonUp
 	BSR.W	ClearFileNames
-	MOVE.W	Action,ActionTemp
+	MOVE.W	Action,LastAction
 	CLR.W	Action
 	LEA	SelectDiskText(PC),A0
 	JSR	ShowStatusText
-	MOVE.W	#1,SelectDiskFlag
-	CLR.W	FileListBufferEntry
+	MOVE.W	#1,ShowDrivesFlag
+	CLR.W	DriveListPos
 	
 	MOVEQ	#' ',D0
-	LEA	FileListBuffer(PC),A0
+	LEA	DriveListBuffer(PC),A0
 	MOVE.L	#(36*16)-1,D1
-sdLoop1	MOVE.B	D0,(A0)+
-	DBRA	D1,sdLoop1
+.loop1	MOVE.B	D0,(A0)+
+	DBRA	D1,.loop1
 
 	MOVEQ	#0,D3
 	MOVE.W	DirPathNum(PC),D3
@@ -3367,36 +3363,37 @@ sdLoop1	MOVE.B	D0,(A0)+
 	BSR.W	DirBrowseGadg2
 	LEA	ModulesPath,A0
 	TST.W	D3
-	BEQ.B	sddSkp1
+	BEQ.B	.L0
 	LEA	SongsPath,A0
 	CMP.W	#1,D3
-	BEQ.B	sddSkp1
+	BEQ.B	.L0
 	LEA	SamplePath,A0
 	CMP.W	#2,D3
-	BEQ.B	sddSkp1
+	BEQ.B	.L0
 	LEA	TrackPath,A0
 	CMP.W	#3,D3
-	BEQ.B	sddSkp1
+	BEQ.B	.L0
 	LEA	PattPath,A0
 	CMP.W	#4,D3
-	BEQ.B	sddSkp1
+	BEQ.B	.L0
 	LEA	ModulesPath,A0
-sddSkp1
-	LEA	FileListBuffer(PC),A1
-sdLoop2	MOVE.B	(A0)+,(A1)+
-	BNE.B	sdLoop2
+.L0	LEA	DriveListBuffer(PC),A1
+
+.loop2	MOVE.B	(A0)+,(A1)+
+	BNE.B	.loop2
 	MOVE.B	#' ',-1(A1)
 
 	MOVEQ	#1,D0
-	LEA	FileListBuffer(PC),A1
+	LEA	DriveListBuffer(PC),A1
 	MOVE.L	A1,A3
 	MOVEQ	#0,D4
-	MOVE.B	lbB002386(PC),D4
+	MOVE.B	NumDrives(PC),D4
 	SUBQ.W	#1,D4
 	CMP.B	#15,D4
-	BLO.B	sddSkp2
-	MOVEQ	#15,D4
-sddSkp2	LEA	36(A3),A3
+	BLO.B	.loop3
+	
+	MOVEQ	#16-1,D4	
+.loop3	LEA	36(A3),A3
 	MOVE.L	A3,A1
 	MOVEM.L	D0/A2,-(SP)
 	MOVE.B	D0,D3
@@ -3410,87 +3407,82 @@ sddSkp2	LEA	36(A3),A3
 	MOVE.L	D1,A0
 	MOVEQ	#1,D0
 	MOVEQ	#0,D2
-lbC002496
-	CMP.L	#2,4(A0)
-	BEQ.B	lbC0024B6
+.L2	CMP.L	#2,4(A0)
+	BEQ.B	.L4
 	TST.L	4(A0)
-	BEQ.B	lbC0024C8
-lbC0024AA
-	MOVE.L	(A0),D1
-	BEQ.B	lbC0024F6
+	BEQ.B	.L5
+.L3	MOVE.L	(A0),D1
+	BEQ.B	.L6
 	LSL.L	#2,D1
 	MOVE.L	D1,A0
-	BRA.B	lbC002496
+	BRA.B	.L2
 
-lbC0024B6
-	ADDQ.W	#1,D0
+.L4	ADDQ.W	#1,D0
 	TST.L	D2
-	BNE.B	lbC0024AA
+	BNE.B	.L3
 	SUBQ.B	#1,D3
-	BNE.B	lbC0024AA
+	BNE.B	.L3
 	MOVE.L	40(A0),D2
 	LSL.L	#2,D2
-	BRA.B	lbC0024AA
+	BRA.B	.L3
 
-lbC0024C8
-	MOVE.L	40(A0),D1
-	BEQ.B	lbC0024AA
+.L5	MOVE.L	40(A0),D1
+	BEQ.B	.L3
 	LSL.L	#2,D1
 	MOVE.L	D1,A2
-	CMP.B	#3,(A2)+
-	BNE.B	lbC0024AA
+	CMP.B	#$03,(A2)+
+	BNE.B	.L3
 	CMP.B	#$44,(A2)+
-	BNE.B	lbC0024AA
+	BNE.B	.L3
 	CMP.B	#$46,(A2)
-	BNE.B	lbC0024AA
+	BNE.B	.L3
 	ADDQ.W	#1,D0
 	TST.L	D2
-	BNE.B	lbC0024AA
+	BNE.B	.L3
 	SUBQ.B	#1,D3
-	BNE.B	lbC0024AA
+	BNE.B	.L3
 	MOVE.L	40(A0),D2
 	LSL.L	#2,D2
-	BRA.B	lbC0024AA
+	BRA.B	.L3
 
-lbC0024F6
-	MOVE.L	D2,A0
+.L6	MOVE.L	D2,A0
 	MOVE.B	(A0)+,D1
-	BEQ.B	lbC00250A
-	AND.B	#$1F,D1
-lbC002500
-	MOVE.B	(A0)+,(A1)+
+	BEQ.B	.L8
+	AND.B	#31,D1
+.L7	MOVE.B	(A0)+,(A1)+
 	SUBQ.B	#1,D1
-	BNE.B	lbC002500
+	BNE.B	.L7
 	MOVE.B	#':',(A1)+
-lbC00250A
-	MOVEM.L	(SP)+,D0/A2
+.L8	MOVEM.L	(SP)+,D0/A2
 	ADDQ.B	#1,D0
-	DBRA	D4,sddSkp2
-lbC002516
-	LEA	FileListBuffer(PC),A0
-	MOVE.W	FileListBufferEntry(PC),D0
+	DBRA	D4,.loop3
+	
+DrawDriveList
+	LEA	DriveListBuffer(PC),A0
+	MOVE.W	DriveListPos(PC),D0
 	MULU.W	#36,D0
 	ADD.L	D0,A0
 	MOVEQ	#36,D0
-	MOVE.W	#1881,D1
+	MOVE.W	#1881,D1	; text position
 	MOVEQ	#0,D4
-	MOVE.B	lbB002386(PC),D4
+	MOVE.B	NumDrives(PC),D4
 	CMP.B	#8,D4
-	BLE.B	lbC002542
+	BLE.B	.L0
 	MOVEQ	#8,D4
-lbC002542	SUBQ.W	#1,D4
-lbC002544
-	MOVEM.L	D0-D7/A0-A6,-(SP)
+.L0	SUBQ.W	#1,D4
+.L1	MOVEM.L	D0-D7/A0-A6,-(SP)
 	JSR	ShowText3
 	MOVEM.L	(SP)+,D0-D7/A0-A6
 	LEA	36(A0),A0
-	ADD.L	#240,D1
-	DBRA	D4,lbC002544
+	ADD.W	#240,D1
+	DBRA	D4,.L1
 	RTS
 
-SelectDiskFlag		dc.w	0
-FileListBufferEntry	dc.w	0
-FileListBuffer		dcb.b	36*16,0
+ShowDrivesFlag	dc.w	0
+DriveListPos	dc.w	0
+DriveListBuffer	dcb.b	36*16,0
+NumDrives	dc.b	2
+SelectDiskText	dc.b	'Select disk',0
 	EVEN
 
 SelectModules
@@ -4535,7 +4527,7 @@ ShowDirPath
 
 FilenameOneUp
 	ST	SetSignalFlag
-	TST.W	SelectDiskFlag
+	TST.W	ShowDrivesFlag
 	BNE.B	fnouskip
 	TST.W	Action
 	BEQ.W	Return1
@@ -4552,32 +4544,30 @@ fnouskip2
 	MOVEQ	#0,D0
 	BRA.W	RedrawFileNames
 fnouskip
-	MOVE.W	FileListBufferEntry(PC),D0
+	MOVE.W	DriveListPos(PC),D0
 	BEQ.W	Return1
 	SUBQ.W	#1,D0
-	MOVE.W	D0,FileListBufferEntry
-	BRA.W	lbC002516
+	MOVE.W	D0,DriveListPos
+	BRA.W	DrawDriveList
 
 FilenameToTop
-	TST.W	SelectDiskFlag
-	BNE.B	lbC003826
+	TST.W	ShowDrivesFlag
+	BNE.B	.L1
 	TST.W	Action
 	BEQ.W	Return1
 	BTST	#2,$DFF016	; right mouse button
-	BEQ.B	lbC003832
+	BEQ.B	.L2
 	LEA	FileNamesPtr(PC),A5
 	MOVE.W	FileNameScrollPos(PC),D0
 	BEQ.W	Return1
-DoSetListToTop
-	CLR.W	D0
+
+.L0	CLR.W	D0
 	BRA.W	RedrawFileNames
 
-lbC003826
-	CLR.W	FileListBufferEntry
-	BRA.W	lbC002516
+.L1	CLR.W	DriveListPos
+	BRA.W	DrawDriveList
 
-lbC003832
-	TST.W	SelectDiskFlag
+.L2	TST.W	ShowDrivesFlag
 	BNE.W	Return1
 	LEA	FileNamesPtr(PC),A5
 	MOVE.W	FileNameScrollPos(PC),D0
@@ -4585,39 +4575,35 @@ lbC003832
 	MOVE.L	(A5),A1
 	MOVE.B	(A1,D0.L),D1
 	CMP.L	#'mod.',(A1,D0.L)
-	BNE.B	lbC00385C
+	BNE.B	.L3
 	MOVE.B	4(A1,D0.L),D1
-lbC00385C
-	BSR.W	lbC0039E8
-	SUB.L	#$24,D0
-	BMI.B	DoSetListToTop
+.L3	BSR.W	D1ToLowercase
+	SUB.L	#36,D0
+	BMI.B	.L0
 	MOVE.B	(A1,D0.L),D2
 	CMP.L	#'mod.',(A1,D0.L)
-	BNE.B	lbC00387A
+	BNE.B	.L4
 	MOVE.B	4(A1,D0.L),D2
-lbC00387A
-	BSR.W	lbC0039F0
+.L4	BSR.W	D2ToLowercase
 	CMP.B	D1,D2
-	BEQ.B	lbC00385C
+	BEQ.B	.L3
 	MOVE.B	D2,D1
-lbC003884
-	SUBI.L	#$24,D0
-	BMI.B	DoSetListToTop
+.L5	SUB.L	#36,D0
+	BMI.B	.L0
 	MOVE.B	(A1,D0.L),D2
 	CMP.L	#'mod.',(A1,D0.L)
-	BNE.B	lbC00389E
+	BNE.B	.L6
 	MOVE.B	4(A1,D0.L),D2
-lbC00389E
-	BSR.W	lbC0039F0
+.L6	BSR.W	D2ToLowercase
 	CMP.B	D1,D2
-	BEQ.B	lbC003884
-	DIVU.W	#$24,D0
+	BEQ.B	.L5
+	DIVU.W	#36,D0
 	ADDQ.W	#1,D0
 	BRA.W	RedrawFileNames
 
 FilenameOneDown
 	ST	SetSignalFlag
-	TST.W	SelectDiskFlag
+	TST.W	ShowDrivesFlag
 	BNE.B	fnodskip
 	TST.W	Action
 	BEQ.W	Return1
@@ -4638,24 +4624,24 @@ fnod2	MOVE.W	16(A5),D1
 	BRA.W	RedrawFileNames
 fnodskip
 	MOVEQ	#0,D0
-	MOVE.B	lbB002386(PC),D0
+	MOVE.B	NumDrives(PC),D0
 	CMP.W	#8,D0
 	BLE.W	Return1
 	SUBQ.W	#8,D0
-	MOVE.W	FileListBufferEntry(PC),D1
+	MOVE.W	DriveListPos(PC),D1
 	CMP.W	D0,D1
 	BGE.W	Return1
 	ADDQ.W	#1,D1
-	MOVE.W	D1,FileListBufferEntry
-	BRA.W	lbC002516
+	MOVE.W	D1,DriveListPos
+	BRA.W	DrawDriveList
 
-lbC003926
-	TST.W	SelectDiskFlag
-	BNE.B	lbC00395A
+FileNameToBottom
+	TST.W	ShowDrivesFlag
+	BNE.B	.L0
 	TST.W	Action
 	BEQ.W	Return1
 	BTST	#2,$DFF016	; right mouse button
-	BEQ.B	lbC00397A
+	BEQ.B	.L1
 	LEA	FileNamesPtr(PC),A5
 	MOVE.W	FileNameScrollPos(PC),D0
 	MOVE.W	16(A5),D1
@@ -4664,17 +4650,15 @@ lbC003926
 	MOVE.W	D1,D0
 	BRA.W	RedrawFileNames
 
-lbC00395A
-	MOVEQ	#0,D0
-	MOVE.B	lbB002386(PC),D0
+.L0	MOVEQ	#0,D0
+	MOVE.B	NumDrives(PC),D0
 	CMP.W	#8,D0
 	BLE.W	Return1
 	SUBQ.W	#8,D0
-	MOVE.W	D0,FileListBufferEntry
-	BRA.W	lbC002516
+	MOVE.W	D0,DriveListPos
+	BRA.W	DrawDriveList
 
-lbC00397A
-	TST.W	SelectDiskFlag
+.L1	TST.W	ShowDrivesFlag
 	BNE.W	Return1
 	LEA	FileNamesPtr(PC),A5
 	MOVE.W	FileNameScrollPos(PC),D0
@@ -4682,53 +4666,49 @@ lbC00397A
 	MOVE.L	(A5),A1
 	MOVE.B	(A1,D0.L),D1
 	CMP.L	#'mod.',(A1,D0.L)
-	BNE.B	lbC0039A4
+	BNE.B	.L2
 	MOVE.B	4(A1,D0.L),D1
-lbC0039A4
-	BSR.B	lbC0039E8
-	ADD.L	#$24,D0
+.L2	BSR.B	D1ToLowercase
+	ADD.L	#36,D0
 	MOVE.W	16(A5),D2
 	SUBQ.W	#8,D2
 	BMI.W	Return1
 	MULU.W	#36,D2
 	CMP.L	D2,D0
-	BLS.B	lbC0039C8
+	BLS.B	.L3
 	MOVE.L	D2,D0
 	DIVU.W	#36,D0
 	BRA.W	RedrawFileNames
 
-lbC0039C8
-	MOVE.B	(A1,D0.L),D2
+.L3	MOVE.B	(A1,D0.L),D2
 	CMP.L	#'mod.',(A1,D0.L)
-	BNE.B	lbC0039DA
+	BNE.B	.L4
 	MOVE.B	4(A1,D0.L),D2
-lbC0039DA
-	BSR.B	lbC0039F0
+.L4	BSR.B	D2ToLowercase
 	CMP.B	D1,D2
-	BEQ.B	lbC0039A4
-	DIVU.W	#$24,D0
+	BEQ.B	.L2
+	DIVU.W	#36,D0
 	BRA.W	RedrawFileNames
 
-lbC0039E8
+D1ToLowercase
 	MOVE.B	D1,D3
-	BSR.B	lbC0039F8
+	BSR.B	ToLowercase
 	MOVE.B	D3,D1
 	RTS
 
-lbC0039F0
+D2ToLowercase
 	MOVE.B	D2,D3
-	BSR.B	lbC0039F8
+	BSR.B	ToLowercase
 	MOVE.B	D3,D2
 	RTS
 
-lbC0039F8
-	CMP.B	#65,D3
-	BLO.B	lbC003A08
-	CMP.B	#90,D3
-	BHI.B	lbC003A08
+ToLowercase
+	CMP.B	#'A',D3
+	BLO.B	.L0
+	CMP.B	#'Z',D3
+	BHI.B	.L0
 	ADD.B	#32,D3
-lbC003A08
-	RTS
+.L0	RTS
 
 ;---- Clicked on a filename ----
 
@@ -4742,8 +4722,8 @@ FileNamePressed
 	SUBQ.W	#3,D1
 	AND.L	#$FFFF,D1
 	DIVU.W	#6,D1
-	TST.W	SelectDiskFlag
-	BNE.W	lbC003ADC
+	TST.W	ShowDrivesFlag
+	BNE.W	SetDriveFromList
 	TST.W	Action
 	BEQ.W	Return1
 	MOVE.W	D1,FileNameScrollPos+2
@@ -4757,10 +4737,12 @@ FileNamePressed
 	MOVE.L	D0,A0
 	TST.L	32(A0)
 	BMI.W	AddDirectory
+	
 	MOVEQ	#DirNameLength-1,D0
 	LEA	DirInputName,A1
-fnploop	MOVE.B	(A0)+,(A1)+
-	DBRA	D0,fnploop
+.loop	MOVE.B	(A0)+,(A1)+
+	DBRA	D0,.loop
+
 	MOVE.W	Action,D6
 	CMP.W	#1,D6
 	BEQ.W	LoadSong
@@ -4786,27 +4768,25 @@ fnploop	MOVE.B	(A0)+,(A1)+
 	BEQ.W	DeletePattern
 	RTS
 
-lbC003ADC
-	ADD.W	FileListBufferEntry(PC),D1
+SetDriveFromList
+	ADD.W	DriveListPos(PC),D1
 	MOVEQ	#0,D3
 	MOVE.W	DirPathNum(PC),D3
 	LEA	dpnum(PC),A0
 	ADD.L	D3,A0
 	MOVEQ	#0,D0
-	MOVE.B	lbB002386(PC),D0
+	MOVE.B	NumDrives(PC),D0
 	CMP.B	D0,D1
-	BLO.B	lbC003AFE
+	BLO.B	.L0
 	RTS
-
-lbC003AFE
-	SUBQ.B	#1,D1
+.L0	SUBQ.B	#1,D1
 	MOVE.B	D1,(A0)
 	BSR.W	DirBrowseGadg2
-	CLR.W	SelectDiskFlag
-	MOVE.W	ActionTemp(PC),Action
+	CLR.W	ShowDrivesFlag
+	MOVE.W	LastAction(PC),Action
 	BRA.W	DoAutoDir
 
-xLoadModule	JMP	LoadModule
+xLoadModule	JMP LoadModule
 
 AddDirectory
 	MOVE.L	A0,-(SP)
@@ -4901,7 +4881,6 @@ FileNamesPtr
 	dc.l	0  ;   +12
 	dc.w	0  ;   +16
 	dc.w	24 ;   +18
-	
 FileNameScrollPos
 	dc.w	0
 	dc.w	0
@@ -4950,7 +4929,7 @@ ExamineError
 	RTS
 
 ShowFreeDiskGadg
-	CLR.W	SelectDiskFlag
+	CLR.W	ShowDrivesFlag
 	BSR.W	WaitForButtonUp
 	MOVE.L	PathPtr,A4
 	BSR.B	LockAndGetInfo
@@ -6165,12 +6144,12 @@ CheckAltKeys
 	BEQ.W	ToggleRecMode	
 	RTS
 
-xFilter		JMP	Filter
-xBoost		JMP	Boost
-xTuningTone	JMP	TuningTone
-xSamplerScreen	JMP	SamplerScreen
-xResample	JMP	Resample
-xSampler	JMP	Sampler
+xFilter		JMP Filter
+xBoost		JMP Boost
+xTuningTone	JMP TuningTone
+xSamplerScreen	JMP SamplerScreen
+xResample	JMP Resample
+xSampler	JMP Sampler
 
 ;---- List Quick Jump Routines (SHIFT+alphanumeric) ----
 
@@ -6213,31 +6192,28 @@ DiskOpQuickJump
 	BMI.W	Return1
 	LEA	FileNamesPtr(PC),A5
 	MOVE.L	(A5),A1
+	BSR.W	D1ToLowercase	
 	MOVEQ	#-36,D0
-	BSR.W	lbC0039E8
-doqjloop
-	ADD.L	#36,D0
+.loop	ADD.L	#36,D0
 	MOVE.W	16(A5),D2
 	SUBQ.W	#8,D2
 	BMI.W	Return1
 	MULU.W	#36,D2
 	CMP.L	D2,D0
-	BLS.B	doqjskip
+	BLS.B	.L0
 	MOVE.L	D2,D0
 	DIVU.W	#36,D0
 	BSR.W	RedrawFileNames
-	BRA.W	ErrorRestoreCol
-doqjskip
-	MOVE.B	(A1,D0.L),D2
+	BRA.W	ErrorRestoreCol	
+.L0	MOVE.B	(A1,D0.L),D2
 	TST.W	DirPathNum
-	BNE.B	doqjskip2
+	BNE.B	.L1
 	CMP.L	#'mod.',(A1,D0.L)
-	BNE.B	doqjloop
+	BNE.B	.loop
 	MOVE.B	4(A1,D0.L),D2
-doqjskip2
-	BSR.W	lbC0039F0
+.L1	BSR.W	D2ToLowercase
 	CMP.B	D1,D2
-	BNE.B	doqjloop
+	BNE.B	.loop
 	DIVU.W	#36,D0
 	BRA.W	RedrawFileNames
 
@@ -6246,51 +6222,48 @@ PLSTQuickJump
 	BMI.W	Return1
 	TST.W	plstDiskSet
 	BNE.W	Return1
-	MOVE.L	PLSTmem,A1
+	MOVE.L	PLSTmem,A1	
+	BSR.W	D1ToLowercase	
 	MOVEQ	#-30,D0
-	BSR.W	lbC0039E8
-plstqjloop
-	ADD.L	#30,D0
+.loop	ADD.L	#30,D0
 	MOVE.W	PresetMarkTotal,D2
 	SUB.W	#12,D2
 	BMI.W	Return1
 	MULU.W	#30,D2
 	CMP.L	D2,D0
-	BLS.B	plstqjskip
+	BLS.B	.L0
 	MOVE.L	D2,D0
 	DIVU.W	#30,D0
-	JSR	lbC010F82
-	BRA.W	ErrorRestoreCol
-plstqjskip
-	MOVE.B	6(A1,D0.L),D2
-	BSR.W	lbC0039F0
+	JSR	UpdatePLST
+	BRA.W	ErrorRestoreCol	
+.L0	MOVE.B	6(A1,D0.L),D2
+	BSR.W	D2ToLowercase
 	CMP.B	D1,D2
-	BNE.B	plstqjloop
+	BNE.B	.loop
 	DIVU.W	#30,D0
-	JMP	lbC010F82
+	JMP	UpdatePLST
 
 PEDQuickJump
 	BSR.W	GetASCIIKey
 	BMI.W	Return1
 	MOVE.L	PLSTmem,A1
+
 	MOVEQ	#-30,D0
-pedqjloop
-	ADD.L	#30,D0
+.loop	ADD.L	#30,D0
 	MOVEQ	#0,D2
 	MOVE.W	PresetTotal,D2
 	SUB.W	#10,D2
 	BMI.W	Return1
 	MULU.W	#30,D2
 	CMP.L	D2,D0
-	BLS.B	pedqjskip
+	BLS.B	.L0
 	MOVE.L	D2,D0
 	DIVU.W	#30,D0
 	JSR	pdodsx
 	BRA.W	ErrorRestoreCol
-pedqjskip
-	MOVE.B	6(A1,D0.L),D2
+.L0	MOVE.B	6(A1,D0.L),D2
 	CMP.B	D1,D2
-	BNE.B	pedqjloop
+	BNE.B	.loop
 	DIVU.W	#30,D0
 	MOVE.W	D0,PEDpos
 	JMP	ShowPresetNames
@@ -20098,7 +20071,7 @@ lbC010E02
 	BEQ.B	lbC010E1C
 lbC010E16
 	MOVEQ	#0,D0
-	BRA.W	lbC010F82
+	BRA.W	UpdatePLST
 
 lbC010E1C
 	TST.W	plstDiskSet
@@ -20108,11 +20081,11 @@ lbC010E1C
 	MULU.W	#30,D0
 	MOVE.B	6(A1,D0.L),D1
 lbC010E38
-	JSR	lbC0039E8
+	JSR	D1ToLowercase
 	SUB.L	#$1E,D0
 	BMI.B	lbC010E16
 	MOVE.B	6(A1,D0.L),D2
-	JSR	lbC0039F0
+	JSR	D2ToLowercase
 	CMP.B	D1,D2
 	BEQ.B	lbC010E38
 	MOVE.B	D2,D1
@@ -20120,12 +20093,12 @@ lbC010E56
 	SUB.L	#$1E,D0
 	BMI.B	lbC010E16
 	MOVE.B	6(A1,D0.L),D2
-	JSR	lbC0039F0
+	JSR	D2ToLowercase
 	CMP.B	D1,D2
 	BEQ.B	lbC010E56
 	DIVU.W	#$1E,D0
 	ADDQ.W	#1,D0
-	BRA.W	lbC010F82
+	BRA.W	UpdatePLST
 
 lbC010E78
 	TST.W	PresetMarkTotal
@@ -20135,7 +20108,7 @@ lbC010E78
 lbC010E8C
 	MOVE.W	PresetMarkTotal(PC),D0
 	SUB.W	#12,D0
-	BRA.W	lbC010F82
+	BRA.W	UpdatePLST
 
 lbC010E98
 	TST.W	plstDiskSet
@@ -20145,7 +20118,7 @@ lbC010E98
 	MULU.W	#30,D0
 	MOVE.B	6(A1,D0.L),D1
 lbC010EB4
-	JSR	lbC0039E8
+	JSR	D1ToLowercase
 	ADD.L	#$1E,D0
 	MOVE.W	PresetMarkTotal(PC),D2
 	SUB.W	#12,D2
@@ -20155,15 +20128,15 @@ lbC010EB4
 	BLS.B	lbC010EE0
 	MOVE.L	D2,D0
 	DIVU.W	#$1E,D0
-	BRA.W	lbC010F82
+	BRA.W	UpdatePLST
 
 lbC010EE0
 	MOVE.B	6(A1,D0.L),D2
-	JSR	lbC0039F0
+	JSR	D2ToLowercase
 	CMP.B	D1,D2
 	BEQ.B	lbC010EB4
 	DIVU.W	#$1E,D0
-	BRA.W	lbC010F82
+	BRA.W	UpdatePLST
 
 PLSTOneUp
 	ST	SetSignalFlag
@@ -20183,9 +20156,9 @@ lbC010F2E
 	SUB.W	#9,D0
 lbC010F32
 	TST.W	D0
-	BPL.B	lbC010F82
+	BPL.B	UpdatePLST
 	CLR.W	D0
-	BRA.B	lbC010F82
+	BRA.B	UpdatePLST
 
 PLSTOneDown
 	ST	SetSignalFlag
@@ -20207,9 +20180,9 @@ lbC010F74
 	MOVE.W	PresetMarkTotal(PC),D1
 	SUB.W	#12,D1
 	CMP.W	D0,D1
-	BHS.B	lbC010F82
+	BHS.B	UpdatePLST
 	MOVE.W	D1,D0
-lbC010F82
+UpdatePLST
 	BSR.B	lbC010F88
 	BRA.W	RedrawPLST
 
