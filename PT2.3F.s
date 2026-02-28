@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;     9th of January, 2026
+;    28th of February, 2026
 ;
 ;    (tab width = 8+ spaces)
 ;
@@ -189,6 +189,7 @@ KeyBufSize		EQU 20
 ThisTask		EQU $114
 pr_CLI			EQU $AC
 pr_MsgPort		EQU $5C
+pr_WindowPtr		EQU $B8
 sm_ArgList		EQU $24
 cli_CommandName		EQU $10
 SHARED_LOCK		EQU -2
@@ -289,10 +290,10 @@ PTStart
 	JSR	_LVOFindTask(A6)
 	MOVE.L	D0,PTProcess
 	MOVE.L	D0,A0
-	MOVE.L	$B8(A0),PTProcessTmp
+	MOVE.L	pr_WindowPtr(A0),oldWindowPtr
 	BSR.W	Main
 	MOVE.L	PTProcess(PC),A0
-	MOVE.L	PTProcessTmp(PC),$B8(A0)
+	MOVE.L	oldWindowPtr(PC),pr_WindowPtr(A0)
 	MOVE.L	4.W,A6
 	JSR	_LVOForbid(A6)
 	MOVE.L	DOSBase,A6
@@ -648,7 +649,7 @@ UpdateNewMark
 	
 	CNOP 0,4
 PTProcess	dc.l	0
-PTProcessTmp	dc.l	0
+oldWindowPtr	dc.l	0
 rb_CurrentDir	dc.l	0
 rb_PtDir	dc.l	0
 rb_Progname	dc.b	'PT2.3F',0
@@ -2847,21 +2848,21 @@ VUMeters
 	MOVEQ	#-23,D0		; lowest possible sprite value (-23 = 233)
 	LEA	VUSpriteData1,A0
 	CMP.B	(A0),D0		; VU #1 == 233?
-	BEQ.B	svum2		; yes, don't sink
+	BEQ.B	.L0		; yes, don't sink
 	ADDQ.B	#1,(A0)		; sink
-svum2	LEA	200(A0),A0	; A0 = VU #2 sprite
+.L0	LEA	200(A0),A0	; A0 = VU #2 sprite
 	CMP.B	(A0),D0		; VU #2 == 233?
-	BEQ.B	svum3		; yes, don't sink
+	BEQ.B	.L1		; yes, don't sink
 	ADDQ.B	#1,(A0)		; sink
-svum3	LEA	200(A0),A0	; A0 = VU #3 sprite
+.L1	LEA	200(A0),A0	; A0 = VU #3 sprite
 	CMP.B	(A0),D0		; VU #3 == 233?
-	BEQ.B	svum4		; yes, don't sink
+	BEQ.B	.L2		; yes, don't sink
 	ADDQ.B	#1,(A0)		; sink
-svum4	LEA	200(A0),A0	; A0 = VU #4 sprite
+.L2	LEA	200(A0),A0	; A0 = VU #4 sprite
 	CMP.B	(A0),D0		; VU #4 == 233?
-	BEQ.B	svumend		; yes, don't sink
+	BEQ.B	.L3		; yes, don't sink
 	ADDQ.B	#1,(A0)		; sink
-svumend	RTS
+.L3	RTS
 	
 RealVUMeters
 	LEA	VUSpriteData1,A0
@@ -2902,7 +2903,7 @@ ShowDirScreen
 	BSR.W	ClearAnalyzerColors
 	BSR.W	Clear100Lines
 	BSR.W	SaveMainPic
-lbC001DF6
+UpdateDiskOpScreen
 	BSR.B	SwapDirScreen
 	BEQ.W	DisplayMainAll
 	BSR.W	ShowDiskSpace
@@ -2911,7 +2912,7 @@ lbC001DF6
 	BSR.W	ShowSaveModePattBuff
 DoAutoDir
 	TST.B	AutoDirFlag
-	BEQ.B	lbC001E42
+	BEQ.B	SelectPath
 	MOVE.W	DirPathNum(PC),D0
 	BEQ.W	LoadModuleGadg
 	CMP.W	#1,D0
@@ -2924,7 +2925,7 @@ DoAutoDir
 	BEQ.W	SavePatternGadg
 	BRA.W	SelectModules
 
-lbC001E42
+SelectPath
 	MOVE.W	DirPathNum(PC),D0
 	BEQ.W	SelectModules
 	CMP.W	#1,D0
@@ -3058,29 +3059,25 @@ ChangeDiskOpMode
 	CLR.W	SelectDiskFlag
 	NOT.W	DiskOpScreen2	
 	CMP.W	#1,DirPathNum
-	BNE.B	lbC002022
+	BNE.B	.L0
 	MOVE.W	#3,DirPathNum
-lbC002022
-	CMP.W	#2,DirPathNum
-	BNE.B	lbC002034
+.L0	CMP.W	#2,DirPathNum
+	BNE.B	.L1
 	MOVE.W	#4,DirPathNum
-lbC002034
-	CMP.W	#3,DirPathNum
-	BNE.B	lbC002046
+.L1	CMP.W	#3,DirPathNum
+	BNE.B	.L2
 	MOVE.W	#1,DirPathNum
-lbC002046
-	CMP.W	#4,DirPathNum
-	BNE.B	lbC002058
+.L2	CMP.W	#4,DirPathNum
+	BNE.B	.L3
 	MOVE.W	#2,DirPathNum
-lbC002058
-	BRA.W	lbC001DF6
+.L3	BRA.W	UpdateDiskOpScreen
 
 ShowNotImpl
 	LEA	NotImplText(PC),A0
 	JSR	ShowStatusText
 	BRA.W	SetErrorPtrCol
 
-NotImplText	dc.b	'Not implemented',0
+NotImplText	dc.b 'Not implemented',0
 	EVEN
 
 TogglePackModeBuff
@@ -3190,7 +3187,7 @@ CheckDirGadgets2
 	CMP.W	#308,D0
 	BLO.W	FileNamePressed
 	CMP.W	#42,D1
-	BLS.W	lbC0037F8
+	BLS.W	FilenameToTop
 	CMP.W	#51,D1
 	BLS.W	FilenameOneUp
 	CMP.W	#82,D1
@@ -3498,23 +3495,23 @@ FileListBuffer		dcb.b	36*16,0
 
 SelectModules
 	MOVEQ	#0,D0
-	BRA.B	lbC0027CA
+	BRA.B	DoChangeDiskOpMode
 SelectSongs
 	TST.W	DiskOpScreen2
 	BNE.B	SelectTracks
 	MOVEQ	#1,D0
-	BRA.B	lbC0027CA
+	BRA.B	DoChangeDiskOpMode
 SelectSamples
 	TST.W	DiskOpScreen2
 	BNE.B	SelectPatterns
 	MOVEQ	#2,D0
-	BRA.B	lbC0027CA
+	BRA.B	DoChangeDiskOpMode
 SelectTracks
 	MOVEQ	#3,D0
-	BRA.B	lbC0027CA
+	BRA.B	DoChangeDiskOpMode
 SelectPatterns
 	MOVEQ	#4,D0
-lbC0027CA
+DoChangeDiskOpMode
 	TST.B	DiskOpWasJustOpened
 	BNE.B	ChangePath
 	TST.B	ModOnlyFlag
@@ -3568,7 +3565,7 @@ chpaski	LEA	TextBitplane,A0
 ;---- Song Gadgets ----
 
 LoadTrackGadg
-	BSR.W	lbC002E76
+	BSR.W	ResetDiskOpMousePointer
 	BSR.W	StorePtrCol
 	BSR.W	WaitForButtonUp
 	BSR.W	ClearFileNames
@@ -3599,7 +3596,7 @@ SaveTrack
 	BSR.W	WaitForButtonUp
 	LEA	EnterFilenameText,A0
 	JSR	ShowStatusText
-	BSR.W	lbC002E64
+	BSR.W	ClearInputFileName
 	BSR.W	StorePtrCol
 	BSR.W	SetWaitPtrCol
 	LEA	InputFileName,A6
@@ -3624,7 +3621,7 @@ stloop
 	MOVE.B	(A0)+,(A1)+
 	DBRA	D0,stloop
 	JSR	StopIt
-	BSR.W	lbC002AD4
+	BSR.W	DoSaveTrack
 	MOVE.W	#11,Action
 	JMP	ShowAllRight
 
@@ -3634,13 +3631,13 @@ DeleteTrackGadg
 	BSR.W	SelectTracks
 	LEA	FileNamesPtr(PC),A5
 	BSR.W	HasDiskChanged
-	BEQ.B	lbC0029D8
+	BEQ.B	EnterTrackDeleteMode
 	BSR.W	ClearDirTotal
 	BSR.W	DirDisk
-	BEQ.B	lbC0029D8
+	BEQ.B	EnterTrackDeleteMode
 	BRA.W	RestorePtrCol
 
-lbC0029D8
+EnterTrackDeleteMode
 	MOVE.W	FileNameScrollPos(PC),D0
 	BSR.W	RedrawFileNames
 	MOVE.W	#12,Action
@@ -3705,11 +3702,11 @@ lotrdone
 	JSR	RedrawPattern
 	RTS
 
-lbC002AD4
+DoSaveTrack
 	MOVE.L	#FileName,FileNamePtr
 	MOVE.L	#TrackBuffer,DiskDataPtr
 	TST.B	LoadTrackToBufferFlag
-	BNE.B	lbC002B38
+	BNE.B	.L0
 	MOVE.L	#TrackReadBuffer,DiskDataPtr
 	MOVE.L	SongDataPtr,A0
 	LEA	sd_patterndata(A0),A0
@@ -3725,12 +3722,10 @@ lbC002AD4
 	ADD.L	D0,A0
 	LEA	TrackReadBuffer,A1
 	MOVEQ	#64-1,D0
-lbC002B2E
-	MOVE.L	(A0),(A1)+
+.loop	MOVE.L	(A0),(A1)+
 	LEA	16(A0),A0
-	DBRA	D0,lbC002B2E
-lbC002B38
-	MOVE.L	#$100,DiskDataLength
+	DBRA	D0,.loop
+.L0	MOVE.L	#64*4,DiskDataLength
 	JSR	DoSaveData
 	JSR	ShowAllRight
 	BSR.W	SetNormalPtrCol
@@ -3752,7 +3747,7 @@ dtrloop	MOVE.B	(A0)+,(A1)+
 	JMP	Delete3
 
 SavePatternGadg
-	BSR.W	lbC002E76
+	BSR.W	ResetDiskOpMousePointer
 	BSR.W	StorePtrCol
 	BSR.W	WaitForButtonUp
 	BSR.W	ClearFileNames
@@ -3783,7 +3778,7 @@ SavePattern
 	BSR.W	WaitForButtonUp
 	LEA	EnterFilenameText,A0
 	JSR	ShowStatusText
-	BSR.W	lbC002E64
+	BSR.W	ClearInputFileName
 	BSR.W	StorePtrCol
 	BSR.W	SetWaitPtrCol
 	LEA	InputFileName,A6
@@ -3817,13 +3812,13 @@ DeletePattGadg
 	BSR.W	SelectPatterns
 	LEA	FileNamesPtr(PC),A5
 	BSR.W	HasDiskChanged
-	BEQ.B	lbC002CD0
+	BEQ.B	EnterPattDeleteMode
 	BSR.W	ClearDirTotal
 	BSR.W	DirDisk
-	BEQ.B	lbC002CD0
+	BEQ.B	EnterPattDeleteMode
 	BRA.W	RestorePtrCol
 
-lbC002CD0
+EnterPattDeleteMode
 	MOVE.W	FileNameScrollPos(PC),D0
 	BSR.W	RedrawFileNames
 	MOVE.W	#14,Action
@@ -3920,37 +3915,33 @@ dpaloop	MOVE.B	(A0)+,(A1)+
 	MOVE.W	#13,Action
 	JMP	Delete3
 
-lbC002E64
+ClearInputFileName
 	LEA	InputFileName,A0
 	MOVEQ	#20-1,D0
-lbC002E6C
-	MOVE.B	#0,(A0)+
-	DBRA	D0,lbC002E6C
+.loop	MOVE.B	#0,(A0)+
+	DBRA	D0,.loop
 	RTS
 
-lbC002E76
+ResetDiskOpMousePointer
 	CMP.W	#2,Action
-	BEQ.B	lbC002EAC
+	BEQ.B	.L0
 	CMP.W	#4,Action
-	BEQ.B	lbC002EAC
+	BEQ.B	.L0
 	CMP.W	#6,Action
-	BEQ.B	lbC002EAC
+	BEQ.B	.L0
 	CMP.W	#12,Action
-	BEQ.B	lbC002EAC
+	BEQ.B	.L0
 	CMP.W	#14,Action
-	BEQ.B	lbC002EAC
-	BRA.W	Return1
-
-lbC002EAC
+	BNE.B	.L0
 	BSR.W	SetNormalPtrCol
-	RTS
+.L0	RTS
 	
 ;---- Song Gadgets ----
 
 LoadSongGadg
 	TST.W	DiskOpScreen2
 	BNE.W	LoadTrackGadg
-	BSR.B	lbC002E76
+	BSR.B	ResetDiskOpMousePointer
 	BSR.W	StorePtrCol
 	BSR.W	WaitForButtonUp
 	BSR.W	ClearFileNames
@@ -4008,7 +3999,7 @@ DeleteSongDirOk
 ;---- Module Gadgets ----
 
 LoadModuleGadg
-	BSR.W	lbC002E76
+	BSR.W	ResetDiskOpMousePointer
 	BSR.W	StorePtrCol
 	BSR.W	WaitForButtonUp
 	BSR.W	ClearFileNames
@@ -4030,10 +4021,10 @@ LoadModDirOk
 	BRA.W	RestorePtrCol
 
 SaveModuleGadg
-	CLR.W	lbW015B92
+	CLR.W	makeModIconFlag
 	TST.B	SaveIconsFlag
 	BEQ.B	smogskip
-	MOVE.W	#1,lbW015B92
+	MOVE.W	#1,makeModIconFlag
 smogskip
 	CLR.W	makeExeModFlag
 	BTST	#2,$DFF016	; right mouse button
@@ -4077,7 +4068,7 @@ DeleteModDirOk
 LoadSampleGadg
 	TST.W	DiskOpScreen2
 	BNE.W	SavePatternGadg
-	BSR.W	lbC002E76
+	BSR.W	ResetDiskOpMousePointer
 	BSR.W	StorePtrCol
 	BSR.W	WaitForButtonUp
 	BSR.W	ClearFileNames
@@ -4567,7 +4558,7 @@ fnouskip
 	MOVE.W	D0,FileListBufferEntry
 	BRA.W	lbC002516
 
-lbC0037F8
+FilenameToTop
 	TST.W	SelectDiskFlag
 	BNE.B	lbC003826
 	TST.W	Action
@@ -4577,7 +4568,7 @@ lbC0037F8
 	LEA	FileNamesPtr(PC),A5
 	MOVE.W	FileNameScrollPos(PC),D0
 	BEQ.W	Return1
-lbC003820
+DoSetListToTop
 	CLR.W	D0
 	BRA.W	RedrawFileNames
 
@@ -4599,7 +4590,7 @@ lbC003832
 lbC00385C
 	BSR.W	lbC0039E8
 	SUB.L	#$24,D0
-	BMI.B	lbC003820
+	BMI.B	DoSetListToTop
 	MOVE.B	(A1,D0.L),D2
 	CMP.L	#'mod.',(A1,D0.L)
 	BNE.B	lbC00387A
@@ -4611,7 +4602,7 @@ lbC00387A
 	MOVE.B	D2,D1
 lbC003884
 	SUBI.L	#$24,D0
-	BMI.B	lbC003820
+	BMI.B	DoSetListToTop
 	MOVE.B	(A1,D0.L),D2
 	CMP.L	#'mod.',(A1,D0.L)
 	BNE.B	lbC00389E
@@ -6253,7 +6244,7 @@ doqjskip2
 PLSTQuickJump
 	BSR.W	GetASCIIKey
 	BMI.W	Return1
-	TST.W	lbW010D56
+	TST.W	plstDiskSet
 	BNE.W	Return1
 	MOVE.L	PLSTmem,A1
 	MOVEQ	#-30,D0
@@ -11060,8 +11051,6 @@ Setup2Menu2
 	BLS.W	SetS2TuneNote
 	CMP.W	#77,D1
 	BLS.W	SetS2VUStyle
-	;CMP.W	#88,D1
-	;BLS.W	Setup2NotImpl
 	CMP.W	#99,D1
 	BLS.B	Setup2SwitchToggles
 	RTS
@@ -11364,11 +11353,10 @@ ToggleSamplePack
 UpdateSysReq
 	MOVE.L	PTProcess,A0
 	TST.B	SysReqFlag
-	BEQ.B	lbC00956E
-	MOVE.L	PTProcessTmp,184(A0)
+	BEQ.B	.L0
+	MOVE.L	oldWindowPtr,pr_WindowPtr(A0)
 	RTS
-lbC00956E
-	MOVE.L	#$FFFFFFFF,184(A0)
+.L0	MOVE.L	#$FFFFFFFF,pr_WindowPtr(A0)
 	RTS
 
 ShowS2Modules
@@ -11527,8 +11515,6 @@ sst2vushow
 VUStyleFakeText dc.b	"FAKE",0
 VUStyleRealText dc.b	"REAL",0
 	EVEN
-
-Setup2NotImpl	BRA.W	ShowNotImpl
 
 ToggleColEdit
 	CMP.W	#79,D0
@@ -17641,7 +17627,6 @@ dc8_2	MOVE.L	D2,(A2)+
 	DBRA	D0,dc7loop
 	RTS
 
-
 Decruncher
 	MOVE.L	SongDataPtr(PC),A0
 	LEA	12(A0),A0
@@ -17790,43 +17775,38 @@ LoadModule3
 	BEQ.W	UnpackPPFile
 	; --PT2.3D fix: clamp song length to 128
 	CMP.B	#128,sd_numofpatt(A0)
-	BLS.B	songLenOK
+	BLS.B	.L0
 	MOVE.B	#128,sd_numofpatt(A0)
-songLenOK
-	MOVE.B	#127,sd_numofpatt+1(A0) ; Set repeatstart to 127
+.L0	MOVE.B	#127,sd_numofpatt+1(A0) ; Set repeatstart to 127
 	CMP.L	#'M!K!',sd_magicid(A0)
 	BNE.W	lm64Patts
 	
 	; 100 patterns MOD (M!K!)
 	TST.W	OutOfMemoryFlag
-	BNE.W	lbC00ED4A
+	BNE.W	.L0
 	TST.B	OneHundredPattFlag
-	BNE.W	lbC00ED4A
-lbC00EC9A
-	MOVE.L	SongDataPtr(PC),D1
-	BEQ.B	lbC00ECB4
+	BNE.W	.L0
+.L1	MOVE.L	SongDataPtr(PC),D1
+	BEQ.B	.L2
 	MOVE.L	D1,A1
 	MOVE.L	SongAllocSize(PC),D0
 	JSR	PTFreeMem
-lbC00ECB4
-	EOR.B	#1,OneHundredPattFlag
+.L2	EOR.B	#1,OneHundredPattFlag
 	MOVE.L	#SONG_SIZE_64PAT,SongAllocSize
 	MOVE.L	#64-1,MaxPattern
 	TST.B	OneHundredPattFlag
-	BEQ.B	lbC00ECEC
+	BEQ.B	.L3
 	MOVE.L	#SONG_SIZE_100PAT,SongAllocSize
 	MOVE.L	#100-1,MaxPattern
-lbC00ECEC
-	MOVE.L	SongAllocSize(PC),D0
+.L3	MOVE.L	SongAllocSize(PC),D0
 	MOVE.L	#MEMF_CLEAR!MEMF_PUBLIC,D1
 	JSR	PTAllocMem
 	MOVE.L	D0,SongDataPtr
-	BNE.B	lbC00ED1A
+	BNE.B	.L4
 	BSR.W	OutOfMemErr
 	MOVE.W	#1,OutOfMemoryFlag
-	BRA.B	lbC00EC9A
-lbC00ED1A
-	MOVE.L	FileHandle(PC),D1
+	BRA.B	.L1
+.L4	MOVE.L	FileHandle(PC),D1
 	MOVE.L	DOSBase(PC),A6
 	JSR	_LVOClose(A6)
 	BRA.W	LoadModule2
@@ -17834,15 +17814,14 @@ lbC00ED1A
 	; 64 patterns MOD (M.K.)
 lm64Patts
 	CMP.L	#'M.K.',sd_magicid(A0)
-	BEQ.B	lbC00ED4A
+	BEQ.B	.L0
 	BSR.W	NotMKFormat
-	BNE.B	lbC00ED4A
+	BNE.B	.L0
 	MOVE.L	FileHandle(PC),D1
 	MOVE.L	#600,D2
 	MOVEQ	#-1,D3
 	JSR	_LVOSeek(A6)
-lbC00ED4A
-	LEA	LoadingModuleText(PC),A0
+.L0	LEA	LoadingModuleText(PC),A0
 	BSR.W	ShowStatusText
 	MOVEQ	#0,D4	
 	MOVE.L	SongDataPtr(PC),A0
@@ -17851,17 +17830,16 @@ lbC00ED4A
 	MOVE.B	-1(A0),D0
 
 	MOVEQ	#0,D3
-lbC00ED68
-	CMP.B	(A0)+,D3
-	BHI.B	lbC00ED70
+.loop1	CMP.B	(A0)+,D3
+	BHI.B	.L1
 	MOVE.B	-1(A0),D3
-lbC00ED70
-	DBRA	D0,lbC00ED68
+.L1	DBRA	D0,.loop1
+
 	ADDQ.W	#1,D3
 	CMP.W	#64,D3
-	BLE.B	lbC00EDC8
+	BLE.B	.L3
 	TST.B	OneHundredPattFlag
-	BNE.B	lbC00EDC8
+	BNE.B	.L3
 	MOVE.W	D3,D4
 	SUB.W	#64,D4
 	MULU.W	#1024,D4
@@ -17869,21 +17847,20 @@ lbC00ED70
 	LEA	sd_pattpos(A0),A0
 	MOVEQ	#0,D0
 	MOVE.B	-1(A0),D0
+
 	MOVEQ	#63,D3
-lbC00ED9E
-	CMP.B	(A0)+,D3
-	BHI.B	lbC00EDA6
+.loop2	CMP.B	(A0)+,D3
+	BHI.B	.L2
 	MOVE.B	D3,-1(A0)
-lbC00EDA6
-	DBRA	D0,lbC00ED9E
+.L2	DBRA	D0,.loop2
+
 	LEA	NoteDataClippedText(PC),A0
 	BSR.W	ShowStatusText
 	JSR	WaitALittle
 	LEA	LoadingModuleText(PC),A0
 	BSR.W	ShowStatusText
 	MOVEQ	#64,D3
-lbC00EDC8
-	MULU.W	#1024,D3
+.L3	MULU.W	#1024,D3
 	MOVE.L	FileHandle(PC),D1
 	MOVE.L	SongDataPtr(PC),D2
 	ADD.L	#1084,D2
@@ -17892,24 +17869,23 @@ lbC00EDC8
 	MOVE.L	SongDataPtr(PC),A0
 	MOVE.L	#'M.K.',sd_magicid(A0)
 	TST.L	D4
-	BEQ.B	lbC00EE2C
+	BEQ.B	.L4
 	MOVE.L	D4,D0
 	MOVE.L	#MEMF_CLEAR!MEMF_PUBLIC,D1
 	JSR	PTAllocMem
 	MOVE.L	D0,D2
-	BEQ.B	lbC00EE2C
+	BEQ.B	.L4
 	MOVE.L	D0,D7
 	MOVE.L	D4,D3
 	MOVE.L	FileHandle(PC),D1
 	MOVE.L	DOSBase(PC),A6
 	JSR	_LVORead(A6)
 	MOVE.L	D7,D1
-	BEQ.B	lbC00EE2C
+	BEQ.B	.L4
 	MOVE.L	D1,A1
 	MOVE.L	D4,D0
 	JSR	PTFreeMem
-lbC00EE2C
-	CLR.L	PatternNumber
+.L4	CLR.L	PatternNumber
 	CLR.L	CurrPos
 	BSR.W	RedrawPattern
 	CLR.W	ScrPattPos
@@ -18122,23 +18098,21 @@ LoadCrunchedSample
 	LEA	PowerPackedText(PC),A0
 	BSR.W	ShowStatusText
 	MOVE.L	PPLibBase(PC),D0
-	BNE.B	lbC00F168
+	BNE.B	.L0
 	LEA	PPLibName(PC),A1
 	MOVE.L	4.W,A6
 	MOVEQ	#0,D0
 	JSR	_LVOOpenLibrary(A6)
 	MOVE.L	D0,PPLibBase
-	BNE.B	lbC00F168
+	BNE.B	.L0
 	LEA	PPLibErrorText(PC),A0
-	BRA.W	lbC00F246
-lbC00F168
-	MOVE.L	D0,A0
+	BRA.W	.L8
+.L0	MOVE.L	D0,A0
 	CMP.W	#35,20(A0)
-	BGE.B	lbC00F17C
+	BGE.B	.L1
 	LEA	MustHavePP35Text(PC),A0
-	BRA.W	lbC00F246
-lbC00F17C
-	LEA	FileName,A0
+	BRA.W	.L8
+.L1	LEA	FileName,A0
 	MOVEQ	#2,D0
 	MOVE.L	#MEMF_CLEAR!MEMF_CHIP,D1
 	MOVEA.W	#-1,A3
@@ -18147,36 +18121,30 @@ lbC00F17C
 	MOVE.L	PPLibBase(PC),A6
 	JSR	_LVOppLoadData(A6)
 	TST.L	D0
-	BEQ.B	lbC00F204
+	BEQ.B	.L7
 	CMP.L	#-1,D0
-	BNE.B	lbC00F1BC
+	BNE.B	.L2
 	LEA	CantOpenFileText(PC),A0
-	BRA.W	lbC00F246
-lbC00F1BC
-	CMP.L	#-2,D0
-	BNE.B	lbC00F1CC
+	BRA.W	.L8
+.L2	CMP.L	#-2,D0
+	BNE.B	.L3
 	LEA	ReadErrorText(PC),A0
-	BRA.B	lbC00F246
-lbC00F1CC
-	CMP.L	#-3,D0
-	BNE.B	lbC00F1DC
+	BRA.B	.L8
+.L3	CMP.L	#-3,D0
+	BNE.B	.L4
 	LEA	OutOfMemoryText(PC),A0
-	BRA.B	lbC00F246
-lbC00F1DC
-	CMP.L	#-4,D0
-	BNE.B	lbC00F1EC
+	BRA.B	.L8
+.L4	CMP.L	#-4,D0
+	BNE.B	.L5
 	LEA	FileEncryptedText(PC),A0
-	BRA.B	lbC00F246
-lbC00F1EC
-	CMP.L	#-6,D0
-	BNE.B	lbC00F1FC
+	BRA.B	.L8
+.L5	CMP.L	#-6,D0
+	BNE.B	.L6
 	LEA	WrongCruncherText(PC),A0
-	BRA.B	lbC00F246
-lbC00F1FC   
-	LEA	DecrunchErrorText(PC),A0
-	BRA.B	lbC00F246
-lbC00F204
-	LEA	SongDataPtr(PC),A4
+	BRA.B	.L8
+.L6   	LEA	DecrunchErrorText(PC),A0
+	BRA.B	.L8
+.L7	LEA	SongDataPtr(PC),A4
 	MOVEQ	#0,D1
 	MOVE.W	InsNum(PC),D1
 	LSL.W	#2,D1
@@ -18191,8 +18159,7 @@ lbC00F204
 	MOVE.L	DiskDataPtr(PC),A0
 	MOVE.L	DiskDataLength(PC),A1
 	BRA.W	LoadSampleOK
-lbC00F246
-	BSR.W	ShowStatusText
+.L8	BSR.W	ShowStatusText
 	JSR	SetErrorPtrCol
 	MOVE.W	#ERR_WAIT_TIME,WaitTime
 	JSR	WaitALittle
@@ -18215,34 +18182,32 @@ CheckForPosEdNames
 	MOVE.B	(A0)+,(A1)+
 	MOVE.B	#$21,-1(A1)
 	MOVEQ	#26-1,D0
-cfpenloop
-	MOVE.B	(A0)+,(A1)+
-	DBRA	D0,cfpenloop
+.loop	MOVE.B	(A0)+,(A1)+
+	DBRA	D0,.loop
 	MOVE.L	DOSBase(PC),A6
 	MOVE.L	#FileName,D1
 	MOVE.L	#1005,D2
 	JSR	_LVOOpen(A6)
 	MOVE.L	D0,FileHandle
-	BEQ.B	lbC00F2EC
+	BEQ.B	.error
 	MOVE.L	D0,D1
 	MOVE.L	#PosEdNames,D2
 	MOVE.L	#16*100,D3
 	JSR	_LVORead(A6)
 	MOVE.L	FileHandle(PC),D1
 	JSR	_LVOClose(A6)
-	RTS
+	RTS	
+.error	BSR.B	ClearPosEdNames
+	BRA.W	CantOpenFile
 
 ClearPosEdNames
 	LEA	PosEdNames(PC),A0
 	MOVE.L	#(16*100)-1,D0
-cpednloop	MOVE.B	#' ',(A0)+
-	DBRA	D0,cpednloop
+.loop	MOVE.B	#' ',(A0)+
+	DBRA	D0,.loop
 	RTS
 
-lbC00F2EC
-	BSR.B	ClearPosEdNames
-	BRA.W	CantOpenFile
-lbC00F2F2
+SavePosEdNames
 	TST.B	SaveNamesFlag
 	BEQ.W	Return2
 	CMP.W	#1,makeExeModFlag
@@ -18258,21 +18223,18 @@ lbC00F2F2
 	MOVE.B	#'!',(A1)+
 	MOVE.L	SongDataPtr(PC),A0
 	MOVEQ	#20-1,D0
-lbC00F338
-	MOVE.B	(A0)+,(A1)+
-	DBRA	D0,lbC00F338
+.loop1	MOVE.B	(A0)+,(A1)+
+	DBRA	D0,.loop1
 	TST.B	ModPackMode
-	BEQ.B	lbC00F362
+	BEQ.B	.L0
 	LEA	FileName,A0
-lbC00F34C
-	TST.B	(A0)+
-	BNE.B	lbC00F34C
-	MOVE.B	#'.',-1(A0)
+.loop2	TST.B	(A0)+
+	BNE.B	.loop2
+	MOVE.B	#'.',-1(A0)	; Posed names saved as .pp? Why?
 	MOVE.B	#'p',(A0)+
 	MOVE.B	#'p',(A0)+
 	MOVE.B	#$00,(A0)
-lbC00F362
-	MOVE.L	DOSBase(PC),A6
+.L0	MOVE.L	DOSBase(PC),A6
 	MOVE.L	#FileName,D1
 	MOVE.L	#1006,D2
 	JSR	_LVOOpen(A6)
@@ -18309,9 +18271,9 @@ SavingNamesText		dc.b 'Saving names',0
 SaveModule
 	JSR	StorePtrCol
 	JSR	SetDiskPtrCol
-	BSR.W	lbC00F2F2
+	BSR.W	SavePosEdNames
 	JSR	SetDiskPtrCol
-	TST.W	lbW015B92
+	TST.W	makeModIconFlag
 	BEQ.W	smoskip3
 	CMP.W	#1,makeExeModFlag
 	BEQ.W	smoskip3
@@ -19232,48 +19194,41 @@ ssiskip	TST.B	NoSampleInfo
 	CMP.W	#3,CurrScreen
 	BNE.W	Return3
 ssiskp2	MOVE.L	CurrCmds(PC),A0
-	BSR.B	lbC010290
+	BSR.B	ChangeFileExtToPP
 	MOVE.W	#4573,D1
 	MOVEQ	#22,D0
 	BRA.W	ShowText3  ; SampleName
 
-lbC010290
+ChangeFileExtToPP
 	MOVE.L	A0,A1
 	MOVEQ	#22-1,D7
-lbC010298
-	CMP.B	#'.',(A1)+
-	BEQ.B	lbC0102A4
-	DBRA	D7,lbC010298
+.loop	CMP.B	#'.',(A1)+
+	BEQ.B	.L0
+	DBRA	D7,.loop
 	RTS
-
-lbC0102A4
-	TST.L	D7
-	BEQ.B	lbC0102E6
+.L0	TST.L	D7
+	BEQ.B	.L3
 	CMP.B	#'p',(A1)
-	BNE.B	lbC0102EE
+	BNE.B	.L4
 	ADDQ	#1,A1
 	SUBQ.L	#1,D7
 	TST.L	D7
-	BEQ.B	lbC0102E0
+	BEQ.B	.L2
 	CMP.B	#'p',(A1)
-	BNE.B	lbC0102EE
+	BNE.B	.L4
 	ADDQ	#1,A1
 	SUBQ.L	#1,D7
 	TST.L	D7
-	BEQ.B	lbC0102DA
+	BEQ.B	.L1
 	TST.B	(A1)
-	BNE.B	lbC0102EE
-lbC0102DA
-	CLR.B	-3(A1)
-lbC0102E0
-	CLR.B	-2(A1)
-lbC0102E6
-	CLR.B	-1(A1)
+	BNE.B	.L4
+.L1	CLR.B	-3(A1)
+.L2	CLR.B	-2(A1)
+.L3	CLR.B	-1(A1)
 	RTS
-lbC0102EE
-	SUBQ.L	#1,D7
+.L4	SUBQ.L	#1,D7
 	BEQ.W	Return2
-	BRA.B	lbC010298
+	BRA.B	.loop
 
 ssiinst
 	TST.B	NoSampleInfo
@@ -19922,7 +19877,7 @@ TypeInDisk3
 	LEA	STText3Number(PC),A6
 	MOVE.W	#252,LineCurX
 DoTypeInDisk
-	MOVE.W	#1,lbW010D56
+	MOVE.W	#1,plstDiskSet
 	CLR.B	(A6)
 	CLR.B	1(A6)
 	JSR	StorePtrCol
@@ -19961,7 +19916,7 @@ DoTypeInDisk
 	JMP	UpdateLineCurPos
 
 ClearAllDisks
-	CLR.W	lbW010D56
+	CLR.W	plstDiskSet
 	BSR.B	DoClearDisks
 	BSR.W	PLSTCheckNum
 	BRA.W	RedrawPLST
@@ -19977,32 +19932,35 @@ DoClearDisks
 	RTS
 
 MountList
-	MOVE.W	#1,lbW010D56
+	MOVE.W	#1,plstDiskSet
 	JSR	StorePtrCol
 	JSR	SetDiskPtrCol
+	; ---
 	MOVE.L	PTProcess,A0
-	MOVE.L	184(A0),lbL010D58
-	MOVE.L	#$FFFFFFFF,184(A0)
+	MOVE.L	pr_WindowPtr(A0),tmpWindowPtr
+	MOVE.L	#$FFFFFFFF,pr_WindowPtr(A0)
+	; ---
 	BSR.B	DoClearDisks
 	MOVE.W	#1,MountFlag
 	LEA	df0text(PC),A4
-	BSR.B	lbC010C98
+	BSR.B	DoMountList
 	LEA	PEdDefaultVol(PC),A0
 	BSR.W	CheckMountName
 	LEA	df1text(PC),A4
-	BSR.B	lbC010C98
+	BSR.B	DoMountList
 	LEA	STText2(PC),A0
 	BSR.W	CheckMountName
 	LEA	df2text(PC),A4
-	BSR.B	lbC010C98
+	BSR.B	DoMountList
 	LEA	STText3(PC),A0
 	BSR.W	CheckMountName
 	CLR.W	MountFlag
 	JSR	RestorePtrCol
 	BSR.B	lbC010C72
 	BSR.W	cdisknum2
+	; ---
 	MOVE.L	PTProcess,A0
-	MOVE.L	lbL010D58(PC),184(A0)
+	MOVE.L	tmpWindowPtr(PC),pr_WindowPtr(A0)
 	RTS
 
 lbC010C72
@@ -20012,10 +19970,10 @@ lbC010C72
 	BNE.W	Return2
 	TST.B	STText3Number
 	BNE.W	Return2
-	CLR.W	lbW010D56
+	CLR.W	plstDiskSet
 	RTS
 
-lbC010C98
+DoMountList
 	CLR.L	FIB_FileName
 	CLR.L	FIB_FileName+4
 	CLR.L	FIB_FileName+8
@@ -20068,8 +20026,8 @@ cdisknum2
 	BRA.W	RedrawPLST
 
 	CNOP 0,4
-lbL010D58	dc.l 0
-lbW010D56	dc.w 0
+tmpWindowPtr	dc.l 0
+plstDiskSet	dc.w 0
 df0text		dc.b 'DF0:',0
 df1text		dc.b 'DF1:',0
 df2text		dc.b 'DF2:',0
@@ -20143,7 +20101,7 @@ lbC010E16
 	BRA.W	lbC010F82
 
 lbC010E1C
-	TST.W	lbW010D56
+	TST.W	plstDiskSet
 	BNE.B	lbC010E16
 	MOVE.L	PLSTmem(PC),A1
 	MOVE.W	PLSTpos(PC),D0
@@ -20180,7 +20138,7 @@ lbC010E8C
 	BRA.W	lbC010F82
 
 lbC010E98
-	TST.W	lbW010D56
+	TST.W	plstDiskSet
 	BNE.B	lbC010E8C
 	MOVE.L	PLSTmem(PC),A1
 	MOVE.W	PLSTpos(PC),D0
@@ -25632,7 +25590,7 @@ PsetNumTemp	dc.w	0
 MaxPLSTEntries2	dc.w	0
 NumPatterns	dc.w	0
 AutoInsSlot	dc.w	0
-lbW015B92	dc.w	0
+makeModIconFlag	dc.w	0
 makeExeModFlag	dc.w	0
 AnalyzerHeights	dcb.w	23,0
 AnalyzerOpplegg	dcb.w	23,0
