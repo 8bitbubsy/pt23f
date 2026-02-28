@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
-         ==============================
-              9th of January, 2026
+         =============================
+             28th of February, 2026
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -20,14 +20,26 @@
 
  -- PT2.3F changelog: --
  
+ == Update 28.02.2026 ===============================================
+ - Added a "SMP. LINE" option in Setup screen #2 (flipped toggles) to
+   enable a centered dotted line in the sampler screen.
+ - Clicking on the "POS" text in Edit Op. screen #3 will now set the
+   sample mark to the sample position number.
+ - Fixed several bugs with the SHIFT+character "quick jump" feature
+   in the Disk Op. screen. Still only works for "MOD.filename" type
+   files when Disk Op. is in modules mode.
+ - (hopefully) Fixed: If keys were pressed during a red mouse cursor,
+   you could get playing notes after the cursor returned to normal.
+ ====================================================================
+
  == Update 09.01.2026 ===============================================
  - Removed unneeded code during sample waveform display in Smp. Ed.
  ====================================================================
- 
+
  == Update 11.12.2025 ===============================================
  - Small replayer optimizations
  ====================================================================
- 
+
  == Update 27.10.2025 ===============================================
  - Fixed a memory leak issue when loading IFF samples (would go out
    of memory after a while)
@@ -36,12 +48,12 @@
  == Update 09.10.2025 ===============================================
  - Further optimizations for pattern data rendering
  ====================================================================
- 
+
  == Update 02.10.2025 ===============================================
  - Small optimizations to pattern data drawing code
  - Shorter delays when using ALT+left/right (change edit pattern)
  ====================================================================
- 
+
  == Update 01.10.2025 ===============================================
  - Free'd up 360 bytes (whoa...) of chipmem. The original code
    allocated slightly more memory than needed for the text/pattern
@@ -50,7 +62,7 @@
  - Free'd up another ~800 bytes of memory (unneeded spectrum ana. LUT)
  - Code cleanup
  ====================================================================
- 
+
  == Update 13.09.2025 ===============================================
  - Sampler screen: Fixed some minor position offset issues when
    moving the scroll bar with the mouse
@@ -60,28 +72,28 @@
  - Bug-fix: "Play Display" / "Play Range" would sometimes not trigger
    the cyan sampling line and the quadrascope.
  ====================================================================
- 
+
  == Update 29.05.2025 ===============================================
  - Optimizations for song playback counter code
  - Song playback counter now ticks correctly on NTSC Amigas
  ====================================================================
- 
+
  == Update 24.05.2025 ===============================================
  - Quadrascope and Spectrum Analyzer optimizations
  - Very minor optimization for VU meters
  ====================================================================
- 
+
  == Update 21.05.2025 ===============================================
  - Safer code for when updating sample loops in realtime
    (e.g. when dragging the loop points while a sample is playing).
  - Set Sample Offset (9xx) now works on >64kB samples
  - Small quadrascope optimization
  ====================================================================
- 
+
  == Update 14.04.2025 ===============================================
  - SHIFT + ALT/CTRL + z = play sample range (hi XSM!)
  ====================================================================
- 
+
  == Update 13.04.2025 ===============================================
  - You can now use SHIFT + ALT/CTRL + left/right/up/down to adjust
    the sample data mark in the sampler screen.
@@ -96,7 +108,7 @@
  == Update 17.11.2024 ===============================================
  - Small arpeggio effect optimization
  ====================================================================
-  
+
  == Update 12.09.2024 ===============================================
  - Bug-fix and speed-up of the volume change ("VOL") function in
    Edit Op. #3.
@@ -130,21 +142,21 @@
  - Removed CTRL+V (filter all samples) and CTRL+G (boost all samples)
  - Edited and cleaned up the PT help file
  ====================================================================
- 
+
  == Update 14.06.2023 ===============================================
  - The spectrum analyzer didn't work like it should when jamming
    samples with the computer keyboard (if finetune wasn't zero).
  - Nasty out-of-bounds memory access fixed for the spectrum analyzer
    in some edge cases.
  ====================================================================
- 
+
  == Update 08.03.2023 ===============================================
  - Fixed: Another vblank+>31 speed fix, for Note Retrigger (E9x)
  - Removed note retrigger LUT (was used to remove DIV). Frees up
    around 528 bytes of RAM. This optimization was a bit pointless as
    a bunch of note retriggers at once is very uncommon.
  ====================================================================
- 
+
  == Update 07.03.2023 ===============================================
  - Fixed: Text editing delays were too short when writing/deleting
    characters and moving the text cursor (in comparison to PT2.3D).
@@ -158,7 +170,7 @@
    optimization. It's still very slow and flickery on a 7MHz 68k
    Amiga, though...
  ====================================================================
- 
+
  == Update 25.01.2023 ===============================================
  - Fixed: Weird things would happen if you were in text/number edit
    mode while efx F00 (stop song) got triggered (hi again Per Arne)
@@ -269,6 +281,7 @@
    when you toggle between "VU-MTR" and "ANALYZ".
  - All fixes after the first PT2.3E final version has now been merged to
    PT2.3F. This ought to happen to begin with, but it never did. Sorry!
+ ====================================================================
 
  == Update 24.10.2019 ===============================================
  - The "ALL" option in the "CLEAR" dialog didn't properly reset some stuff

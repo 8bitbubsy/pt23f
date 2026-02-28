@@ -4691,23 +4691,19 @@ FileNameToBottom
 	BRA.W	RedrawFileNames
 
 D1ToLowercase
-	MOVE.B	D1,D3
-	BSR.B	ToLowercase
-	MOVE.B	D3,D1
-	RTS
+	CMP.B	#'A',D1
+	BLO.B	.L0
+	CMP.B	#'Z',D1
+	BHI.B	.L0
+	ADD.B	#32,D1
+.L0	RTS
 
 D2ToLowercase
-	MOVE.B	D2,D3
-	BSR.B	ToLowercase
-	MOVE.B	D3,D2
-	RTS
-
-ToLowercase
-	CMP.B	#'A',D3
+	CMP.B	#'A',D2
 	BLO.B	.L0
-	CMP.B	#'Z',D3
+	CMP.B	#'Z',D2
 	BHI.B	.L0
-	ADD.B	#32,D3
+	ADD.B	#32,D2
 .L0	RTS
 
 ;---- Clicked on a filename ----
@@ -5756,6 +5752,13 @@ SetErrorPtrCol
 	JSR	ShowAllRight
 	BSR.W	SetNormalPtrCol
 	SF	DisableScopeMuting	; kludge
+	
+	; remove potentially stuck keys
+	CLR.B	SaveKey
+	CLR.W	KeyRepCounter
+	CLR.W	KeyBufPos
+	CLR.B	RawKeyCode
+	
 	MOVEQ	#0,D0
 	RTS
 
@@ -6188,42 +6191,46 @@ gakskip
 	RTS
 
 DiskOpQuickJump
-	BSR.B	GetASCIIKey
+	BSR.B	GetASCIIKey	; D1 = key
 	BMI.W	Return1
+	
 	LEA	FileNamesPtr(PC),A5
-	MOVE.L	(A5),A1
-	BSR.W	D1ToLowercase	
-	MOVEQ	#-36,D0
-.loop	ADD.L	#36,D0
-	MOVE.W	16(A5),D2
-	SUBQ.W	#8,D2
-	BMI.W	Return1
-	MULU.W	#36,D2
-	CMP.L	D2,D0
-	BLS.B	.L0
-	MOVE.L	D2,D0
-	DIVU.W	#36,D0
-	BSR.W	RedrawFileNames
-	BRA.W	ErrorRestoreCol	
-.L0	MOVE.B	(A1,D0.L),D2
-	TST.W	DirPathNum
-	BNE.B	.L1
-	CMP.L	#'mod.',(A1,D0.L)
-	BNE.B	.loop
-	MOVE.B	4(A1,D0.L),D2
-.L1	BSR.W	D2ToLowercase
-	CMP.B	D1,D2
-	BNE.B	.loop
-	DIVU.W	#36,D0
-	BRA.W	RedrawFileNames
+	MOVE.W	16(A5),D3	; D3 = number of files	
+	CMP.W	#8,D3		; all files shown? (files <= 8)
+	BLS.W	Return1		; yep, no need to quick jump	
+	
+	MOVE.L	0(A5),A1
+
+	MOVEQ	#0,D0
+.loop	MOVE.B	0(A1),D2
+	TST.W	DirPathNum	; Disk Op. is in module mode?
+	BNE.B	.L0		; nope, no need for MOD.name test
+	MOVE.L	0(A1),D2
+	AND.L	#$DFDFDFFF,D2	; convert to uppercase
+	CMP.L	#'MOD.',D2
+	BNE.B	.next		; not a "MOD." file, skip
+	MOVE.B	4(A1),D2
+.L0	BSR.W	D2ToLowercase
+	CMP.B	D1,D2 		; first characer matching with key?
+	BEQ.B	.found	
+.next	LEA	36(A1),A1
+	ADDQ.W	#1,D0
+	CMP.W	D3,D0
+	BLO.B	.loop	
+	BRA.W	ErrorRestoreCol	; beyond last file, match not found
+
+.found	SUBQ.W	#8,D3
+	CMP.W	D3,D0
+	BLS.B	.L1
+	MOVE.W	D3,D0
+.L1	BRA.W	RedrawFileNames
 
 PLSTQuickJump
 	BSR.W	GetASCIIKey
 	BMI.W	Return1
 	TST.W	plstDiskSet
 	BNE.W	Return1
-	MOVE.L	PLSTmem,A1	
-	BSR.W	D1ToLowercase	
+	MOVE.L	PLSTmem,A1
 	MOVEQ	#-30,D0
 .loop	ADD.L	#30,D0
 	MOVE.W	PresetMarkTotal,D2
@@ -11076,7 +11083,7 @@ Setup2Menu4
 	CMP.W	#11,D1
 	BLS.B	ExitOrDefault
 	CMP.W	#22,D1
-	BLS.W	ToggleSalvage
+	BLS.W	ToggleSampleLine
 	CMP.W	#33,D1
 	BLS.W	Toggle100Patts
 	CMP.W	#44,D1
@@ -11220,7 +11227,7 @@ ShowS2T	CLR.B	RawKeyCode
 	LEA	OverrideFlag,A4
 	TST.B	SwitchTogglesFlag
 	BEQ.B	sstskip4
-	LEA	SalvageFlag,A4
+	LEA	SampleLineFlag,A4
 	MOVE.W	#3,TextLength
 	MOVEQ	#7-1,D7
 	MOVE.W	#636,D6
@@ -11264,8 +11271,35 @@ sstskip5
 SongAllocSize	dc.l SONG_SIZE_64PAT
 MaxPattern	dc.l 64-1
 
-ToggleSalvage
-	BRA.W	ShowNotImpl
+ToggleSampleLine
+	EOR.B	#1,SampleLineFlag
+	TST.W	SamScrEnable
+	BEQ.B	.L0
+	
+	
+	TST.B	SampleLineFlag
+	BNE.B	.L1
+	
+	MOVEM.L	ClearRegs,D0-D4
+	
+	; clear dotted center pattern (different bitplanes)
+	LEA	BitplaneData+6800+40,A0
+	LEA	BitplaneData+10240+6800+40,A1
+	MOVEM.L	D0-D4,-(A0)
+	MOVEM.L	D0-D4,-(A1)
+	MOVEM.L	D0-D4,-(A0)
+	MOVEM.L	D0-D4,-(A1)
+
+	; fix trashed frame pixels on left and right edge
+	MOVE.B	#%00000101,39(A0)
+	MOVE.B	#%00000011,39(A1)
+	MOVE.B	#%10100000,0(A0)
+	MOVE.B	#%01100000,0(A1)
+	
+	
+.L1	JSR	DisplaySample
+.L0	BRA.W	ShowS2T
+	
 Toggle100Patts
 	BSR.W	WaitForButtonUp
 	LEA	AreYouSureText,A0
@@ -15088,10 +15122,22 @@ ShowHalfClip
 	LEA	C_BoxData,A2
 DoShowHalfClip	JMP	rtdoit
 
+SamplePosToSampleMark
+	TST.W	SamScrEnable
+	BEQ.W	Return3
+	TST.W	MarkStart(PC)
+	BEQ.B	.L0
+	BSR.W	InvertRange
+.L0	MOVE.L	SamplePos(PC),D0
+	MOVE.L	D0,MarkStartOfs
+	MOVE.L	D0,MarkEndOfs
+	BSR.W	OffsetToMark
+	BRA.W	InvertRange
+
 SetSamplePos
 	MOVE.L	SamplePos(PC),D2
 	CMP.W	#237,D0
-	BLS.W	Return3
+	BLS.W	SamplePosToSampleMark
 	CMP.W	#283,D0
 	BLS.W	EnterSamplePos
 	CMP.W	#294,D0
@@ -16423,7 +16469,7 @@ GetDeltaFromChordNote
 	MOVE.B	14(A0,D2.W),D1	; finetune
 	AND.B	#$0F,D1
 	LSL.B	#2,D1
-	LEA	ftunePerTab(PC),A0
+	LEA	ftunePerTab,A0
 	MOVE.L	(A0,D1.W),A0	; A0 = finetuned section in period table
 	MOVEQ	#0,D1
 	AND.W	#$FF,D0
@@ -21917,6 +21963,24 @@ ClearSamArea
 	MOVEM.L	D0-D7,-(A0)
 	MOVEM.L	D0-D7,-(A0)
 	MOVEM.L	D0-D7,-(A0)
+	
+	TST.B	SampleLineFlag
+	BEQ.B	.L0
+	
+	; clear dotted center pattern (different bitplanes)
+	LEA	BitplaneData+6800+40,A0
+	LEA	BitplaneData+10240+6800+40,A1
+	MOVEM.L	D0-D4,-(A0)
+	MOVEM.L	D0-D4,-(A1)
+	MOVEM.L	D0-D4,-(A0)
+	MOVEM.L	D0-D4,-(A1)
+
+	; fix trashed frame pixels on left and right edge
+	MOVE.B	#%00000101,39(A0)
+	MOVE.B	#%00000011,39(A1)
+	MOVE.B	#%10100000,0(A0)
+	MOVE.B	#%01100000,0(A1)	
+.L0
 
 	; clear sample view
 	MOVE.W	#((64*10)/8)/4,ClearCounter
@@ -23674,7 +23738,29 @@ rdsupdt	ADD.L	D7,D6
 	BLO.B	rdsloop
 
 	JSR	_LVODisownBlitter(A6)
+	
+	TST.B	SampleLineFlag
+	BEQ.B	.L0
+	
+	; --PT2.3D change: dotted line in sampler screen	
+	LEA	BitplaneData+6800,A0
+	LEA	BitplaneData+10240+6800,A1
+	LEA	TextBitplane+6800,A2
 
+	MOVEQ	#(40/4)-1,D0
+	MOVE.L	#$AAAAAAAA,D1 	; bit pattern
+.loop	MOVE.L	(A2)+,D3
+	NOT.L	D3
+	AND.L	D1,D3
+	OR.L	D3,(A0)+
+	OR.L	D3,(A1)+
+	DBRA	D0,.loop
+
+	; fix two trashed bits
+	LEA	-40(A1),A1
+	BCLR	#7,0(A1)
+	BCLR	#1,-1(A0)	
+.L0
 	BRA.W	SetLoopSprites
 	
 	CNOP 0,4
@@ -25678,7 +25764,7 @@ DefCol	dc.w	$000,$BBB,$888,$555,$FD0,$D04,$000,$34F
 	dcb.b	20,0
 	dc.b	"ST-00:Patterns"	; Patterns Path
 	dcb.b	18,0
-	dc.b	0 ; SalvageFlag
+	dc.b	0 ; SampleLineFlag
 	dc.b	0 ; OneHundredPattFlag
 	dc.b	0 ; SaveIconsFlag
 	dc.b	0 ; LoadNamesFlag
@@ -26625,7 +26711,7 @@ VUmeterColors	ds.w	48
 AnalyzerColors	ds.w	40
 TrackPath	ds.b	32
 PattPath	ds.b	32
-SalvageFlag	ds.b	1
+SampleLineFlag	ds.b	1
 OneHundredPattFlag	ds.b	1
 SaveIconsFlag	ds.b	1
 LoadNamesFlag	ds.b	1
