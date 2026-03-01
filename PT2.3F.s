@@ -193,6 +193,7 @@ pr_WindowPtr		EQU $B8
 sm_ArgList		EQU $24
 cli_CommandName		EQU $10
 SHARED_LOCK		EQU -2
+AttnFlags		EQU $128
 
 ; -----------------------------------------------------------------------------
 ;                         RUNBACK HUNK (modified by ross)  
@@ -340,8 +341,8 @@ InitDelayRoutines
 	MOVE.L	A6,-(SP)
 	MOVE.L	D0,-(SP)
 	MOVE.L	4.W,A6
-	MOVE.W	296(A6),D0
-	BTST	#1,D0
+	MOVE.W	AttnFlags(A6),D0
+	BTST	#1,D0	; 68020+ present?
 	BNE.B	.not68000
 	MOVE.W	#PaulaDMAWaitScanlines_000,PaulaDMAWaitScanlines
 	MOVE.W	#GUIDelayScanlines_000,GUIDelayScanlines
@@ -351,10 +352,10 @@ InitDelayRoutines
 	MOVE.W	#GUIDelayScanlines_020,GUIDelayScanlines
 .end	MOVE.L	(SP)+,D0
 	MOVE.L	(SP)+,A6
-	RTS	
+	RTS
 	
 ; ------------------------------------------------------------------------------
-; 32-bit unsigned div/mul routines. Software-based if CPU is 68000.
+; 32-bit unsigned div/mul routines. Software-based if CPU is 68000/68010.
 ;
 ; Note:
 ;  "InitMulDivRoutines" has to be called on program init to use these.
@@ -369,7 +370,7 @@ InitDelayRoutines
 	; Output:
 	;  D0.L - 32-bit unsigned result
 MULU32
-	TST.B	_CPUIs68000
+	TST.B	_CPUIs68000or68010
 	BNE.B	SoftMULU32
 	MULU.L	D1,D0
 	RTS
@@ -400,7 +401,7 @@ SoftMULU32
 	; Output:
 	;  D0.L - 32-bit unsigned quotient
 DIVU32
-	TST.B	_CPUIs68000
+	TST.B	_CPUIs68000or68010
 	BNE.B	SoftDIVU32
 	DIVU.L	D1,D0
 	RTS
@@ -443,14 +444,14 @@ InitMulDivRoutines
 	MOVE.L	A6,-(SP)
 	MOVE.L	D0,-(SP)
 	MOVE.L	4.W,A6
-	MOVE.W	296(A6),D0
-	BTST	#1,D0
-	SEQ	_CPUIs68000
+	MOVE.W	AttnFlags(A6),D0
+	BTST	#1,D0	; 68020+ present?
+	SEQ	_CPUIs68000or68010
 	MOVE.L	(SP)+,D0
 	MOVE.L	(SP)+,A6
 	RTS
 	
-_CPUIs68000 dc.b 1
+_CPUIs68000or68010 dc.b 1
 	EVEN
 	
 ; ------------------------------------------------------------------------------
