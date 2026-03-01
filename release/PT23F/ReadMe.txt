@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          =============================
-             28th of February, 2026
+              1st of March, 2026
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -19,6 +19,11 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+ 
+ == Update 01.03.2026 ===============================================
+ - Fixed a possible sample mark duplication bug when using the zoom
+   out feature in the sample editor screen.
+ ====================================================================
  
  == Update 28.02.2026 ===============================================
  - Added a "SMP. LINE" option in Setup screen #2 (flipped toggles) to

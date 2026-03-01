@@ -22174,6 +22174,7 @@ zoomou3	MOVE.L	D2,SamOffset
 	BNE.B	zoomouo
 	MOVEQ	#-1,D0
 	MOVE.L	D0,MarkStartOfs
+	CLR.W	MarkStart
 zoomouo	BSR.W	DisplaySample
 	JMP	WaitForButtonUp
 	
