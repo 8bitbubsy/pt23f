@@ -2,7 +2,7 @@
 ; ============================
 ;      1st of March, 2026
 ;
-;    (tab width = 8+ spaces)
+;    (tab width = 8 spaces)
 ;
 ; If you find any bugs, please contact me through the email/Discord
 ; found at 16-bits.org.
