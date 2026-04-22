@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;      1st of March, 2026
+;     22nd of April, 2026
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -17782,14 +17782,17 @@ LoadModule3
 	BLS.B	.L0
 	MOVE.B	#128,sd_numofpatt(A0)
 .L0	MOVE.B	#127,sd_numofpatt+1(A0) ; Set repeatstart to 127
+
 	CMP.L	#'M!K!',sd_magicid(A0)
-	BNE.W	lm64Patts
+	BNE.W	DoStartModLoad
 	
 	; 100 patterns MOD (M!K!)
 	TST.W	OutOfMemoryFlag
-	BNE.W	.L0
+	BNE.W	DoStartModLoad
 	TST.B	OneHundredPattFlag
-	BNE.W	.L0
+	BNE.W	DoStartModLoad
+	
+	; free song and toggle OneHundredPattFlag
 .L1	MOVE.L	SongDataPtr(PC),D1
 	BEQ.B	.L2
 	MOVE.L	D1,A1
@@ -17802,7 +17805,8 @@ LoadModule3
 	BEQ.B	.L3
 	MOVE.L	#SONG_SIZE_100PAT,SongAllocSize
 	MOVE.L	#100-1,MaxPattern
-.L3	MOVE.L	SongAllocSize(PC),D0
+.L3    
+        MOVE.L	SongAllocSize(PC),D0
 	MOVE.L	#MEMF_CLEAR!MEMF_PUBLIC,D1
 	JSR	PTAllocMem
 	MOVE.L	D0,SongDataPtr
@@ -17818,14 +17822,17 @@ LoadModule3
 	; 64 patterns MOD (M.K.)
 lm64Patts
 	CMP.L	#'M.K.',sd_magicid(A0)
-	BEQ.B	.L0
+	BEQ.B	DoStartModLoad
 	BSR.W	NotMKFormat
-	BNE.B	.L0
+	BNE.B	DoStartModLoad
 	MOVE.L	FileHandle(PC),D1
 	MOVE.L	#600,D2
 	MOVEQ	#-1,D3
 	JSR	_LVOSeek(A6)
-.L0	LEA	LoadingModuleText(PC),A0
+	; fall-through
+
+DoStartModLoad
+        LEA	LoadingModuleText(PC),A0
 	BSR.W	ShowStatusText
 	MOVEQ	#0,D4	
 	MOVE.L	SongDataPtr(PC),A0

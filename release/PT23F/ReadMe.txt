@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          =============================
-              1st of March, 2026
+              22nd of April, 2026
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -19,6 +19,11 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+ 
+  == Update 22.04.2026 ===============================================
+ - Fixed crash while loading "M!K!" type .MODs (>64 patterns) from
+   version 01.03.2026
+ ====================================================================
  
  == Update 01.03.2026 ===============================================
  - Fixed a possible sample mark duplication bug when using the zoom
