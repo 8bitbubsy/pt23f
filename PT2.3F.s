@@ -17785,13 +17785,13 @@ LoadModule3
 
 	CMP.L	#'M!K!',sd_magicid(A0)
 	BNE.W	DoStartModLoad
-	
+
 	; 100 patterns MOD (M!K!)
 	TST.W	OutOfMemoryFlag
 	BNE.W	DoStartModLoad
 	TST.B	OneHundredPattFlag
 	BNE.W	DoStartModLoad
-	
+
 	; free song and toggle OneHundredPattFlag
 .L1	MOVE.L	SongDataPtr(PC),D1
 	BEQ.B	.L2
@@ -17805,8 +17805,8 @@ LoadModule3
 	BEQ.B	.L3
 	MOVE.L	#SONG_SIZE_100PAT,SongAllocSize
 	MOVE.L	#100-1,MaxPattern
-.L3    
-        MOVE.L	SongAllocSize(PC),D0
+.L3
+	MOVE.L	SongAllocSize(PC),D0
 	MOVE.L	#MEMF_CLEAR!MEMF_PUBLIC,D1
 	JSR	PTAllocMem
 	MOVE.L	D0,SongDataPtr
@@ -17818,7 +17818,7 @@ LoadModule3
 	MOVE.L	DOSBase(PC),A6
 	JSR	_LVOClose(A6)
 	BRA.W	LoadModule2
-	
+
 	; 64 patterns MOD (M.K.)
 lm64Patts
 	CMP.L	#'M.K.',sd_magicid(A0)
