@@ -306,7 +306,7 @@ PTStart
 	JSR	_LVOUnLoadSeg(A6)
 	MOVEQ	#0,D0
 	RTS
-	
+
 ; ------------------------------------------------------------------------------
 ; Scanline-wait routines. Used for Paula DMA latch waiting, and GUI interaction
 ;
@@ -353,7 +353,7 @@ InitDelayRoutines
 .end	MOVE.L	(SP)+,D0
 	MOVE.L	(SP)+,A6
 	RTS
-	
+
 ; ------------------------------------------------------------------------------
 ; 32-bit unsigned div/mul routines. Software-based if CPU is 68000/68010.
 ;
@@ -439,7 +439,7 @@ SoftDIVU32
 .L2	DBRA	D3,.loop
 .end	MOVEM.L	(SP)+,D1/D2/D3
 	RTS
-	
+
 InitMulDivRoutines
 	MOVE.L	A6,-(SP)
 	MOVE.L	D0,-(SP)
@@ -450,10 +450,10 @@ InitMulDivRoutines
 	MOVE.L	(SP)+,D0
 	MOVE.L	(SP)+,A6
 	RTS
-	
+
 _CPUIs68000or68010 dc.b 1
 	EVEN
-	
+
 ; ------------------------------------------------------------------------------
 ; ------------------------------------------------------------------------------
 
@@ -484,7 +484,7 @@ Main
 	LEA	VersionText(PC),A0
 	JSR	ShowStatusText
 	MOVE.L	SongDataPtr,A0
-	MOVE.B	#1,sd_numofpatt(A0)	
+	MOVE.B	#1,sd_numofpatt(A0)
 	BSR.W	DisplayMainScreen
 	; fall-through
 
@@ -492,7 +492,7 @@ MainLoop
 	JSR	CheckMIDIin
 	BSR.W	DoKeyBuffer
 	BSR.W	CheckToggleRasterbarKeys
-	BSR.W	CheckSamplerScreenKeys	
+	BSR.W	CheckSamplerScreenKeys
 	BSR.W	CheckPatternInvertKeys
 	BSR.W	CheckTransKeys
 	BSR.W	CheckCtrlKeys
@@ -514,7 +514,7 @@ MainLoop
 	MOVE.L	4.W,A6
 	MOVEQ	#0,D0
 	MOVE.L	#$30000000,D1
-	JSR	_LVOSetSignal(A6)	
+	JSR	_LVOSetSignal(A6)
 	MOVE.L	#$70000000,D0
 	JSR	_LVOWait(A6)
 	AND.L	#$10000000,D0
@@ -523,7 +523,7 @@ MainLoop
 	BTST	#6,$BFE001	; left mouse button
 	BNE.W	StopInputLoop
 .skip2	BSR.W	ArrowKeys
-	BRA.W	CheckGadgets	
+	BRA.W	CheckGadgets
 	BRA.W	MainLoop
 	
 CheckToggleRasterbarKeys
@@ -538,15 +538,15 @@ CheckToggleRasterbarKeys
 	RTS
 
 	; used stop further key/mouse input for a while
-StopInputLoop	
+StopInputLoop
 	TST.B	StopInputFlag
 	BNE.W	MainLoop
 	MOVEQ	#8*2,D1
 	BSR.W	WaitD1
 	BRA.B	StopInputLoop
-	
+
 ;---- Sample data range/mark special keys (sampler screen) ----
-	
+
 	; SHIFT + ALT/CTRL + z:
 	;  Play Range
 	;
@@ -607,7 +607,7 @@ ExtendLeftMarkSide
 	JSR	InvertRange
 	SUBQ.W	#1,MarkStart
 	BRA.B	UpdateNewMark
-	
+
 ShrinkLeftMarkSide
 	CLR.B	RawKeyCode
 	TST.W	MarkStart
@@ -617,7 +617,7 @@ ShrinkLeftMarkSide
 	JSR	InvertRange
 	ADDQ.W	#1,MarkStart
 	BRA.B	UpdateNewMark
-	
+
 ExtendRightMarkSide
 	CLR.B	RawKeyCode
 	TST.W	MarkStart
@@ -627,7 +627,7 @@ ExtendRightMarkSide
 	JSR	InvertRange
 	ADDQ.W	#1,MarkEnd
 	BRA.B	UpdateNewMark
-	
+
 ShrinkRightMarkSide
 	CLR.B	RawKeyCode
 	TST.W	MarkStart
@@ -647,7 +647,7 @@ UpdateNewMark
 	MOVE.W	D1,MarkStart
 .ok	JSR	InvertRange
 	JMP	MarkToOffset
-	
+
 	CNOP 0,4
 PTProcess	dc.l	0
 OldWindowPtr	dc.l	0
@@ -696,7 +696,7 @@ chkredr	CMP.L	#'patp',RunMode
 	BEQ.W	Return1
 	MOVE.L	PattRfshNum,PatternNumber
 	JMP	RedrawPattern
-	
+
 ; ----------------------------------------------------------------------------
 ; Allocates a block of memory
 ;
@@ -724,10 +724,10 @@ PTAllocMem
 PTFreeMem
 	MOVEM.L	D0/D1/A1/A6,-(SP)
 	MOVE.L	4.W,A6
-	JSR	_LVOFreeMem(A6)	
+	JSR	_LVOFreeMem(A6)
 	MOVEM.L	(SP)+,D0/D1/A1/A6
 	RTS
-	
+
 ;---- Cleanup upon exit from PT ----
 
 ExitCleanup
@@ -767,7 +767,7 @@ exex2	BSR.W	FreeDirMem
 	BCLR	#1,$BFE001
 	MOVE.B	LEDStatus,D0
 	AND.B	#2,D0
-	OR.B	D0,$BFE001	; Restore LED Status	
+	OR.B	D0,$BFE001	; Restore LED Status
 	MOVEQ	#0,D0
 	MOVE.W	D0,$DFF0A8	; clear voice #1 volume
 	MOVE.W	D0,$DFF0B8	; clear voice #2 volume
@@ -825,10 +825,10 @@ OpenLotsOfThings
 	MOVEQ	#0,D0
 	JSR	_LVOOpenLibrary(A6)
 	MOVE.L	D0,IntuitionBase
-	
+
 	BSR.W	OpenPTScreen
 	BEQ.W	errorexit1
-	
+
 	MOVE.L	DOSBase,A6
 	MOVE.L	rb_CurrentDir(PC),D1
 	JSR	_LVOCurrentDir(A6)
@@ -837,14 +837,14 @@ OpenLotsOfThings
 	MOVE.W	D0,NoteBplptrLow	; set low word
 	SWAP	D0
 	MOVE.W	D0,NoteBplptrHigh	; set high word
-	
+
 	MOVE.L	SongAllocSize,D0
 	MOVE.L	#MEMF_PUBLIC!MEMF_CLEAR,D1
 	JSR	PTAllocMem
 	MOVE.L	D0,SongDataPtr
 	BEQ.W	errorexit1
 	BSR.W	SetDefaultSampleReplens
-	
+
 	MOVE.L	SongDataPtr,A0
 	MOVE.W	#$017F,sd_numofpatt(A0)
 	MOVE.L	#'M.K.',sd_magicid(A0)	; M.K. again...
@@ -859,7 +859,7 @@ OpenLotsOfThings
 	MOVE.L	#KbdTransTable2,KeyTransTabPtr
 	MOVE.L	#NoteNames1,NoteNamesPtr
 	MOVE.L	#VUmeterColors,TheRightColors
-	
+
 	MOVE.L	#BitplaneData,D0 	; Set pointers to bitplane data
 	LEA	CopListBitplanes,A1
 	MOVE.W	D0,6(A1)
@@ -877,7 +877,7 @@ OpenLotsOfThings
 	JSR	ShowSongLength
 	MOVE.W	#1,InsNum
 	JSR	ShowSampleInfo
-	
+
 	LEA	TopMenusPos,A0
 	LEA	TopMenusBuffer,A1
 	MOVEQ	#44-1,D0
@@ -888,7 +888,7 @@ stmloop2
 	DBRA	D1,stmloop2
 	LEA	15(A0),A0
 	DBRA	D0,stmloop
-	
+
 	JSR	DoResetAll
 	JSR	cfgupda
 	JSR	LoadConfigOnStartup ; --PT2.3D bug fix: make sure cwd is correct at this point
@@ -917,7 +917,7 @@ alotskip3
 	TST.B	LoadPLSTFlag
 	BEQ.B	ChangeCopList
 	JSR	DoLoadPLST
-	
+
 ChangeCopList
 	TST.W	SamScrEnable
 	BNE.W	Return1
@@ -954,7 +954,7 @@ alotlp5	MOVE.W	(A5),D4
 
 VUmeterColRegs
 	dc.w	$01AA,$01AC,$01AE,$01B2,$01B4,$01B6
-	
+
 	CNOP 0,4
 CopListBpl4Ptr	dc.l	0
 CopListColorPtr	dc.l	0
@@ -1019,7 +1019,7 @@ sdsp2
 	MOVE.L	#LineCurSpriteData,LineCurPosPtr
 	MOVE.L	#NoSpriteData,NoSpritePtr
 	MOVE.L	PointerSpritePtr(PC),SpritePtrsPtr
-	
+
 	LEA	SpritePtrsPtr,A0	; Set pointers to spritedata
 	LEA	CopperSpriteList,A1
 	MOVEQ	#16-1,D2
@@ -1032,7 +1032,7 @@ alotloop2
 	CNOP 0,4
 PointerSpritePtr	dc.l	0
 
-	
+
 ;---- Vertical Blank Interrupt ----
 
 SetVBInt
@@ -1115,7 +1115,7 @@ rmbnotheld
 	BRA.B	vbiend
 rmbreleased
 	CLR.B	RightMouseButtonHeld
-	BSR.W	CheckScopeMuting	
+	BSR.W	CheckScopeMuting
 vbiend	; ------------------------------
 	MOVEM.L	(SP)+,D0-D7/A0-A6
 	TST.B	ShowRasterbar
@@ -1123,7 +1123,7 @@ vbiend	; ------------------------------
 	MOVE.W	#0,$DFF180 	; rasterbars to measure frame time left
 .skip2
 	RTS
-	
+
 	CNOP 0,4
 VBIntServer
 	dc.l 0,0
@@ -1173,18 +1173,18 @@ cipiaskip2
 cipiaskip3
 	MOVEQ	#0,D0
 	RTS
-	
+
 ;---- Copper List ----
 
 SetCopList
-	MOVE.L	#CopperList1,$DFF080	
+	MOVE.L	#CopperList1,$DFF080
 	RTS
 
 SetOldCopList
 	MOVE.L	GfxBase,A0
 	MOVE.L	38(A0),$DFF080
 	RTS
-	
+
 ;---- Intuition Routines ----
 
 OpenPTScreen
@@ -1302,12 +1302,12 @@ musintname	dc.b "ProTracker MusicInt",0
 
 ;---- CIA Interrupt ----
 
-ciatalo = $400
-ciatahi = $500
-ciatblo = $600
-ciatbhi = $700
-ciacra  = $E00
-ciacrb  = $F00
+ciatalo	= $400
+ciatahi	= $500
+ciatblo	= $600
+ciatbhi	= $700
+ciacra	= $E00
+ciacrb	= $F00
 
 SetCIAInt
 	MOVEQ	#2,D6
@@ -1320,7 +1320,7 @@ SetCIALoop
 	JSR	_LVOOpenResource(A6)
 	MOVE.L	D0,CIAAbase
 	BEQ.W	Return1
-	
+
 	MOVE.L	D0,A6
 	MOVE.L	GfxBase,A0
 	MOVE.W	206(A0),D0	; DisplayFlags
@@ -1331,7 +1331,7 @@ SetCIALoop
 WasNTSC	MOVE.L	#1789773,D7 ; NTSC (= round[715909.09090 * (125/50)])
 sciask	MOVE.L	D7,TimerValue
 	DIVU.W	#125,D7 ; Default to normal 50 Hz timer
-	
+
 TryTimerB
 	LEA	MusicIntServer(PC),A1
 	MOVEQ	#1,D0	; Bit 1: Timer B
@@ -1376,7 +1376,7 @@ ResetCIAInt
 	MOVE.L	CIAAaddr(PC),A5
 	TST.L	TimerFlag
 	BEQ.B	ResTimerA
-	
+
 	BCLR	#0,ciacrb(A5)
 	MOVEQ	#1,D0
 	BRA.B	RemInt
@@ -1448,7 +1448,7 @@ temposk	MOVE.W	D0,Tempo
 	BSR.B	ShowTempo
 	BSR.B	SetTempo
 	JMP	Wait_4000
-	
+
 TempoDown
 	MOVE.W	Tempo,D0
 	SUBQ.W	#1,D0
@@ -1562,12 +1562,12 @@ inploop	MOVE.B	4(A1),D0	; ie_Class
 	BEQ.B	InpRawmouse
 	MOVE.L	A1,A2
 InpNext	MOVE.L	0(A1),A1	; ie_NextEvent
-	MOVE.L	A1,D0		; pointer == NULL?	
+	MOVE.L	A1,D0		; pointer == NULL?
 	BNE.B	inploop
 inphend	MOVE.L	A0,D0
 	MOVEM.L	(SP)+,D1/D2/A0-A3
 	RTS
-	
+
 InpUnchain
 	MOVE.L	A2,D0
 	BNE.B	InpUnc2
@@ -1575,7 +1575,7 @@ InpUnchain
 	RTS
 InpUnc2	MOVE.L	0(A1),0(A2)
 	RTS
-	
+
 	; Changed the mouse code as PT2.3A introduced crude acceleration,
 	; which made the mouse very annoying during precise sliding.
 InpRawmouse
@@ -1625,19 +1625,19 @@ InpRawmouse
 .L5	MOVE.L	D0,MouseX	; writes to X and Y in one go (safer)
 	; ----------------------
 	BRA.W	InpNext
-	
+
 InpRawkey
 	BSR.W	InpUnchain
 	MOVE.W	6(A1),D0	; ie_Code
 	BSR.W	ProcessRawkey
 	BRA.W	InpNext
-	
+
 ;---- Process rawkey code from the keyboard ----
 
 ProcessRawkey
 	CMP.B	LastRawkey(PC),D0
 	BEQ.W	kbintDone
-	MOVE.B	D0,LastRawkey	
+	MOVE.B	D0,LastRawkey
 	; -------------------------
 	CMP.B	#96,D0
 	BEQ.W	ShiftOn
@@ -1784,7 +1784,7 @@ RepDown
 	MOVE.L	#$20000000,D0
 	JSR	_LVOSignal(A6)
 	RTS
-	
+
 ;---- Song Playback Counter ----
 
 ; 8bitbubsy: less code overhead and improved tick accuracy (less drifting)
@@ -1799,15 +1799,15 @@ PDELTA_PAL EQU 86036300 ; round[2^32 / FrameRate]
 ; ------------ NTSC Amiga video ------------
 ; Horizontal clock: 15734.265734266Hz (3579545.4545454 (recurring) / 227.5)               
 ; Lines: 263
-; Frame rate = 59.8261054535Hz (HorizontalClock / Lines)	
-PDELTA_NTSC EQU 71790856 ; round[2^32 / FrameRate]	
+; Frame rate = 59.8261054535Hz (HorizontalClock / Lines)
+PDELTA_NTSC EQU 71790856 ; round[2^32 / FrameRate]
 ; ------------------------------------------
 
 ; --- PAL-on-NTSC Amiga video (ECS/AGA) ----
 ; Horizontal clock: 15768.922707249Hz (3579545.4545454 (recurring) / 227.0)
 ; Lines: 313
-; Frame rate = 50.3799447516Hz (HorizontalClock / Lines)	
-PDELTA_PAL_ON_NTSC EQU 85251529 ; round[2^32 / FrameRate]	
+; Frame rate = 50.3799447516Hz (HorizontalClock / Lines)
+PDELTA_PAL_ON_NTSC EQU 85251529 ; round[2^32 / FrameRate]
 ; ------------------------------------------
 
 DrawPlaybackCounter
@@ -1847,7 +1847,7 @@ DoDrawPlaybackCounter
 	MOVE.B	1(A3,D0.W),D1
 	LEA	(A4,D1.W),A1
 	; ---------------------
-	SWAP	D0			
+	SWAP	D0
 	ADD.W	D0,D0		; D0.W = seconds (*2 for LUT)
 	MOVE.B	0(A3,D0.W),D1
 	LEA	(A4,D1.W),A2
@@ -1868,7 +1868,7 @@ DoDrawPlaybackCounter
 	MOVE.B	(A1),160-1(A4)
 	; ---------------------
 	ADDQ	#1,A4		; draw seconds
-	MOVE.B	(A2)+,(A4)+		
+	MOVE.B	(A2)+,(A4)+
 	MOVE.B	(A2)+,40-1(A4)
 	MOVE.B	(A2)+,80-1(A4)
 	MOVE.B	(A2)+,120-1(A4)
@@ -1877,7 +1877,7 @@ DoDrawPlaybackCounter
 	MOVE.B	(A3)+,40-1(A4)
 	MOVE.B	(A3)+,80-1(A4)
 	MOVE.B	(A3)+,120-1(A4)
-	MOVE.B	(A3),160-1(A4)	
+	MOVE.B	(A3),160-1(A4)
 DDPCEnd	RTS
 
 	CNOP 0,4
@@ -2010,7 +2010,7 @@ SpecAna2
 	BHS.B	.L1
 	MOVE.W	D4,D0
 .L1	; --------------------
-	SUB.W	D4,D0		; Subtract 113 (highest rate)	
+	SUB.W	D4,D0		; Subtract 113 (highest rate)
 	MOVE.W	#743,D1
 	SUB.W	D0,D1		; Invert range 0-743
 	MULU.W	D1,D1		; 0 - 743^2
@@ -2061,7 +2061,7 @@ AnalyzerOffsets
 	dc.w $0370,$0348,$0320,$02F8,$02D0,$02A8,$0280,$0258
 	dc.w $0230,$0208,$01E0,$01B8,$0190,$0168,$0140,$0118
 	dc.w $00F0
-	
+
 AnaDrawFlag	dc.b 0
 	EVEN
 
@@ -2087,10 +2087,10 @@ Scope
 ScoLoop
 	MOVE.W	n_period(A0),D0
 	BEQ.W	ScoSampleEnd		; end if no period
-	
+
 	MOVE.W	n_periodout(A0),ns_period(A2)
 	MOVE.B	n_volumeout(A0),ns_volume(A2)
-	
+
 	TST.B	n_trigger(A0)
 	BEQ.B	ScoContinue
 ScoRetrig
@@ -2103,7 +2103,7 @@ ScoRetrig
 	MOVEQ	#0,D0
 	MOVE.B	n_samplenum(A0),D0
 	SUBQ.W	#1,D0
-	LSL.W	#4,D0	
+	LSL.W	#4,D0
 	MOVE.L	ns_sampleptr(A1,D0.W),ns_sampleptr(A2)
 	MOVE.L	ns_endptr(A1,D0.W),ns_endptr(A2)
 	MOVE.L	ns_repeatptr(A1,D0.W),ns_repeatptr(A2)
@@ -2112,14 +2112,14 @@ ScoRetrig
 	CMP.L	A3,D0 ; at end of sample...
 	BEQ.W	ScoNextChan
 	BRA.B	ScoChk
-	
+
 ScoContinue
 	MOVE.L	ns_sampleptr(A2),D0
 	CMP.L	A3,D0 ; at end of sample...
 	BEQ.B	ScoNextChan
 	MOVE.W	ns_period(A2),D1
 	BEQ.B	ScoNextChan
-	
+
 	; PT2.3F: better scope pitch/delta precision
 
 FRAC_BITS EQU 6				; max bits for period 113 w/ DIVU.W
@@ -2136,8 +2136,8 @@ ScoOk	MOVE.L	#71051*(1<<FRAC_BITS),D2 ; PaulaClk / VBlankHz = 71051.0 (exact)
 	ADD.W	D1,ns_posfrac(A2)	; add delta fraction
 	CLR.W	D1
 	SWAP	D1
-	ADDX.L	D1,D0			; add integer + fraction overflow bit	
-	
+	ADDX.L	D1,D0			; add integer + fraction overflow bit
+
 ScoChk	CMP.L	ns_endptr(A2),D0
 	BLO.B	ScoUpdatePtr
 	TST.L	ns_repeatptr(A2)
@@ -2145,7 +2145,7 @@ ScoChk	CMP.L	ns_endptr(A2),D0
 ScoSampleEnd
 	MOVE.L	A3,D0
 	BRA.B	ScoUpdatePtr
-ScoHandleLoop	
+ScoHandleLoop
 	MOVE.L	ns_endptr(A2),D1
 	SUB.L	ns_repeatptr(A2),D1	; D1.L = loop length
 	CMP.L	#256,D1			; loopLength < 256 = use MOD (DIV) instead
@@ -2182,7 +2182,7 @@ ScoNextChan
 	BNE.B	clsnot
 	TST.B	EdEnable
 	BNE.B	clsnot
-	
+
 	; clear scopes (slightly optimized in PT2.3F)
 	LEA	TextBitplane+2256,A0
 	MOVEQ	#(33/3)-1,D0
@@ -2199,14 +2199,14 @@ clscop	MOVEM.L	D1-D6,(A0)
 	MOVEM.L	D1-D6,(A0)
 	LEA	40(A0),A0
 	DBRA	D0,clscop
-	
+
 clsnot	MOVEQ	#-1,D4
 	TST.W	SamScrEnable
 	BEQ.B	ScoNClr
 	MOVEQ	#0,D4
 ScoNClr	MOVEQ	#0,D7
 	MOVE.W	$DFF002,D6 ; dmaconr
-	
+
 	MOVEQ	#0,D5
 	LEA	TextBitplane+(72*40+16),A1
 	LEA	xBlankSample,A2
@@ -2289,14 +2289,14 @@ sdsk1	EXT.W	D5
 	MOVE.L	ns_sampleptr(A2),A0
 	MOVEQ	#5-1,D2
 	LEA	(64*2)+scopeYTab(PC),A5
-	
+
 	; --PT2.3D bug fix: scope loop fix
 	MOVE.L	ns_endptr(A2),A4	; sample end
 	TST.L	ns_repeatptr(A2)	; loop enabled?
 	BEQ.B	sdlp1			; no, let's use the old scope routine
 	TST.B	ns_oneshotflag(A2)	; oneshot cycle?
 	BNE.B	sdlp1			; yes, let's use the original scope routine first
-	
+
 	; ---- new scope routine for looped samples ----
 	MOVE.L	ns_rependptr(A2),A4	; sample loop end
 	MOVE.L	ns_repeatptr(A2),A3	; sample loop start
@@ -2320,9 +2320,9 @@ sdlnowrap
 sWrapLoop
 	MOVE.L	A3,A0			; set read address to sample loop start
 	BRA.B	sdlnowrap
-	
+
 	; --END OF FIX--------------------
-	
+
 	; ---- old scope routine for non-looping samples (or oneshot-cycle) ----
 sdlp1
 	MOVEQ	#8-1,D3			; we do 8 pixels per bitplane byte
@@ -2342,7 +2342,7 @@ sdlp2
 	ADDQ	#1,A1			; we have done 8 bits now, increase bitplane ptr
 	DBRA	D2,sdlp1
 	; ----------------------------------------------------
-			
+
 sdlpos	; process sample play position (the blue line)
 	TST.B	D4
 	BNE.W	ScoRTS
@@ -2360,7 +2360,7 @@ sdlpos	; process sample play position (the blue line)
 	CMP.L	SamDrawEnd(PC),D1
 	BHS.W	ScoRTS
 	SUB.L	D0,D1
-	
+
 	; dirty fix for new scopes on non-looping samples
 	CMP.L	#2,D1
 	BLT.B	sdloscr
@@ -2393,7 +2393,7 @@ SetScope
 
 	; -- PT2.3D bug fix: show 9xx properly on scopes ( doesn't include 9xx quirks :-( )
 	TST.L	RunMode
-	BEQ.B	ss9Done	
+	BEQ.B	ss9Done
 	MOVE.B	n_cmd(A0),D0
 	AND.B	#$0F,D0
 	CMP.B	#$09,D0
@@ -2429,10 +2429,10 @@ ss9Done
 	ADD.W	n_replen(A0),D1
 	CMP.W	#1,D1			; (n_repeat+n_replen) > 1? (loop enabled)
 	BLS.B	sconorep		; nope, no loop...
-	
+
 	; set loop pointers
 	MOVE.W	n_replen(A0),D1
-	MOVE.L	n_loopstart(A0),D0	
+	MOVE.L	n_loopstart(A0),D0
 	MOVE.L	D0,ns_repeatptr(A4)
 	ADD.L	D1,D0
 	ADD.L	D1,D0
@@ -2448,7 +2448,7 @@ ss9Done
 	BEQ.B	.skip			; nope, they are equal
 	ST	ns_oneshotflag(A2)	; yes, activate oneshot flag for one loop cycle
 .skip	RTS
-	
+
 sconorep
 	CLR.L	ns_repeatptr(A4)
 	RTS
@@ -2486,7 +2486,7 @@ rsdsk1	EXT.W	D5
 	NEG.W	D5			; D5.W = -0..32768
 
 	MOVE.L	ns_sampleptr(A2),A0
-	MOVEQ	#5-1,D2	
+	MOVEQ	#5-1,D2
 	ADDQ	#6,A4
 	LEA	(64*2)+scopeYTab(PC),A5
 
@@ -2496,7 +2496,7 @@ rsdsk1	EXT.W	D5
 	BEQ.B	rsdlp1			; no, let's use the old scope routine
 	TST.B	ns_oneshotflag(A2)	; oneshot cycle?
 	BNE.B	rsdlp1			; yes, let's use the original scope routine first
-		
+
 	; ---- new scope routine for looped samples ----
 	MOVE.L	ns_rependptr(A2),D4	; sample loop end
 	MOVE.L	ns_repeatptr(A2),A3	; sample loop start
@@ -2510,7 +2510,7 @@ rsdlnowrap
 	EXT.W	D0			; extend to word
 	MULS.W	D5,D0			; multiply by volume
 	SWAP	D0			; D0.W = -63..64
-	
+
 	MOVE.W	D0,D1			; D1 = amplitude
 	BPL.B 	rnotSigned		; D1 >= 0?
 	NEG.W 	D1			; no, D1 = ABS(D1)
@@ -2523,7 +2523,7 @@ rnoNewStore
 	BEQ.B	rsdlskip		; nope...
 
 	ADD.W	D0,D0
-	MOVE.W	(A5,D0.W),D0	
+	MOVE.W	(A5,D0.W),D0
 	BSET	D3,(A1,D0.W)		; set the current bitplane bit
 rsdlskip
 	DBRA	D3,rsdlp2LOOP
@@ -2537,7 +2537,7 @@ rWrapLoop
 	MOVE.L	A3,A0			; set read address to sample loop start
 	BRA.B	rsdlnowrap
 	; --END OF FIX--------------------
-	
+
 	; ---- old scope routine for non-looping samples ----
 rsdlp1
 	MOVEQ	#8-1,D3			; we do 8 pixels per bitplane byte
@@ -2545,7 +2545,7 @@ rsdlp2
 	MOVEQ	#0,D0
 	CMP.L	D4,A0			; did we reach sample end yet?
 	BHS.B	rnoNewStore2		; yes, draw empty sample
-	
+
 	MOVE.B	(A0)+,D0		; get byte from sample data
 	EXT.W	D0			; extend to word
 	MULS.W	D5,D0			; multiply by volume
@@ -2578,7 +2578,7 @@ rsdlskip2
 ToggleAnaScope
 	BSR.W	WaitForButtonUp
 	TST.B	AboutScreenShown
-	BNE.B	HideAboutScreen	
+	BNE.B	HideAboutScreen
 	MOVE.W	MouseX2,D0
 	MOVE.W	MouseY2,D1
 	CMP.W	#55,D1
@@ -2592,7 +2592,7 @@ tasny	MOVEQ	#0,D4
 	BRA.W	RedrawAnaScope
 tasana	SF	AnaScopFlag
 	BRA.W	RedrawAnaScope
-	
+
 HideAboutScreen
 	MOVEQ	#0,D4
 	MOVE.B	SaveScope,ScopeEnable
@@ -2622,7 +2622,7 @@ ShowAboutScreen
 	MOVE.L	#AboutBoxSize,D0
 	BSR.W	cgjojo ; decompact
 	RTS
-	
+
 ;---- Show Free/Tune Memory ----
 
 DoShowFreeMem
@@ -2661,7 +2661,7 @@ sfmskp3
 fremend	MOVEM.L	(SP)+,D0-D7/A0-A6
 	RTS
 
-shfrdec	MOVE.L	FreeMemory(PC),D0	
+shfrdec	MOVE.L	FreeMemory(PC),D0
 	MOVE.W	#5273,TextOffset
 	JSR	Print6DecDigits
 	BRA.B	fremend
@@ -2864,7 +2864,7 @@ VUMeters
 	BEQ.B	.L3		; yes, don't sink
 	ADDQ.B	#1,(A0)		; sink
 .L3	RTS
-	
+
 RealVUMeters
 	LEA	VUSpriteData1,A0
 	LEA	6+audchan1toggle(PC),A1
@@ -3015,7 +3015,7 @@ RenameFileGadg
 	BSR.W	ClearDirTotal
 	BSR.W	DirDisk
 	BNE.W	RestorePtrCol
-	
+
 RenameFileDirOk
 	MOVE.W	FileNameScrollPos(PC),D0
 	BSR.W	RedrawFileNames
@@ -3058,7 +3058,7 @@ smpmskp	MOVEQ	#3,D0
 
 ChangeDiskOpMode
 	CLR.W	ShowDrivesFlag
-	NOT.W	DiskOpScreen2	
+	NOT.W	DiskOpScreen2
 	CMP.W	#1,DirPathNum
 	BNE.B	.L0
 	MOVE.W	#3,DirPathNum
@@ -3129,7 +3129,7 @@ ShowSaveModePattBuff
 	LEA	ToggleCURText(PC),A0
 	TST.B	LoadPattToBufferFlag
 	BEQ.B	ssmpbskip
-	LEA	ToggleBUFText(PC),A0	
+	LEA	ToggleBUFText(PC),A0
 ssmpbskip
 	MOVEQ	#3,D0
 	MOVE.W	#1055,D1
@@ -3233,7 +3233,7 @@ DirBrowseGadg2
 	MOVE.L	PathPtr,A0
 
 	MOVEQ	#64-1,D1
-	MOVEQ	#0,D2	
+	MOVEQ	#0,D2
 .loop1	MOVE.B	D2,(A0)+
 	DBRA	D1,.loop1
 
@@ -3329,7 +3329,7 @@ DirBrowseGadg2
 	MOVE.B	#':',(A1)+
 .L10	MOVE.L	(SP)+,A2
 	RTS
-	
+
 	CNOP 0,4
 dpnum	dc.l 0
 	dc.w 0
@@ -3349,7 +3349,7 @@ ShowDiskDrives
 	JSR	ShowStatusText
 	MOVE.W	#1,ShowDrivesFlag
 	CLR.W	DriveListPos
-	
+
 	MOVEQ	#' ',D0
 	LEA	DriveListBuffer(PC),A0
 	MOVE.L	#(36*16)-1,D1
@@ -3392,8 +3392,8 @@ ShowDiskDrives
 	SUBQ.W	#1,D4
 	CMP.B	#15,D4
 	BLO.B	.loop3
-	
-	MOVEQ	#16-1,D4	
+
+	MOVEQ	#16-1,D4
 .loop3	LEA	36(A3),A3
 	MOVE.L	A3,A1
 	MOVEM.L	D0/A2,-(SP)
@@ -3554,7 +3554,7 @@ chpaski	LEA	TextBitplane,A0
 	MOVE.L	A4,PathPtr
 	BSR.W	ShowDirPath
 	BRA.W	WaitForButtonUp
-	
+
 ;---- Song Gadgets ----
 
 LoadTrackGadg
@@ -3857,7 +3857,7 @@ LoadPattToBuffer
 	MOVE.W	#(64*4)-1,D0
 lopaloop4
 	MOVE.L	(A0)+,(A1)+
-	DBRA	D0,lopaloop4	
+	DBRA	D0,lopaloop4
 lopaskip
 	TST.B	AutoExitFlag
 	BEQ.B	lopadone
@@ -3928,7 +3928,7 @@ ResetDiskOpMousePointer
 	BNE.B	.L0
 	BSR.W	SetNormalPtrCol
 .L0	RTS
-	
+
 ;---- Song Gadgets ----
 
 LoadSongGadg
@@ -3988,7 +3988,7 @@ DeleteSongDirOk
 	LEA	SelectSongText,A0
 	JSR	ShowStatusText
 	BRA.W	SetDeletePtrCol
-	
+
 ;---- Module Gadgets ----
 
 LoadModuleGadg
@@ -4055,7 +4055,7 @@ DeleteModDirOk
 	LEA	SelectModuleText,A0
 	JSR	ShowStatusText
 	BRA.W	SetDeletePtrCol
-	
+
 ;---- Sample Gadgets ----
 
 LoadSampleGadg
@@ -4099,7 +4099,7 @@ dosavesample
 	JSR	CreateSampleName
 	CMP.B	#2,RawIFFPakMode
 	BNE.W	WriteSample	; PAK flag disabled
-	
+
 	; Sample Crunch (PAK)
 	TST.L	DiskDataLength
 	BEQ.W	Return1
@@ -4149,7 +4149,7 @@ AbortSampleCrunchBox
 	LEA	CrunchAbortedText(PC),A0
 	JSR	ShowStatusText
 	BRA.W	SetErrorPtrCol
-	
+
 SampleCrunchSettings
 	CMP.W	#$36,D1
 	BLO.W	dssaloop2
@@ -4186,7 +4186,7 @@ WriteSample
 	MOVE.W	InsNum,D1
 	LSL.L	#2,D1
 	LEA	SongDataPtr,A0
-	MOVE.L	(A0,D1.W),DiskDataPtr	
+	MOVE.L	(A0,D1.W),DiskDataPtr
 	BSR.W	SetDiskPtrCol
 	MOVE.L	DOSBase,A6
 	MOVE.L	FileNamePtr,D1
@@ -4196,7 +4196,7 @@ WriteSample
 	BNE.B	SaveSample
 	JSR	CantOpenFile
 	BRA.W	ErrorRestoreCol
-	
+
 SaveSample
 	LEA	SavingSampleText,A0
 	JSR	ShowStatusText
@@ -4292,7 +4292,6 @@ wpsskip5
 	MOVE.L	PPLibBase,A6
 	JSR	_LVOppCrunchBuffer(A6)
 	LEA	CrunchAbortedText(PC),A0
-	;CMP.L	#0,D0
 	TST.L	D0
 	BEQ.W	SampleCrunchError
 	LEA	BufOverflowText(PC),A0
@@ -4342,7 +4341,6 @@ SampleCrunchCleanUp
 	MOVE.L	FileHandle,D1
 	MOVE.L	DOSBase,A6
 	JSR	_LVOClose(A6)
-	;CMP.L	#0,CrunchInfoPtr
 	TST.L	CrunchInfoPtr
 	BEQ.B	sccskip
 	MOVE.L	CrunchInfoPtr(PC),A0
@@ -4359,14 +4357,14 @@ sccskip2
 	BSR.W	SetNormalPtrCol
 	JSR	ShowAllRight
 	BRA.W	DoAutoDir
-	
+
 SampleCrunchError
 	JSR	ShowStatusText
 	BSR.W	SetErrorPtrCol
 	MOVE.W	#ERR_WAIT_TIME,WaitTime
 	BSR.W	WaitALittle
 	BRA.B	SampleCrunchCleanUp
-	
+
 SampleCrunchOutOfMemory
 	LEA	NoBufMemText(PC),A0
 	JSR	ShowStatusText
@@ -4474,7 +4472,7 @@ dpgok
 	BSR.W	RedrawFileNames
 	MOVEA.L	(SP)+,A5
 	MOVE.L	A0,-(SP)
-	MOVE.W	DirPathNum(PC),D0	; D0 = DirPathNum (Disk Op. Load/Save mode)			
+	MOVE.W	DirPathNum(PC),D0	; D0 = DirPathNum (Disk Op. Load/Save mode)
 	BEQ.B	moduleAction		; D0 #0 = load module
 	CMP.B	#1,D0
 	BEQ.B	songAction			; D0 #1 = load song
@@ -4523,7 +4521,7 @@ ShowDirPath
 	JSR	ShowText3
 	MOVEM.L	(SP)+,D0/D1/A0/A1
 	RTS
-	
+
 ;---- File List Gadgets ----
 
 FilenameOneUp
@@ -4734,7 +4732,7 @@ FileNamePressed
 	MOVE.L	D0,A0
 	TST.L	32(A0)
 	BMI.W	AddDirectory
-	
+
 	MOVEQ	#DirNameLength-1,D0
 	LEA	DirInputName,A1
 .loop	MOVE.B	(A0)+,(A1)+
@@ -4881,7 +4879,7 @@ FileNamesPtr
 FileNameScrollPos
 	dc.w	0
 	dc.w	0
-	
+
 ;---- Has Disk Changed ----
 
 HasDiskChanged
@@ -4954,7 +4952,7 @@ LockAndGetInfo
 	MOVE.L	#InfoData,D2
 	JSR	_LVOInfo(A6)
 	LEA	InfoData,A0
-	MOVE.L	12(A0),D0 ; id_NumBlocks	
+	MOVE.L	12(A0),D0 ; id_NumBlocks
 	; -------------------------------------------------
 	; This code snippet was taken from PT3.15.S
 	MOVEM.L	D3/D4,-(SP)
@@ -5003,7 +5001,7 @@ sdsdecok
 sdsdecend
 	MOVEQ	#0,D0
 	RTS
-	
+
 tooMuchText	dc.b "A LOT..."
 	EVEN
 
@@ -5019,7 +5017,7 @@ AllocDirMem
 	JSR	PTAllocMem
 	MOVE.L	D0,D7
 	BEQ.B	baehsj
-	
+
 	MOVE.L	FileNamesPtr(PC),D1
 	MOVE.L	D7,FileNamesPtr
 	TST.L	D1
@@ -5047,7 +5045,7 @@ FreeDirMem
 	CLR.W	DirEntries
 	RTS
 
-baehsj  JSR	OutOfMemErr
+baehsj	JSR	OutOfMemErr
 	MOVEQ	#-1,D0
 	RTS
 
@@ -5239,11 +5237,11 @@ sfnloop	MOVE.W	A6,TextOffset
 	MOVEQ	#0,D0
 	MOVE.W	30(A0),D0
 	BSR.W	CalculateDate
-	MOVE.W	TheDay(PC),WordNumber	
+	MOVE.W	TheDay(PC),WordNumber
 	JSR	Print2DecDigits
-	MOVE.W	TheMonth(PC),WordNumber	
+	MOVE.W	TheMonth(PC),WordNumber
 	JSR	Print2DecDigits
-	MOVE.W	TheYear(PC),WordNumber	
+	MOVE.W	TheYear(PC),WordNumber
 	JSR	Print2DecDigits
 	ADDQ.W	#1,TextOffset
 	MOVE.L	D6,ShowTextPtr
@@ -5337,7 +5335,7 @@ TheDay		dc.w 0
 MonthTable	dc.w 0,31,59,90,120,151,181,212,243,273,304,334
 DirText		dc.b " (DIR)"
 	EVEN
-	
+
 ;---- Update Mousepointer Position ----
 
 UpdatePointerPos
@@ -5385,7 +5383,7 @@ SongPosToZero
 	CLR.L	SongPosition
 	CLR.L	CurrPos
 	RTS
-	
+
 ;---- Play Pattern ----
 
 PlayPattern
@@ -5485,7 +5483,7 @@ RedrawAnaScope
 	BEQ.B	cgjojo
 	LEA	ScopeData,A0
 	MOVE.L	#ScopeSize,D0
-	
+
 cgjojo	BSR.W	Decompact
 	BEQ.B	cgjaja
 	LEA	SpectrumAnaPos,A0
@@ -5510,7 +5508,7 @@ cgjaja	TST.L	D4
 	BRA.W	SetAnalyzerColors
 cgscope	ST	ScopeEnable
 	BRA.W	ClearAnalyzerColors
-	
+
 ;---- Clear Areas ----
 
 ClearFileNames
@@ -5543,7 +5541,7 @@ Clear100Lines
 chlloop	MOVE.L	D1,(A0)+
 	DBRA	D0,chlloop
 	RTS
-	
+
 ;---- Are You Sure Requester ----
 
 AreYouSure
@@ -5599,7 +5597,7 @@ surebuttoncheck
 	BLO.B	SureAnswerYes
 	CMP.W	#$EA,D0
 	BLO.B	surebuttoncheck
-SureAnswerNo	
+SureAnswerNo
 	LEA	SureBoxData,A1
 	BSR.W	SwapBoxMem
 	JSR	ShowAllRight
@@ -5609,7 +5607,7 @@ SureAnswerNo
 	; --PT2.3D change: don't show busy mouse on 15 sample .mod loading
 	MOVE.L	LastAreYouSureTextPtr(PC),A0
 	LEA	Loadas31Text(PC),A1
-	CMP.L	A0,A1	
+	CMP.L	A0,A1
 	BEQ.B	noBusyCursor
 	BSR.W	ErrorRestoreCol
 noBusyCursor
@@ -5620,7 +5618,7 @@ noBusyCursor
 	MOVEQ	#-1,D0
 	SF	AskBoxShown
 	RTS
-	
+
 	CNOP 0,4
 LastAreYouSureTextPtr	dc.l 0
 
@@ -5684,7 +5682,7 @@ WaitForVBlank
 	CMP.W	D1,D0
 	BNE.B	WaitForVBlank
 	RTS
-	
+
 ;---- Set Pointercolors ----
 
 SetDeletePtrCol
@@ -5753,13 +5751,13 @@ SetErrorPtrCol
 	JSR	ShowAllRight
 	BSR.W	SetNormalPtrCol
 	SF	DisableScopeMuting	; kludge
-	
+
 	; remove potentially stuck keys
 	CLR.B	SaveKey
 	CLR.W	KeyRepCounter
 	CLR.W	KeyBufPos
 	CLR.B	RawKeyCode
-	
+
 	MOVEQ	#0,D0
 	RTS
 
@@ -5798,8 +5796,8 @@ RestorePtrCol
 	MOVE.W	PointerCol3Save,10(A6)
 	MOVE.L	(SP)+,A6
 	RTS
-	
-	
+
+
 ;---- Check special keys ----
 
 CheckPlayKeys
@@ -5822,7 +5820,7 @@ cpkskip
 	BEQ.W	EscPressed
 	CMP.B	#66,D0
 	BEQ.W	TabulateCursor
-	;CMP.B	#127,D0	(8bb: probably broke in PT2.3...)
+	;CMP.B	#127,D0 (8bb: probably broke in PT2.3...)
 	;BEQ.W	GotoCLI
 	CMP.B	#48,D0
 	BEQ.W	TurnOffVoices
@@ -5834,7 +5832,7 @@ cpkskip
 	BEQ.W	KillSample
 	CMP.B	#13,D0
 	BEQ.W	togglepnote
-	
+
 	CMP.B	#67,D0
 	BEQ.B	ToggleHiLoInstr
 	MOVE.W	HiLowInstr,D1
@@ -5959,7 +5957,7 @@ ctksub	MOVEQ	#0,D0
 	BEQ.W	OctaveUp
 	CMP.B	#49,D1
 	BEQ.W	OctaveDown
-	
+
 	MOVE.W	#300,D0
 	CMP.B	#2,D1
 	BEQ.W	NoteUp
@@ -5969,7 +5967,7 @@ ctksub	MOVEQ	#0,D0
 	BEQ.W	OctaveUp
 	CMP.B	#50,D1
 	BEQ.W	OctaveDown
-	
+
 	MOVEQ	#0,D0
 	ST	SampleAllFlag
 	CMP.B	#3,D1
@@ -5980,7 +5978,7 @@ ctksub	MOVEQ	#0,D0
 	BEQ.W	OctaveUp
 	CMP.B	#51,D1
 	BEQ.W	OctaveDown
-	
+
 	MOVE.W	#300,D0
 	CMP.B	#4,D1
 	BEQ.W	NoteUp
@@ -5991,7 +5989,7 @@ ctksub	MOVEQ	#0,D0
 	CMP.B	#52,D1
 	BEQ.W	OctaveDown
 	RTS
-	
+
 ;---- Check control keys ----
 
 CheckCtrlKeys
@@ -6034,7 +6032,7 @@ CheckCtrlKeys
 	CMP.B	#21,D0 ; Y
 	BEQ.W	BackwardsBlock
 	CMP.B	#17,D0 ; W
-	BEQ.W	PolyphonizeBlock	
+	BEQ.W	PolyphonizeBlock
 	CMP.B	#18,D0 ; E
 	BEQ.W	ExpandTrack
 	CMP.B	#24,D0 ; O
@@ -6046,12 +6044,12 @@ CheckCtrlKeys
 	CMP.B	#39,D0 ; K
 	BEQ.W	KillToEndOfTrack
 	CMP.B	#22,D0 ; U
-	BEQ.W	UndoLastChange	
+	BEQ.W	UndoLastChange
 	CMP.B	#68,D0 ; CR
 	BEQ.W	InsCmdTrack
 	CMP.B	#65,D0 ; Del
 	BEQ.W	DelCmdTrack
-	
+
 	CMP.B	#1,D0
 	BLO.W	Return1
 	CMP.B	#10,D0
@@ -6087,7 +6085,7 @@ ToggleRecMode
 trmSkip
 	LEA	RecPattText(PC),A0
 trmShow
-	JSR	ShowStatusText	
+	JSR	ShowStatusText
 	; update rec mode string in edit op. #2 (if shown)
 	CMP.W	#1,CurrScreen
 	BNE.B	trmEnd
@@ -6194,12 +6192,12 @@ gakskip
 DiskOpQuickJump
 	BSR.B	GetASCIIKey	; D1 = key
 	BMI.W	Return1
-	
+
 	LEA	FileNamesPtr(PC),A5
-	MOVE.W	16(A5),D3	; D3 = number of files	
+	MOVE.W	16(A5),D3	; D3 = number of files
 	CMP.W	#8,D3		; all files shown? (files <= 8)
-	BLS.W	Return1		; yep, no need to quick jump	
-	
+	BLS.W	Return1		; yep, no need to quick jump
+
 	MOVE.L	0(A5),A1
 
 	MOVEQ	#0,D0
@@ -6213,11 +6211,11 @@ DiskOpQuickJump
 	MOVE.B	4(A1),D2
 .L0	BSR.W	D2ToLowercase
 	CMP.B	D1,D2 		; first characer matching with key?
-	BEQ.B	.found	
+	BEQ.B	.found
 .next	LEA	36(A1),A1
 	ADDQ.W	#1,D0
 	CMP.W	D3,D0
-	BLO.B	.loop	
+	BLO.B	.loop
 	BRA.W	ErrorRestoreCol	; beyond last file, match not found
 
 .found	SUBQ.W	#8,D3
@@ -6299,7 +6297,7 @@ SetMetroChannel
 	BNE.W	Return1
 	BRA.W	ShowMetronome
 
-AutoInsert	
+AutoInsert
 	CLR.B	RawKeyCode
 	EOR.B	#1,AutoInsFlag
 ShowAutoInsert
@@ -6325,7 +6323,7 @@ AutoInsText	dc.w	0
 AutoInsFlag	dc.b	0
 MetroFlag	dc.b	0
 	EVEN
-	
+
 DecAutoInsSlot
 	CLR.B	RawKeyCode
 	TST.B	AutoInsFlag
@@ -6379,7 +6377,7 @@ SaveAllSamples
 	JMP	ShowSampleInfo
 sarts
 	RTS
-	
+
 SaveAllSamplesText
 	dc.b	"save all samples?",0
 	EVEN
@@ -6410,7 +6408,7 @@ TabCurRight
 	BPL.B	tacskip
 	MOVEQ	#3,D0
 	BRA.B	tacskip
-	
+
 ;---- Escape was pressed ----
 
 EscPressed	CLR.B	RawKeyCode
@@ -6477,7 +6475,7 @@ HelpSelectText	dc.b	'* help selected *',0
 PLSTSelectText	dc.b	'* plst selected *',0
 PLSTHelpFlag	dc.b	0 ; free 0
 	EVEN
-	
+
 CheckHelpKey
 	CMP.B	#95,RawKeyCode	; Help Key pressed ?
 	BNE.W	Return1
@@ -7068,7 +7066,7 @@ pacmloop
 	BNE.B	pacmloop
 	CLR.B	RawKeyCode
 	JMP	RedrawPattern
-	
+
 ;---- Swap Tracks ----
 
 SwapTrack
@@ -7218,7 +7216,7 @@ cobllop	MOVE.L	(A0),(A1)
 coblskp	MOVE.W	D0,BuffFromPos
 	MOVE.W	D1,BuffToPos
 	JMP	ShowAllRight
-	
+
 PasteBlock
 	CLR.B	RawKeyCode
 	TST.W	BlockBufferFlag
@@ -7496,7 +7494,6 @@ cotrend	MOVE.W	PosSave(PC),ScrPattPos
 
 PosSave	dc.w	0
 
-
 KillToEndOfTrack
 	CLR.B	RawKeyCode
 	BSR.B	SaveUndo
@@ -7549,7 +7546,7 @@ saunlop	MOVE.L	(A0)+,(A1)+
 	DBRA	D0,saunlop
 	MOVEM.L	(SP)+,D0/A0/A1
 	RTS
-	
+
 ;---- Check Function Keys F1-F2 ----
 
 CheckF1_F2
@@ -7568,7 +7565,7 @@ SetOctaveHigh
 	MOVE.L	#KbdTransTable2,KeyTransTabPtr
 	CLR.B	RawKeyCode
 	RTS
-	
+
 ;---- Get Hex Key ----
 
 GetHexNybble
@@ -7599,7 +7596,7 @@ ghndone
 	BSR.W	RestorePtrCol
 	MOVE.B	D6,D0
 	RTS
-	
+
 GetHexByte
 	MOVE.W	#1,AbortHexFlag
 	BSR.W	StorePtrCol
@@ -7681,7 +7678,7 @@ chxloop	CMP.B	(A0)+,D0
 	CMP.B	#16,D1
 	BNE.B	chxloop
 	RTS
-	
+
 ;---- Enter Edit Commands (effects) ----
 
 EditCommand
@@ -7705,7 +7702,8 @@ DoEditCommand
 	LSL.W	#8,D1
 	BRA.W	UpdateCommand
 
-ChkPos2	CMP.W	#2,PattCurPos
+ChkPos2
+	CMP.W	#2,PattCurPos
 	BNE.B	ChkPos3
 	MOVE.L	#$FFF,D2
 	MOVE.W	#2,CmdOffset
@@ -7713,27 +7711,31 @@ ChkPos2	CMP.W	#2,PattCurPos
 	LSL.W	#8,D1
 	BRA.W	UpdateCommand
 
-ChkPos3	CMP.W	#3,PattCurPos
+ChkPos3
+	CMP.W	#3,PattCurPos
 	BNE.B	ChkPos4
 	MOVE.L	#$F0FF,D2
 	MOVE.W	#2,CmdOffset
 	LSL.W	#8,D1
 	BRA.W	UpdateCommand
 
-ChkPos4	CMP.W	#4,PattCurPos
+ChkPos4
+	CMP.W	#4,PattCurPos
 	BNE.B	ChkPos5
 	MOVE.L	#$FF0F,D2
 	MOVE.W	#2,CmdOffset
 	LSL.W	#4,D1
 	BRA.W	UpdateCommand
 
-ChkPos5	CMP.W	#5,PattCurPos
+ChkPos5
+	CMP.W	#5,PattCurPos
 	BNE.B	ChkPos7
 	MOVE.L	#$FFF0,D2
 	MOVE.W	#2,CmdOffset
 	BRA.W	UpdateCommand
 
-ChkPos7	CMP.W	#7,PattCurPos
+ChkPos7
+	CMP.W	#7,PattCurPos
 	BNE.B	ChkPos8
 	CMP.W	#1,D1
 	BHI.W	Return1
@@ -7743,7 +7745,8 @@ ChkPos7	CMP.W	#7,PattCurPos
 	LSL.W	#8,D1
 	BRA.W	UpdateCommand
 
-ChkPos8	CMP.W	#8,PattCurPos
+ChkPos8
+	CMP.W	#8,PattCurPos
 	BNE.B	ChkPos9
 	MOVE.L	#$FFF,D2
 	MOVE.W	#6,CmdOffset
@@ -7751,27 +7754,31 @@ ChkPos8	CMP.W	#8,PattCurPos
 	LSL.W	#8,D1
 	BRA.W	UpdateCommand
 
-ChkPos9	CMP.W	#9,PattCurPos
+ChkPos9
+	CMP.W	#9,PattCurPos
 	BNE.B	ChkPos10
 	MOVE.L	#$F0FF,D2
 	MOVE.W	#6,CmdOffset
 	LSL.W	#8,D1
 	BRA.W	UpdateCommand
 
-ChkPos10	CMP.W	#10,PattCurPos
+ChkPos10
+	CMP.W	#10,PattCurPos
 	BNE.B	ChkPos11
 	MOVE.L	#$FF0F,D2
 	MOVE.W	#6,CmdOffset
 	LSL.W	#4,D1
 	BRA.W	UpdateCommand
 
-ChkPos11	CMP.W	#11,PattCurPos
+ChkPos11
+	CMP.W	#11,PattCurPos
 	BNE.B	ChkPos13
 	MOVE.L	#$FFF0,D2
 	MOVE.W	#6,CmdOffset
 	BRA.W	UpdateCommand
 
-ChkPos13	CMP.W	#13,PattCurPos
+ChkPos13
+	CMP.W	#13,PattCurPos
 	BNE.B	ChkPos14
 	CMP.W	#1,D1
 	BHI.W	Return1
@@ -7781,7 +7788,8 @@ ChkPos13	CMP.W	#13,PattCurPos
 	LSL.W	#8,D1
 	BRA.W	UpdateCommand
 
-ChkPos14	CMP.W	#14,PattCurPos
+ChkPos14
+	CMP.W	#14,PattCurPos
 	BNE.B	ChkPos15
 	MOVE.L	#$FFF,D2
 	MOVE.W	#10,CmdOffset
@@ -7789,27 +7797,31 @@ ChkPos14	CMP.W	#14,PattCurPos
 	LSL.W	#8,D1
 	BRA.W	UpdateCommand
 
-ChkPos15	CMP.W	#15,PattCurPos
+ChkPos15
+	CMP.W	#15,PattCurPos
 	BNE.B	ChkPos16
 	MOVE.L	#$F0FF,D2
 	MOVE.W	#10,CmdOffset
 	LSL.W	#8,D1
 	BRA.W	UpdateCommand
 
-ChkPos16	CMP.W	#16,PattCurPos
+ChkPos16
+	CMP.W	#16,PattCurPos
 	BNE.B	ChkPos17
 	MOVE.L	#$FF0F,D2
 	MOVE.W	#10,CmdOffset
 	LSL.W	#4,D1
 	BRA.W	UpdateCommand
 
-ChkPos17	CMP.W	#17,PattCurPos
+ChkPos17
+	CMP.W	#17,PattCurPos
 	BNE.B	ChkPos19
 	MOVE.L	#$FFF0,D2
 	MOVE.W	#10,CmdOffset
 	BRA.W	UpdateCommand
 
-ChkPos19	CMP.W	#19,PattCurPos
+ChkPos19
+	CMP.W	#19,PattCurPos
 	BNE.B	ChkPos20
 	CMP.W	#1,D1
 	BHI.W	Return1
@@ -7819,7 +7831,8 @@ ChkPos19	CMP.W	#19,PattCurPos
 	LSL.W	#8,D1
 	BRA.B	UpdateCommand
 
-ChkPos20	CMP.W	#20,PattCurPos
+ChkPos20
+	CMP.W	#20,PattCurPos
 	BNE.B	ChkPos21
 	MOVE.L	#$FFF,D2
 	MOVE.W	#14,CmdOffset
@@ -7827,7 +7840,8 @@ ChkPos20	CMP.W	#20,PattCurPos
 	LSL.W	#8,D1
 	BRA.B	UpdateCommand
 
-ChkPos21	CMP.W	#21,PattCurPos
+ChkPos21
+	CMP.W	#21,PattCurPos
 	BNE.B	ChkPos22
 	MOVE.L	#$F0FF,D2
 	MOVE.W	#14,CmdOffset
@@ -7901,7 +7915,7 @@ sinokok	LSR.W	#4,D0
 sinprt	MOVE.L	D0,ShowTextPtr
 	JSR	ShowText
 	BRA.B	dscend
-	
+
 ;---- Store/Insert Effect Commands ----
 
 CheckStoreEffect
@@ -7912,7 +7926,7 @@ CheckStoreEffect
 	CMP.W	#4,CurrScreen
 	BEQ.W	Return1
 	MOVEQ	#0,D0
-	
+
 	MOVE.B	RawKeyCode,D0
 	BEQ.W	Return1
 	CMP.B	#70,D0 ; Del
@@ -8019,7 +8033,7 @@ DecECom MOVE.W	D0,D1
 InsEfx	dc.w 0
 
 ;---- Check Keyboard for notekeys ----
-	
+
 CheckKeyboard
 	TST.B	RawKeyCode
 	BEQ.W	Return1
@@ -8058,7 +8072,7 @@ cnkloop	CMP.B	(A0,D0.W),D1
 	BEQ.B	NoteKeyPressed
 	DBRA	D0,cnkloop
 	RTS
-	
+
 UpdateChordNote
 	BSR.W	CalculateChordLen
 	BRA.W	DisplayChordNotes
@@ -8127,12 +8141,12 @@ nkpskipit
 	LEA	ftunePerTab,A4
 	MOVE.L	(A4,D1.W),A1
 	MOVE.W	(A1,D0.W),CurrentPlayNote
-	
+
 	TST.L	D2
 	BEQ.B	nkpnrml
 	CMP.B	#2,pnoteflag
 	BNE.W	antpskip
-	
+
 nkpnrml	TST.L	EditMode
 	BEQ.W	antpskip
 AddNoteToPattern
@@ -8355,14 +8369,14 @@ dpnvolok
 	MOVEQ	#1,D0
 	MOVE.W	D0,4(A5)
 	MOVE.W	D0,n_length(A4)
-	
+
 dpnnz	MOVE.W	CurrentPlayNote,D0
 	BSR.W	PlayNoteAnalyze
-	
+
 	JSR	WaitForPaulaLatch
 	MOVE.W	n_dmabit(A4),D0
 	OR.W	#$8000,D0	; Set bits
-	MOVE.W	D0,$DFF096	; Turn DMAs back on	
+	MOVE.W	D0,$DFF096	; Turn DMAs back on
 	JSR	WaitForPaulaLatch
 
 	MOVEQ	#0,D1
@@ -8633,7 +8647,7 @@ RightArrow2	TST.W	ShiftKeyStatus
 	CMP.W	#2,CurrScreen
 	BEQ.W	HelpRight
 	RTS
-	
+
 ;---- Update Line Cursor Position ----
 
 UpdateLineCurPos
@@ -8662,7 +8676,7 @@ CheckScopeMuting
 	BLO.B	csmRTS
 	CMP.W	#88,D0
 	BHI.B	csmRTS
-	MOVE.W	MouseX(PC),D1	
+	MOVE.W	MouseX(PC),D1
 csmcheck4
 	CMP.W	#264,D1
 	BLO.B	csmcheck3
@@ -8692,7 +8706,7 @@ csmcheck1
 	BSR.W	DoToggleMute
 csmRTS
 	RTS
-	
+
 ;---- Check Gadgets ----
 
 CheckGadgets
@@ -8832,7 +8846,7 @@ mm1skip	CMP.W	#45,D0
 	TST.W	D0
 	BHS.W	PlaySong
 	RTS
-	
+
 ;---- Disk Format ----
 
 DiskFormatGadg
@@ -9011,7 +9025,7 @@ df_verifyok
 	ADDQ.W	#1,CylinderNumber
 	CMP.W	#160,CylinderNumber
 	BNE.W	df_formatloop
-	
+
 	LEA	InitDiskText,A0
 	JSR	ShowStatusText
 	BSR.W	ClearCylinder
@@ -9068,7 +9082,7 @@ df_loop4
 	MOVE.L	D0,$0014(A4)
 	LEA	$200(A4),A4
 	DBRA	D7,df_loop3
-	
+
 	LEA	TrackdiskIOExtTD,A1
 	MOVE.L	#$0006E000,IO_OFFSET(A1)
 	MOVE.W	#CMD_WRITE,IO_COMMAND(A1)
@@ -9098,11 +9112,11 @@ df_cleanup
 	BNE.W	df_skip2
 	CMP.W	#'00',DiskNumText1
 	BNE.W	df_skip2
-	
+
 	MOVE.L	DOSBase,A6
 	MOVE.L	#150,D1	; Wait 3 sec
 	JSR	_LVODelay(A6)
-	
+
 	MOVE.L	#LockNameDF0,D1
 	MOVEQ	#-2,D2
 	JSR	_LVOLock(A6)
@@ -9111,27 +9125,27 @@ df_cleanup
 	MOVE.L	D0,D1
 	JSR	_LVOCurrentDir(A6)
 	MOVE.L	D0,D7
-	
+
 	MOVE.L	#ModulesText,D1
 	JSR	_LVOCreateDir(A6)
 	MOVE.L	D0,D1
 	JSR	_LVOUnLock(A6)
-	
+
 	MOVE.L	#SongsText,D1
 	JSR	_LVOCreateDir(A6)
 	MOVE.L	D0,D1
 	JSR	_LVOUnLock(A6)
-	
+
 	MOVE.L	#SamplesText,D1
 	JSR	_LVOCreateDir(A6)
 	MOVE.L	D0,D1
 	JSR	_LVOUnLock(A6)
-	
+
 	MOVE.L	#TracksText,D1
 	JSR	_LVOCreateDir(A6)
 	MOVE.L	D0,D1
 	JSR	_LVOUnLock(A6)
-	
+
 	MOVE.L	#PatternsText,D1
 	JSR	_LVOCreateDir(A6)
 	MOVE.L	D0,D1
@@ -9165,10 +9179,10 @@ FormatDiskNum2	dc.b	$30
 		dc.b	$3F
 		dc.b	0
 		dc.b	0
-	
+
 LockNameDF0	dc.b	"df0:",0
 	EVEN
-	
+
 ;---- Clear All Data ----
 
 ClearAll
@@ -9392,7 +9406,7 @@ tomuskp	MOVEQ	#0,D0
 	BSR.W	DoToggleMute
 	MOVE.L	(SP)+,D6
 	RTS
-	
+
 SetBackCh1Vol
 	MOVE.L	A0,-(SP)
 	MOVE.L	D0,-(SP)
@@ -9403,7 +9417,7 @@ SetBackCh1Vol
 	MOVE.L	(SP)+,D0
 	MOVE.L	(SP)+,A0
 	RTS
-	
+
 SetBackCh2Vol
 	MOVE.L	A0,-(SP)
 	MOVE.L	D0,-(SP)
@@ -9414,7 +9428,7 @@ SetBackCh2Vol
 	MOVE.L	(SP)+,D0
 	MOVE.L	(SP)+,A0
 	RTS
-	
+
 SetBackCh3Vol
 	MOVE.L	A0,-(SP)
 	MOVE.L	D0,-(SP)
@@ -9425,7 +9439,7 @@ SetBackCh3Vol
 	MOVE.L	(SP)+,D0
 	MOVE.L	(SP)+,A0
 	RTS
-	
+
 SetBackCh4Vol
 	MOVE.L	A0,-(SP)
 	MOVE.L	D0,-(SP)
@@ -9647,7 +9661,7 @@ dcdlop2	MOVE.B	D2,(A1)+
 dcdskp2	DBRA	D1,dcdlop2
 	SUBQ.L	#2,D0
 	BRA.B	dcslop2
-	
+
 ; Gadgets
 
 CheckSetupGadgs
@@ -9796,7 +9810,7 @@ clsploop
 	DBRA	D0,clsploop
 	BRA.B	ShowSplit
 clspexit	RTS
-	
+
 ShowSetupToggles
 	CLR.B	RawKeyCode
 	BSR.W	Show_MS
@@ -9877,12 +9891,12 @@ casploop
 	ADDQ.W	#1,D0
 	CMP.W	#37,D0
 	BLS.B	casploop
-	
+
 	MOVE.B	1(A2),-(SP)
 	MOVE.B	1+4(A2),-(SP)
 	MOVE.B	1+8(A2),-(SP)
 	MOVE.B	1+12(A2),-(SP) ; note
-	
+
 	MOVEQ	#4-1,D4
 caspbigloop
 	MOVEQ	#127,D0
@@ -9897,7 +9911,7 @@ caspskip
 	ADDQ.W	#4,D1
 	CMP.W	#16,D1
 	BNE.B	casploop2
-	
+
 	MOVEQ	#0,D0
 	MOVE.B	1(A2,D2.W),D0 ; note
 	MOVE.B	#127,1(A2,D2.W) ; note
@@ -9914,7 +9928,7 @@ caspskip2
 	CMP.W	#36,D0
 	BLO.B	casploop3
 	DBRA	D4,caspbigloop
-	
+
 	MOVE.B	(SP)+,1+12(A2)
 	MOVE.B	(SP)+,1+8(A2)
 	MOVE.B	(SP)+,1+4(A2)
@@ -10012,10 +10026,10 @@ AccidentalText	dc.b '#¡'
 
 Return5
 	RTS
-	
+
 LoadConfigOnStartup
 	BRA.W	DoLoadConfig
-	
+
 LoadConfig
 	CMP.W	#84,D0
 	BHS.W	SetConfigNumber
@@ -10027,7 +10041,7 @@ LoadConfig
 	BSR.W	ShowStatusText
 DoLoadConfig
 	BSR.W	StorePtrCol
-	BSR.W	PutConfigNumber	
+	BSR.W	PutConfigNumber
 	MOVE.L	#ConfigName,D1
 	MOVE.L	#1005,D2
 	MOVE.L	DOSBase,A6
@@ -10149,7 +10163,7 @@ cfglskip
 	BRA.W	RestorePtrCol
 cfglrts
 	RTS
-	
+
 SetConfigNumber
 	MOVE.W	#611,TextOffset
 	BSR.W	GetHexByte
@@ -10457,9 +10471,9 @@ SelectColor
 	LEA	TextBitplane+2410,A0
 	MOVEQ	#25-1,D2
 slcloop	CLR.L	(A0)
-	LEA	40(A0),A0	
+	LEA	40(A0),A0
 	DBRA	D2,slcloop
-	
+
 	AND.L	#$FFFF,D0
 	AND.L	#$FFFF,D1
 	SUB.W	#82,D0
@@ -10666,7 +10680,7 @@ ShowPrintPath
 	MOVE.W	#3694,D1
 	MOVEQ	#12,D0
 	BRA.W	ShowText3
-	
+
 ; Print Song
 
 PrintSong
@@ -10744,7 +10758,7 @@ spujk	ADD.B	#'0',D0
 	ADDQ.B	#7,D0
 spujk2	ADD.B	#'0',D0
 	MOVE.B	D0,PattXText2
-	
+
 	MOVE.L	SongDataPtr,A0
 	MOVE.W	D7,D0
 	MULU.W	#30,D0
@@ -10755,7 +10769,7 @@ ps2_loop
 	MOVE.B	#' ',(A1)+
 	DBRA	D0,ps2_loop
 	LEA	PpText,A1
-	
+
 	MOVE.L	A0,SavIt
 ps2_loop2
 	MOVE.B	(A0)+,D0
@@ -10813,7 +10827,7 @@ ps4_loop2
 	SWAP	D6
 	ADD.B	#$30,D6
 	MOVE.B	D6,D0
-	
+
 	LEA	PnText,A1
 	MOVE.B	D1,(A1)+
 	MOVE.B	D0,(A1)
@@ -10866,7 +10880,7 @@ PrintPattern
 	MOVE.L	DOSBase,A6
 	JSR	_LVOWrite(A6)
 	MOVEM.L	(SP)+,D0-D7/A0-A6
-	
+
 	MOVE.L	D1,D6
 	MOVE.L	SongDataPtr,A6
 	LEA	sd_patterndata(A6),A6
@@ -11038,7 +11052,7 @@ Setup2Menu2
 
 SwitchTogglesFlag	dc.b 0
 	EVEN
-	
+
 Setup2SwitchToggles
 	EOR.B	#1,SwitchTogglesFlag
 	LEA	Setup2Menus,A0
@@ -11193,7 +11207,6 @@ SpeedDown
 	BHS.B	spedup2
 	MOVEQ	#1,D1
 	BRA.B	spedup2
-	
 
 ToggleOverride
 	EOR.B	#1,OverrideFlag
@@ -11267,7 +11280,7 @@ sstskip5
 	ADD.W	#440,D6
 	DBRA	D7,sstloop3
 	BRA.W	WaitForButtonUp
-	
+
 	CNOP 0,4
 SongAllocSize	dc.l SONG_SIZE_64PAT
 MaxPattern	dc.l 64-1
@@ -11276,13 +11289,12 @@ ToggleSampleLine
 	EOR.B	#1,SampleLineFlag
 	TST.W	SamScrEnable
 	BEQ.B	.L0
-	
-	
+
 	TST.B	SampleLineFlag
 	BNE.B	.L1
-	
+
 	MOVEM.L	ClearRegs,D0-D4
-	
+
 	; clear dotted center pattern (different bitplanes)
 	LEA	BitplaneData+6800+40,A0
 	LEA	BitplaneData+10240+6800+40,A1
@@ -11296,11 +11308,10 @@ ToggleSampleLine
 	MOVE.B	#%00000011,39(A1)
 	MOVE.B	#%10100000,0(A0)
 	MOVE.B	#%01100000,0(A1)
-	
-	
+
 .L1	JSR	DisplaySample
 .L0	BRA.W	ShowS2T
-	
+
 Toggle100Patts
 	BSR.W	WaitForButtonUp
 	LEA	AreYouSureText,A0
@@ -11387,7 +11398,6 @@ ShowS2PTPath
 	MOVE.W	#177+1320,D1
 	LEA	PTPath,A0
 	BRA.B	s2path
-
 
 Set2ModPath
 	BSR.W	StorePtrCol
@@ -11502,7 +11512,7 @@ ss2tvol	MOVE.W	#2384,TextOffset
 	MOVE.B	#64,D0
 ss2tvolset	MOVE.W	D0,TToneVol
 	BRA.B	ShowS2TuneNote
-	
+
 SetS2VUStyle
 	EOR.B	#1,RealVUMetersFlag
 	BSR.W	WaitForButtonUp
@@ -11519,7 +11529,7 @@ sst2vushow
 	MOVEQ	#4,D0
 	MOVE.W	#2382+440,D1
 	BRA.W	ShowText3
-	
+
 VUStyleFakeText dc.b	"FAKE",0
 VUStyleRealText dc.b	"REAL",0
 	EVEN
@@ -11747,7 +11757,7 @@ chkspr2	MOVE.W	D1,D4
 	LEA	(A1,D1.W),A1	; 2nd col
 	MOVE.W	(A1),D3
 	MOVEQ	#0,D5
-	
+
 sprdlop	MOVE.W	D2,D0 ; red
 	LSR.W	#8,D0
 	MOVE.W	D3,D1
@@ -11823,7 +11833,7 @@ rainsk3	ADD.W	#$0100,D0
 rainlp3	MOVE.L	#$01B80000,(A0)+
 	DBRA	D0,rainlp3
 	RTS
-	
+
 	CNOP 0,4
 TheRightColors	dc.l	0
 RainbowPos	dc.w	0
@@ -11897,7 +11907,7 @@ PosInsDelGadgs
 	BHS.W	PosInsert
 	BRA.B	PosEd
 	RTS
-	
+
 ;---- Position Editor (POSED) ----
 
 PosEd
@@ -11913,12 +11923,12 @@ PosEd
 	BEQ.W	ExitPLST
 	BSR.B	RefreshPosEd
 	RTS
-	
+
 DrawPosEdScreen   
 	LEA	PosEdData,A0
 	MOVE.L	#PosEdSize,D0
 	BRA.W	DecompactPLST
-	
+
 RefreshPosEd
 	CMP.W	#8,CurrScreen
 	BNE.W	Return2
@@ -12072,7 +12082,7 @@ PosEd_Update
 	MOVE.L	SongPosition,CurrPos
 	BSR.W	ShowPosition
 	BRA.W	RefreshPosEd
-	
+
 PosEd_OneUp
 	ST	SetSignalFlag
 	MOVE.L	SongPosition,D0
@@ -12086,7 +12096,7 @@ PosEd_OneUp
 .L1	MOVE.L	D0,SongPosition
 	BSR.B	PosEd_ScrollDelay
 	BRA.B	PosEd_Update
-	
+
 PosEd_Bottom
 	MOVE.L	SongDataPtr,A0
 	MOVEQ	#0,D7
@@ -12094,13 +12104,13 @@ PosEd_Bottom
 	SUBQ.B	#1,D7
 	MOVE.L	D7,SongPosition
 	BRA.B	PosEd_Update
-	
+
 PosEd_OneDown	; --PT2.3D bug fix: could overflow
 	ST	SetSignalFlag
 	MOVE.L	D1,-(SP)
 	MOVEQ	#0,D1
 	MOVE.L	SongDataPtr,A0
-	MOVE.B	sd_numofpatt(A0),D1	
+	MOVE.B	sd_numofpatt(A0),D1
 	MOVE.L	SongPosition,D0
 	ADDQ.W	#1,D0
 	BTST	#2,$DFF016	; right mouse button
@@ -12114,7 +12124,7 @@ PosEd_OneDown	; --PT2.3D bug fix: could overflow
 	MOVE.L	(SP)+,D1
 	BSR.B	PosEd_ScrollDelay
 	BRA.W	PosEd_Update
-	
+
 	; added in PT2.3E to prevent too fast scrolling on faster Amigas
 PosEd_ScrollDelay
 	MOVEM.L	A0/D0-D1,-(SP)
@@ -12126,7 +12136,7 @@ PosEd_ScrollDelay
 	DBRA	D0,.L0
 	MOVEM.L	(SP)+,A0/D0-D1
 	RTS
-	
+
 PosEdPlayPattern
 	MOVE.L	SongDataPtr,A1
 	LEA	sd_pattpos(A1),A1
@@ -12172,7 +12182,7 @@ pdloop	MOVE.B	1(A0),(A0)
 	MOVE.W	#$FFFF,UpOrDown
 	BSR.W	SongLengthGadg
 	BRA.W	WaitForButtonUp
-	
+
 EnterNumGadgWide
 	MOVE.W	MouseY2,D1
 	CMP.W	#66,D1
@@ -12360,7 +12370,7 @@ eslengskip3
 	MOVE.W	D1,(A0)
 eslengok
 	BRA.W	ShowSampleInfo
-	
+
 EnterSRepeatGadg
 	CLR.B	RawKeyCode
 	MOVE.W	InsNum,D1
@@ -12443,7 +12453,7 @@ esreplgskip
 	CMP.L	#$1FFFF,D7
 	BLS.B	esreplgskip3
 	MOVE.L	#$1FFFF,D7
-esreplgskip3	
+esreplgskip3
 	LSR.L	#1,D7
 esreplgskip2
 	MOVE.L	SongDataPtr,A0
@@ -12595,7 +12605,6 @@ padoskp	TST.B	(A0)
 	CLR.B	(A0)
 	BRA.W	pogskip
 
-
 SongLengthGadg
 	MOVE.L	SongDataPtr,A0
 	LEA	sd_numofpatt(A0),A0
@@ -12625,7 +12634,6 @@ sldoskp	CMP.B	#1,(A0)
 	MOVE.B	#1,(A0)
 	BRA.B	solgskip
 
-
 SampleNumGadg
 	BTST	#2,$DFF016	; right mouse button
 	BNE.B	SampleNum2
@@ -12647,7 +12655,7 @@ snuskip	BSR.W	redrsam
 	BSR.W	Wait_4000
 	BRA.W	Wait_4000
 	RTS
-	
+
 SampleNumDown
 	TST.W	InsNum
 	BEQ.B	snuskip
@@ -12686,7 +12694,6 @@ FineTuneDown
 	SUBQ.B	#1,2(A0)
 	AND.B	#$0F,2(A0)
 	BRA.B	ftuskip
-
 
 VolumeGadg
 	MOVE.L	SongDataPtr,A0
@@ -12925,22 +12932,21 @@ rluskip
 	MOVE.W	4(A0),D1
 	SUB.L	D1,D0
 	CMP.L	D2,D0
-	BHI.W	rlupskip3	
+	BHI.W	rlupskip3
 	CMP.L	#1,D0
 	BGE.B	rlupskip2
 	MOVEQ	#1,D0
 rlupskip2
 	MOVE.W	D0,6(A0)
 	BRA.W	repdone
-	
+
 rlupskip3
 	MOVE.W	D2,6(A0)
 	BRA.W	repdone
-	
+
 rlupskip4
 	MOVE.W	#$0001,6(A0)
 	BRA.W	repdone
-
 
 RepLenDown
 	MOVEQ	#0,D0
@@ -12989,7 +12995,7 @@ UpdateRepeats
 	LEA	ScopeInfo+(ScopeInfoSize*3),A3
 	BSR.B	upre2
 	MOVE.L	(SP)+,A4
-	RTS	
+	RTS
 
 upre2	MOVE.W	InsNum,D0
 	CMP.B	n_samplenum(A1),D0	; channel sample == selected GUI sample?
@@ -13103,7 +13109,7 @@ ShowOneDigit
 	CLR.L	NumberText
 	CLR.W	WordNumber
 	RTS
-	
+
 ;---- Get Text Line ----
 
 GetTextLine
@@ -13197,7 +13203,7 @@ LineClicked
 	ASR.W	#3,D1
 	BEQ.W	WaitForKey
 	BPL.B	linclri
-	
+
 	CMP.L	DSTPtr(PC),A6
 	BEQ.W	WaitForKey
 	SUBQ.L	#1,A6
@@ -13457,14 +13463,14 @@ cilend
 ; 8bitbubsy: modified to safely disable overflown loop points
 wasvhdr	MOVE.L	SampleInstrSave(PC),A3
 	MOVEQ	#0,D0
-	MOVE.W	22(A3),D0	
-	ADD.L	D0,D0		; D0 = allocated sample length (in bytes)	
+	MOVE.W	22(A3),D0
+	ADD.L	D0,D0		; D0 = allocated sample length (in bytes)
 	MOVE.L	8(A0),D1	; D1 = IFF repeat
 	MOVE.L	12(A0),D2	; D2 = IFF replen
-	
+
 	CMP.L	#2,D2		; IFF replen >= 2 ?
 	BLO.B	wDisL		; nope, disable loop
-	
+
 	MOVE.L	D1,D3
 	ADD.L	D2,D3		; D3 = IFF repend
 
@@ -13472,11 +13478,11 @@ wasvhdr	MOVE.L	SampleInstrSave(PC),A3
 	BHI.B	wDisL		; nope, disable loop
 
 	LSR.L	#1,D1
-	MOVE.W	D1,26(A3)	; store repeat	
+	MOVE.W	D1,26(A3)	; store repeat
 	LSR.L	#1,D2
 	MOVE.W	D2,28(A3)	; store replen
 	BRA.B	cilend
-	
+
 wDisL	MOVE.L	SampleInstrSave(PC),A3
 	CLR.W	26(A3)		; disable sample loop
 	MOVE.W	#1,28(A3)
@@ -13596,7 +13602,7 @@ csnloop	CLR.B	(A0)+
 	MOVE.L	D0,IFFBODY+4
 	ADD.L	#IFFEND-IFFFORM-8,D0
 	MOVE.L	D0,IFFFORM+4
-	
+
 	MOVEQ	#0,D0
 	MOVE.W	22(A0),D0
 	ADD.L	D0,D0
@@ -13612,7 +13618,7 @@ csnloop	CLR.B	(A0)+
 csnskp2	MOVEQ	#0,D1
 csnskp3	MOVE.L	D0,IFFVHDR+8
 	MOVE.L	D1,IFFVHDR+12
-	
+
 	LEA	SampleFileName,A1
 	LEA	IFFNAME+8(PC),A2
 	MOVEQ	#22-1,D0
@@ -13648,7 +13654,6 @@ FindColonFail
 FindColonSuccess
 	MOVEQ	#0,D0
 	RTS
-
 
 CheckOverride
 	TST.B	OverrideFlag
@@ -13855,19 +13860,19 @@ rnfskip	DBRA	D0,rnfloop
 	BEQ.B	rnfend
 	CMP.B	#69,MixChar
 	BEQ.B	rnfend
-	
+
 	MOVE.L	PathPtr,A0
 	JSR	CopyPath
 	LEA	NewInputName,A0
 	MOVEQ	#24-1,D0
 rnfloop2	MOVE.B	(A0)+,(A1)+
 	DBRA	D0,rnfloop2
-	
+
 	LEA	FileName,A0
 	LEA	NewFileName,A1
 rnfloop3	MOVE.B	(A0)+,(A1)+
 	BNE.B	rnfloop3
-	
+
 	MOVE.L	PathPtr,A0
 	JSR	CopyPath
 	LEA	DirInputName,A0
@@ -13875,12 +13880,12 @@ rnfloop3	MOVE.B	(A0)+,(A1)+
 rnfloop4
 	MOVE.B	(A0)+,(A1)+
 	DBRA	D0,rnfloop4
-	
+
 	MOVE.L	#FileName,D1
 	MOVE.L	#NewFileName,D2
 	MOVE.L	DOSBase,A6
 	JSR	_LVORename(A6)
-	
+
 rnfend	BSR.W	ClearFileNames
 	CLR.W	Action
 	BSR.W	RestorePtrCol
@@ -14137,7 +14142,7 @@ xilSkip2
 	LEA	30(A0),A0
 	DBRA	D1,xilloop
 	RTS
-	
+
 	; Mouse variables have been moved here
 	; to be mostly PC-addressing capable.
 
@@ -14224,7 +14229,7 @@ uploop	MOVE.B	(A0)+,(A1)+
 upok	BSR.W	LoadPreset
 upend	BSR.W	ShowSampleInfo
 	BRA.W	RestorePtrCol
-	
+
 ;---- Edit ----
 
 Edit	TST.W	SamScrEnable
@@ -14946,7 +14951,7 @@ ShowRecordMode
 	LEA	SongText(PC),A0
 srmskip	MOVEQ	#4,D0
 	BRA.W	ShowText3
-	
+
 AbortDecFlag	dc.w 0
 AbortHexFlag	dc.w 0
 AbortStrFlag	dc.w 0
@@ -15149,8 +15154,9 @@ shposkip3
 	CMP.L	D3,D2
 	BLS.B	shposkip2
 	MOVE.L	D3,SamplePos
-ShowPos
+	; fall-through
 
+ShowPos
 	CMP.W	#1,CurrScreen
 	BNE.W	Return3
 	TST.B	EdEnable
@@ -15254,7 +15260,8 @@ ShowMod	LEA	PlusMinusText(PC),A0
 	BPL.B	semoskp7
 	NEG.B	D6
 	ADDQ	#1,A0
-semoskp7	MOVEQ	#1,D0
+semoskp7
+	MOVEQ	#1,D0
 	MOVE.W	#2831,D1
 	BSR.W	ShowText3
 	MOVE.W	D6,WordNumber
@@ -15343,7 +15350,7 @@ CutBeg
 	BHI.B	FadeUp
 	CMP.W	#230,D0
 	BHI.W	DrawEditOp4
-	
+
 	; fixed in PT2.3E to be 128kB compatible
 	JSR	WaitForButtonUp
 	JSR	StorePtrCol
@@ -15406,7 +15413,7 @@ fuloop	MOVE.L	D2,D1
 	MULS.W	D1,D0
 	SWAP	D0
 	ROL.L	#1,D0
-	MOVE.B	D0,(A0)+	
+	MOVE.B	D0,(A0)+
 	ADD.L	D3,D2
 	ADDQ.L	#1,D4
 	CMP.L	D5,D4
@@ -15520,7 +15527,7 @@ PercentText	dc.b	'%',0
 
 	; 128kB compatible and much faster, by 8bitbubsy.
 dcvrts	RTS
-DoChangeVol	
+DoChangeVol
 	JSR	WaitForButtonUp
 
 	CMP.W	#100,SampleVol	; volume change needed (vol != 100)?
@@ -15536,7 +15543,7 @@ DoChangeVol
 	MOVE.L	si_pointer,D0
 	BEQ.W	bwErrorRestoreCol
 	MOVE.L	D0,A1
-	
+
 	; 8bb:
 	; Instead of doing a full loop of MUL+ASR, let's precalc
 	; a 256 byte long conversion LUT instead. This is
@@ -15546,7 +15553,7 @@ DoChangeVol
 	MOVEQ	#0,D0
 	MOVE.W	SampleVol(PC),D0
 	MOVEQ	#11,D6		; max bits for 0..999 range
-	LSL.L	D6,D0		; rescale volume range (for DIV -> bitshift)	
+	LSL.L	D6,D0		; rescale volume range (for DIV -> bitshift)
         DIVU.W	#100,D0		; vol 0..999/100 --> 0..20459
         LEA	SmpConvLUT,A0
         MOVEQ	#127,D4		; clip values
@@ -15687,7 +15694,7 @@ RestoreMix
 	BRA.W	ShowText3
 
 	; 128kB compatible and optimized by 8bitbubsy
-Mix2	
+Mix2
 	BSR.B	RestoreMix
 	BSR.W	TurnOffVoices
 	LEA	SongDataPtr,A2
@@ -15701,7 +15708,7 @@ Mix2
 	LSL.W	#2,D0
 	LEA	(A2,D0.W),A3
 	MOVE.L	A3,FromPtr1
-	
+
 	MOVEQ	#0,D0
 	LEA	MixText+7(PC),A0
 	BSR.W	HexToInteger2
@@ -15712,7 +15719,7 @@ Mix2
 	LSL.W	#2,D0
 	LEA	(A2,D0.W),A3
 	MOVE.L	A3,FromPtr2
-	
+
 	MOVEQ	#0,D0
 	LEA	MixText+13(PC),A0
 	BSR.W	HexToInteger2
@@ -15723,7 +15730,7 @@ Mix2
 	LSL.W	#2,D0
 	LEA	(A2,D0.W),A3
 	MOVE.L	A3,ToPtr
-	
+
 	MOVE.L	FromPtr1(PC),A1
 	MOVE.L	FromPtr2(PC),A2
 	MOVE.L	124(A1),D1
@@ -15733,9 +15740,9 @@ Mix2
 	EXG	D1,D2
 	EXG	A1,A2
 mixnswp	MOVE.L	(A1),A1
-	MOVE.L	(A2),A2	
+	MOVE.L	(A2),A2
 	; A1/D1 = longest running (or same as A2/D2)
-	
+
 	TST.L	D1
 	BEQ.W	SamEmptyError ; Both samples had length=0
 	MOVE.L	D1,D0
@@ -15747,14 +15754,14 @@ mixnswp	MOVE.L	(A1),A1
 	MOVE.L	(SP)+,D1
 	MOVE.L	D0,MixPtr
 	BEQ.W	SamMemError ; No memory for new sample...
-	
+
 	LEA	mixingtext(PC),A0
 	BSR.W	ShowStatusText
-	
+
 	LEA	(A1,D1.L),A4	; A4 = end of A1
 	LEA	(A2,D2.L),A5	; A5 = end of A2
 	MOVE.L	MixPtr(PC),A3
-	
+
 	TST.B	HalfClipFlag
 	BEQ.B	mixhalf
 
@@ -15777,7 +15784,7 @@ mixlop2	MOVE.B	(A1)+,D0
 	CMP.L	A4,A1
 	BLO.B	mixlop2
 	BRA.B	mixdone
-	
+
 .hi	MOVE.L	D2,D0
 	BRA.B	.set
 .lo	MOVE.L	D3,D0
@@ -15795,7 +15802,7 @@ mixhalf	MOVE.B	(A1)+,D0
 	MOVE.B	D0,(A3)+
 	CMP.L	A4,A1
 	BLO.B	mixhalf
-	
+
 mixdone	
 	MOVE.W	ToSam(PC),InsNum
 	BSR.W	FreeSample
@@ -15864,7 +15871,7 @@ OldMix
 				; A1 = copy of sample
 	LEA	(A2,D2.L),A3	; A3 = end of original sample (A2)
 	ADD.L	D6,A2		; A2 = mix pos in original sample
-	
+
 	CMP.L	A3,A2
 	BHS.B	omixdone
 
@@ -15879,7 +15886,7 @@ omixloop
 	MOVE.B	(A2),D0
 	EXT.W	D0
 	MOVE.B	(A1)+,D1
-	EXT.W	D1	
+	EXT.W	D1
 	ADD.W	D1,D0
 	CMP.W	D2,D0
 	BGT.B	.hi
@@ -15894,7 +15901,7 @@ omixloop
 	BRA.B	.set
 .lo	MOVE.L	D3,D0
 	BRA.B	.set
-		
+
 	; halved mixing
 omixhalf
 	MOVE.B	(A2),D0
@@ -16096,7 +16103,7 @@ BoostingText	dc.b 'boosting',0
 	EVEN
 
 	; fixed in PT2.3E to be 128kB compatible
-XFade	
+XFade
 	JSR	WaitForButtonUp
 	JSR	StorePtrCol
 	JSR	SetWaitPtrCol
@@ -16109,10 +16116,10 @@ XFade
 	MOVE.L	D0,A1
 	MOVE.L	D0,A2
 	ADD.L	D2,A2
-		
+
 	TST.B	HalfClipFlag
-	BEQ.B	xfahalf	
-	
+	BEQ.B	xfahalf
+
 	MOVEQ	#127,D2
 	MOVEQ	#-127,D3
 
@@ -16131,12 +16138,12 @@ xfaloop	MOVE.B	(A1),D0
 	CMP.L	A2,A1
 	BLO.B	xfaloop
 	BRA.B	xfadone
-	
+
 .hi	MOVE.L	D2,D0
 	BRA.B	.set
 .lo	MOVE.L	D3,D0
 	BRA.B	.set
-	
+
 	; halved mixing
 xfahalf	MOVE.B	(A1),D0
 	EXT.W	D0
@@ -16148,9 +16155,7 @@ xfahalf	MOVE.B	(A1),D0
 	MOVE.B	D0,(A2)
 	CMP.L	A2,A1
 	BLO.B	xfahalf
-	
 xfadone
-	
 	MOVE.L	si_pointer,A1
 	CLR.W	(A1)
 	JSR	RestorePtrCol
@@ -16494,7 +16499,7 @@ GetSmpLenFromChordNote
 	AND.W	#$FF,D0
 	ADD.W	D0,D0
 	MOVE.W	(A1,D0.W),D1	; D1.L = dst. period
-	; -----------------------	
+	; -----------------------
 	MOVEQ	#0,D0
 	MOVE.W	12(A0,D2.W),D0	; length
 	ADD.L	D0,D0
@@ -16578,7 +16583,7 @@ ShowChordLength
 	MOVE.L	ChordLen(PC),D7
 	MOVE.L	D7,LongWordNumber
 	BRA.W	Print5HexDigits
-	
+
 DisplayChordNotes
 	CMP.W	#1,CurrScreen
 	BNE.W	Return3
@@ -16619,7 +16624,7 @@ DisplayChordNotes
 	MOVE.L	A0,ShowTextPtr
 	MOVE.W	#3,TextLength
 	BRA.W	ShowText
-	
+
 ChordNote1Down
 	MOVE.W	ChordNote1(PC),D0
 	LEA	ChordNote1(PC),A0
@@ -16634,7 +16639,7 @@ ChordNote3Down
 	BRA.B	ChordNoteDown
 ChordNote4Down
 	MOVE.W	ChordNote4(PC),D0
-	LEA	ChordNote4(PC),A0	
+	LEA	ChordNote4(PC),A0
 ChordNoteDown
 	SUBQ.W	#1,D0
 	BTST	#2,$DFF016	; right mouse button
@@ -16645,12 +16650,12 @@ ChordNoteDown
 	BPL.B	.L1
 	CLR.W	D0
 .L1	MOVE.W	D0,(A0)
-	CLR.L	SplitAddress	
+	CLR.L	SplitAddress
 	BSR.W	Wait_4000
-	;BSR.W	Wait_4000	
+	;BSR.W	Wait_4000
 	BSR.W	CalculateChordLen
 	BRA.W	DisplayChordNotes
-	
+
 ChordNote1Up
 	MOVE.W	ChordNote1(PC),D0
 	LEA	ChordNote1(PC),A0
@@ -16684,7 +16689,7 @@ ChordNoteUp
 	;BSR.W	Wait_4000
 	BSR.W	CalculateChordLen
 	BRA.W	DisplayChordNotes
-	
+
 ChordNote1Gadget
 	BSR.W	SetUndoNotes
 	BTST	#2,$DFF016	; right mouse button
@@ -16774,7 +16779,7 @@ CheckOctaves3
 	SUB.W	#12,ChordNote4
 .L2	BSR.W	CalculateChordLen
 	BRA.W	DisplayChordNotes
-	
+
 ChordMinor7
 	BSR.W	SetUndoNotes
 	MOVE.W	ChordNote1(PC),D0
@@ -16787,7 +16792,7 @@ ChordMinor7
 	ADDQ.W	#3,D0
 	MOVE.W	D0,ChordNote4
 	BRA.B	CheckOctaves3
-	
+
 ChordMajor6
 	BSR.W	SetUndoNotes
 	MOVE.W	ChordNote1(PC),D0
@@ -16800,7 +16805,7 @@ ChordMajor6
 	ADDQ.W	#2,D0
 	MOVE.W	D0,ChordNote4
 	BRA.W	CheckOctaves3
-	
+
 ChordMinor6
 	BSR.W	SetUndoNotes
 	MOVE.W	ChordNote1(PC),D0
@@ -16813,7 +16818,7 @@ ChordMinor6
 	ADDQ.W	#2,D0
 	MOVE.W	D0,ChordNote4
 	BRA.W	CheckOctaves3
-	
+
 ChordMajor
 	BSR.W	SetUndoNotes
 	MOVE.W	ChordNote1(PC),D0
@@ -16824,7 +16829,7 @@ ChordMajor
 	ADDQ.W	#3,D0
 	MOVE.W	D0,ChordNote3
 	MOVE.W	#36,ChordNote4
-	
+
 CheckOctaves2
 	CMP.W	#35,ChordNote2
 	BLS.B	.L0
@@ -16833,7 +16838,7 @@ CheckOctaves2
 	BLS.B	.L1
 	SUB.W	#12,ChordNote3
 .L1	BRA.W	DisplayChordNotes
-	
+
 ChordMinor
 	BSR.W	SetUndoNotes
 	MOVE.W	ChordNote1(PC),D0
@@ -16845,7 +16850,7 @@ ChordMinor
 	MOVE.W	D0,ChordNote3
 	MOVE.W	#36,ChordNote4
 	BRA.B	CheckOctaves2
-	
+
 ChordSus4
 	BSR.W	SetUndoNotes
 	MOVE.W	ChordNote1(PC),D0
@@ -16857,7 +16862,7 @@ ChordSus4
 	MOVE.W	D0,ChordNote3
 	MOVE.W	#36,ChordNote4
 	BRA.W	CheckOctaves2
-	
+
 ChordReset
 	BSR.B	SetUndoNotes
 	MOVEQ	#36,D0
@@ -16869,7 +16874,7 @@ ChordReset
 RedrawNotes
 	BSR.W	ShowChordLength
 	BRA.W	DisplayChordNotes
-	
+
 ChordUndo
 	MOVE.W	ChordNote1Old(PC),ChordNote1
 	MOVE.W	ChordNote2Old(PC),ChordNote2
@@ -17015,13 +17020,13 @@ ResetLocalLabels
 	MOVE.W	D0,cv_deltalo(A6)
 	CLR.W	D0
 	SWAP	D0		; D0.L = resampling delta integer
-	MOVE.L	D0,cv_deltahi(A6)	
+	MOVE.L	D0,cv_deltahi(A6)
 	ADDQ.W	#1,D2
 	LEA	CV_SIZE(A6),A6
 .nextv	DBRA	D7,.loop1
 	CMP.W	#2,D2
 	BLO.W	OneNoteError
-	MOVE.W	D2,ChordNumVoices	
+	MOVE.W	D2,ChordNumVoices
 	; ---------------------
 	; allocate sample data
 	; ---------------------
@@ -17121,7 +17126,7 @@ ResetLocalLabels
 	LEA	-10(A2,D0.W),A1
 	MOVEQ	#21-1,D0
 .loop2	MOVE.B	(A1)+,(A0)+
-	DBRA	D0,.loop2	
+	DBRA	D0,.loop2
 .L4	; ---------------------
 	JSR	RestorePtrCol
 	JSR	ClearSamStarts
@@ -17129,7 +17134,7 @@ ResetLocalLabels
 	BSR.W	ShowSampleInfo
 	BSR.W	RedrawSample
 	BRA.W	DisplaySample
-	
+
 CVMIX1_M	MACRO
 	MOVE.L	cv_pos(A6),D2
 	MOVE.W	cv_frac(A6),D3
@@ -17151,7 +17156,7 @@ CVMIX1_M	MACRO
 	MOVE.L	D2,cv_pos(A6)
 	MOVE.W	D3,cv_frac(A6)
 	ENDM
-	
+
 CVMIX2_M	MACRO
 	MOVE.L	cv_pos(A6),D2
 	MOVE.W	cv_frac(A6),D3
@@ -17172,7 +17177,7 @@ CVMIX2_M	MACRO
 	ADDX.L	D6,D2
 	MOVE.L	D2,cv_pos(A6)
 	MOVE.W	D3,cv_frac(A6)
-	ENDM	
+	ENDM
 
 
 ChordMix2Voices
@@ -17222,7 +17227,7 @@ ChordMix4Voices
 	SUBQ.L	#1,D7
 	BNE.W	ChordMix4Voices
 	RTS
-	
+
 ChordScanPeak2Voices
 	MOVEQ	#0,D0		; peak
 	; ---------------------
@@ -17294,7 +17299,7 @@ ChordScanPeak4Voices
 .setNewPeak
 	MOVE.W	D1,D0
 	BRA.B	.next
-	
+
 BaseNoteError
 	LEA	NoBaseNoteText(PC),A0
 	BSR.W	ShowStatusText
@@ -17304,12 +17309,12 @@ NoEmptySampleError
 	LEA	NoEmptySampleText(PC),A0
 	BSR.W	ShowStatusText
 	JMP	ErrorRestoreCol
-	
+
 OneNoteError
 	LEA	OnlyOneNoteText(PC),A0
 	BSR.W	ShowStatusText
 	JMP	ErrorRestoreCol
-	
+
 LenTooSmallError
 	LEA	LenTooSmallText(PC),A0
 	BSR.W	ShowStatusText
@@ -17319,7 +17324,7 @@ ChordOutOfMemory
 	LEA	mixerrtext3(PC),A0
 	BSR.W	ShowStatusText
 	JMP	ErrorRestoreCol
-	
+
 cv_deltahi		EQU  0 ; L
 cv_pos			EQU  4 ; L
 cv_deltalo		EQU  8 ; W
@@ -17376,7 +17381,7 @@ sadloop	MOVE.W	(A1,D1.W),D2
 	ADDQ.W	#2,D1
 	CMP.W	#$3E,D1
 	BNE.B	sadloop
-	
+
 	LEA	sd_pattpos(A0),A0
 	MOVEQ	#0,D0
 	MOVEQ	#0,D1
@@ -17737,7 +17742,7 @@ dec6skip
 	ROXL.L	#1,D2
 	DBRA	D1,dec6loop
 	RTS
-	
+
 OutOfMemoryFlag	dc.w	0
 NoteDataClippedText	dc.b 'NoteData Clipped!',0
 	EVEN
@@ -17834,7 +17839,7 @@ lm64Patts
 DoStartModLoad
         LEA	LoadingModuleText(PC),A0
 	BSR.W	ShowStatusText
-	MOVEQ	#0,D4	
+	MOVEQ	#0,D4
 	MOVE.L	SongDataPtr(PC),A0
 	LEA	sd_pattpos(A0),A0
 	MOVEQ	#0,D0
@@ -17950,7 +17955,7 @@ ReadModInstrument
 	MOVE.L	D0,D2		; 'read to' address
 	MOVE.L	D6,D3		; read length
 	JSR	_LVORead(A6)
-	
+
 	; PT2.3D change: clear first 2 bytes of non-looping samples (prevent beep)
 	CMP.W	#1,D5		; loop length
 	BHI.B	rmiok		; loop deactivated, let's not modify!
@@ -17958,7 +17963,7 @@ ReadModInstrument
 	CLR.W	(A0)		; clear first two bytes...
 rmiok
 	; --END OF FIX------------------------------------------------------------
-	
+
 	BSR.W	RedrawSample
 rminext	ADDQ.W	#1,InsNum
 	CMP.W	#32,InsNum
@@ -17983,7 +17988,7 @@ rmiskip
 	BSR.W	RedrawSample
 	CLR.W	TempPPFileFlag
 	JMP	DoShowFreeMem
-	
+
 ;---- PowerPacker routines -----
 
 PowerPacked
@@ -18076,7 +18081,7 @@ uppferror
 	JSR	ExitFromDir
 uppfskip9
 	BRA.W	rmiskip
-	
+
 uppfok
 	MOVE.L	FileHandle(PC),D1
 	MOVE.L	ppBufferPtr(PC),D2
@@ -18207,7 +18212,7 @@ CheckForPosEdNames
 	JSR	_LVORead(A6)
 	MOVE.L	FileHandle(PC),D1
 	JSR	_LVOClose(A6)
-	RTS	
+	RTS
 .error	BSR.B	ClearPosEdNames
 	BRA.W	CantOpenFile
 
@@ -18350,7 +18355,7 @@ DoSaveModule
 	MOVE.B	#'o',(A1)+
 	MOVE.B	#'d',(A1)+
 	MOVE.B	#'.',(A1)+
-dsmskip1	
+dsmskip1
 	MOVE.L	SongDataPtr(PC),A0
 	MOVEQ	#20-1,D0
 dsmloop
@@ -18362,7 +18367,7 @@ dsmloop
 	MOVEQ	#0,D0
 	MOVE.W	HighPattNum(PC),D0
 	ADDQ.L	#1,D0
-	MULU.W	#64*4*4,D0	
+	MULU.W	#64*4*4,D0
 	ADD.L	D0,DiskDataLength	; Add 1024 x NumOfPatt
 	MOVE.B	#127,sd_numofpatt+1(A0) ; Set maxpatt to 127
 	MOVE.L	#'M.K.',sd_magicid(A0)	; M.K. again...
@@ -18374,7 +18379,7 @@ dsmskip2
 	BEQ.W	WriteExeModule
 	TST.B	ModPackMode
 	BEQ.W	WriteModule
-	
+
 	; Module Crunch (PAK)
 	LEA	FileName,A0
 dsmgetend
@@ -18630,7 +18635,7 @@ ModCrunchError
 	MOVE.W	#ERR_WAIT_TIME,WaitTime
 	JSR	WaitALittle
 	BRA.B	ModCrunchCleanup
-	
+
 ModCrunchOutOfMemory
 	LEA	NoBufMemText,A0
 	BSR.W	ShowStatusText
@@ -18647,7 +18652,7 @@ ModCrunchOutOfMemory
 	JSR	PTFreeMem
 mcoomskip
 	BRA.W	ShowModCrunchBox
-	
+
 CrunchInterrupt	; periodically called while crunching
 	MOVEM.L	D0-D7/A0-A6,RegBackup
 	MOVE.L	(SP)+,D4
@@ -18703,16 +18708,14 @@ seloop
 	LEA	exeReplayData(PC),A1
 	LEA	145(A1),A1
 	MOVEQ	#19-1,D1
-seloop2
-	MOVE.B	(A0)+,(A1)+
+seloop2	MOVE.B	(A0)+,(A1)+
 	DBRA	D1,seloop2
 	MOVE.L	SongDataPtr(PC),A0
 	LEA	sd_sampleinfo(A0),A0
 	LEA	exeReplayData(PC),A1
 	LEA	175(A1),A1
 	MOVEQ	#21-1,D1
-seloop3
-	MOVE.B	(A0)+,(A1)+
+seloop3	MOVE.B	(A0)+,(A1)+
 	DBRA	D1,seloop3
 	LEA	exeReplayData(PC),A0
 	MOVE.L	TuneMemory,D1
@@ -18723,11 +18726,11 @@ seloop3
 	BEQ.B	seskip
 	ADDQ.L	#1,D1
 	ADDQ.L	#2,DiskDataLength
-seskip
-	MOVE.L	D1,28(A0)
+seskip	MOVE.L	D1,28(A0)
 	ADD.L	#$40000000,D1
 	MOVE.L	D1,sd_sampleinfo(A0)
-	
+	; fall-through
+
 WriteModule
 	LEA	SavingModuleText(PC),A0
 	BSR.W	ShowStatusText
@@ -18743,8 +18746,7 @@ WriteModule
 	JSR	_LVOWrite(A6)
 	CMP.L	#5112,D3
 	BNE.W	WriteModError
-wmskip1
-	BSR.W	WriteModuleData
+wmskip1	BSR.W	WriteModuleData
 	BNE.B	WriteModError
 	BTST	#2,$DFF016	; right mouse button
 	BEQ.B	WriteModError
@@ -18768,8 +18770,7 @@ saveinstrloop
 	JSR	_LVOWrite(A6)
 	CMP.L	#304,D3
 	BNE.B	WriteModError
-wmskip2
-	BSR.W	CloseWriteMod
+wmskip2	BSR.W	CloseWriteMod
 	MOVE.W	SaveInstrNum(PC),InsNum
 	BSR.W	ShowSampleInfo
 	BSR.W	ShowAllRight
@@ -18836,7 +18837,7 @@ CloseWriteMod
 	MOVE.L	DOSBase(PC),A6
 	MOVE.L	FileHandle(PC),D1
 	JMP	_LVOClose(A6)
-	
+
 ;---- Load PLST ----
 
 LoadPLST
@@ -18926,7 +18927,7 @@ PLSTOpenErr
 	LEA	PLSTOpenText(PC),A0
 	BRA.B	plster
 	RTS
-	
+
 PLSTMemText	dc.b	'no mem for plst !',0
 PLSTOpenText	dc.b	'plst not found ! ',0
 	EVEN
@@ -18956,7 +18957,7 @@ stloop3	ADDQ.W	#1,D0
 	BSR.W	ShowText3
 	MOVEM.L	(SP)+,D0/D1/A1
 	RTS
-	
+
 ;---- Redraw Pattern ----
 
 RedrawPattern
@@ -18986,7 +18987,7 @@ rpnxpos	MOVEQ	#4-1,D7		; channel counter
 	ADDQ.W	#1,PPattPos
 	BSR.W	Print2DecDigits ; Print PatternPosition
 	ADDQ.W	#1,TextOffset
-rploop	
+rploop
 
 	; convert period to note number string
 	MOVE.W	(A6),D1
@@ -19056,15 +19057,15 @@ rploop2	MOVEQ	#0,D0
 	DBRA	D1,rploop2
 	ADD.W	#8+1,TextOffset
 	SUBQ	#8,A3
-	
+
 	DBRA	D7,rploop  ; Next Channel
 	ADD.W	#241,TextOffset
 	DBRA	D6,rpnxpos ; Next PattPos
-	
+
 	RTS
-	
+
 rplo	MOVE.L	#'??? ',(A3)
-	BRA.W    rpskip2
+	BRA.W	rpskip2
 
 	CNOP 0,4
 RedrawBuffer	dc.b	'---00000'
@@ -19135,7 +19136,7 @@ ssiskipit
 	MOVE.L	26(A0),si_long
 	TST.B	NoSampleInfo
 	BNE.W	ssiskip
-	
+
 	MOVE.L	A0,-(SP)
 	MOVE.B	#' ',FineTuneSign
 	MOVE.B	24(A0),D0
@@ -19154,14 +19155,14 @@ dopfitu	MOVE.W	#1491,TextOffset
 	MOVEQ	#1,D0
 	BSR.W	ShowText3  ; FineTuneSign
 	MOVE.L	(SP)+,A0
-	
+
 	CLR.W	WordNumber
 	MOVE.B	25(A0),WordNumber+1
 	MOVE.W	WordNumber(PC),VolumeEfx
 	OR.W	#$0C00,VolumeEfx
 	MOVE.W	#$940,TextOffset
 	BSR.W	PrintHexWord  ; Volume
-	
+
 	MOVEQ	#0,D0
 	MOVE.W	SampleInfo(PC),D0
 	ADD.L	D0,D0
@@ -19178,23 +19179,23 @@ dopfitu	MOVE.W	#1491,TextOffset
 ShowLen	MOVE.W	#2807,TextOffset
 	BSR.W	Print5HexDigits  ; Length
 	BSR.W	CalculateChordLen
-	
+
 	MOVEQ	#0,D0
 	MOVE.W	si_long(PC),D0
 	ADD.L	D0,D0
 	MOVE.L	D0,LongWordNumber
 	MOVE.W	#3247,TextOffset
 	BSR.W	Print5HexDigits  ; Repeat
-	
+
 	MOVEQ	#0,D0
 	MOVE.W	si_long+2(PC),D0
 	ADD.L	D0,D0
 	MOVE.L	D0,LongWordNumber
 	MOVE.W	#3687,TextOffset
 	BSR.W	Print5HexDigits  ; RepLen
-	
+
 	BSR.W	ssiinst
-	
+
 ssiskip	TST.B	NoSampleInfo
 	BEQ.B	ssiskp2
 	CMP.W	#5,CurrScreen
@@ -19330,7 +19331,7 @@ DoOneDigit
 
 Print6DecDigits	; fixed in PT2.3E to display big numbers correctly
 	LEA	NumberText(PC),A0
-	
+
 	; if number is zero, draw "     0"
 	TST.L	D0
 	BNE.B	p6ddskip
@@ -19341,7 +19342,7 @@ Print6DecDigits	; fixed in PT2.3E to display big numbers correctly
 	MOVE.B	#' ',1(A0)
 	MOVE.B	#' ',(A0)
 	BRA.W	p6ddok
-	
+
 	; number is not zero, let's do some math!
 p6ddskip
 	MOVE.L	D0,D1
@@ -19356,7 +19357,7 @@ p6ddskip
 	CLR.W	D1
 	SWAP	D1
 	; D1 = first 3 digits
-	; D2 = last 3 digits	
+	; D2 = last 3 digits
 
 	DIVU.W	#10,D2	; sixth digit
 	SWAP	D2
@@ -19371,33 +19372,33 @@ p6ddskip
 	MOVE.B	D2,4(A0)
 	CLR.W	D2
 	SWAP	D2
-	
+
 	DIVU.W	#10,D2	; fourth digit
 	SWAP	D2
 	ADD.B	#'0',D2
 	MOVE.B	D2,3(A0)
 	CLR.W	D2
 	SWAP	D2
-	
+
 	DIVU.W	#10,D1	; third digit
 	SWAP	D1
 	ADD.B	#'0',D1
 	MOVE.B	D1,2(A0)
 	CLR.W	D1
 	SWAP	D1
-	
+
 	DIVU.W	#10,D1	; second digit
 	SWAP	D1
 	ADD.B	#'0',D1
 	MOVE.B	D1,1(A0)
 	CLR.W	D1
 	SWAP	D1
-	
+
 	DIVU.W	#10,D1	; first digit
 	SWAP	D1
 	ADD.B	#'0',D1
 	MOVE.B	D1,(A0)
-		
+
 	; replace zeroes to the left with space
 	MOVE.L	A0,A1
 .loop	CMP.B	#'0',(A1)
@@ -19422,7 +19423,7 @@ printch	LEA	NumberText(PC),A0
 	MOVE.B	D0,(A0)
 	MOVE.W	#1,TextLength
 	BRA.W	ShowText2
-	
+
 toobigoverflow
 	MOVE.B	#'>',D0
 	BSR.B	printch
@@ -19434,7 +19435,7 @@ toobigoverflow
 	CNOP 0,4
 NumberText	dcb.b	6,0
 	EVEN
-	
+
 ;---- Print Hex Digits ----
 
 PrintHiInstrNum
@@ -19507,7 +19508,7 @@ PrintHexByte
 	BSR.B	ShowText2
 	CLR.W	WordNumber
 	RTS
-	
+
 ;---- Text Output Routines ----
 
 ShowText3
@@ -19610,7 +19611,7 @@ sppskip4
 	MOVE.W	D1,(A0)
 	MOVE.W	D2,2(A0)
 	RTS
-	
+
 ;---- DoLoad / DoSave Data ----
 
 DoLoadData
@@ -20244,7 +20245,7 @@ PLSTPressed
 	MOVE.W	D1,CurrentPreset
 	JSR	WaitForButtonUp
 	BRA.W	UsePreset
-	
+
 ;---- Preset Editor/PED ----
 
 PresetEditor
@@ -20256,7 +20257,7 @@ PresetEditor
 	BEQ.W	pedexi2
 PED_Refresh
 	CLR.W	PED_Action
-	LEA	TextBitplane,A0	
+	LEA	TextBitplane,A0
 	MOVE.W	#1220-1,D0
 	MOVEQ	#0,D1
 pedloop	MOVE.L	D1,(A0)+
@@ -20511,7 +20512,7 @@ AddPreset
 	MOVEQ	#6-1,D0	; Disk ST-XX:
 aploop	MOVE.B	(A0)+,(A1)+
 	DBRA	D0,aploop
-	
+
 	LEA	FIB_FileName,A0
 	MOVEQ	#15-1,D0	; Name 16 letters.
 aploop2	MOVE.B	(A0)+,(A1)+
@@ -20519,7 +20520,7 @@ aploop2	MOVE.B	(A0)+,(A1)+
 	SUBQ.L	#1,A0
 .skip	DBRA	D0,aploop2
 	CLR.B	(A1)
-	
+
 	MOVE.L	FIB_FileSize,D0
 	CMP.L	#$FFFE,D0
 	BLS.B	apskip2
@@ -20605,7 +20606,7 @@ pediwaitkey
 ShiftKeySkip
 	MOVE.B	(A0,D0.W),D1
 	BEQ.B	pediwaitkey
-	
+
 	CMP.W	#6,D7
 	BLO.B	hexchk2
 	CMP.W	#25,D7
@@ -21016,7 +21017,7 @@ CheckPEDnames
 PED_DoSetToTop
 	CLR.W	PEDpos
 	BRA.W	ShowPresetNames
-	
+
 PED_Top
 	MOVE.L	PLSTmem(PC),A1
 	MOVE.W	PEDpos(PC),D0
@@ -21026,7 +21027,7 @@ PED_Top
 	BMI.B	PED_DoSetToTop
 	MOVE.B	6(A1,D0.L),D2
 	CMP.B	D1,D2
-	BEQ.B	.loop1	
+	BEQ.B	.loop1
 	MOVE.B	D2,D1
 .loop2	SUB.L	#30,D0
 	BMI.B	PED_DoSetToTop
@@ -21095,7 +21096,7 @@ PED_Bottom
 	BEQ.B	.loop
 	DIVU.W	#30,D0
 	MOVE.W	D0,PEDpos
-	
+
 ShowPresetNames
 	MOVE.W	#2321,D6
 	MOVEQ	#10-1,D7
@@ -21372,7 +21373,7 @@ OpenMIDI
 	BEQ.W	Return3
 omidisk	CLR.B	MIDIinTo
 	CLR.B	MIDIinFrom
-	
+
 	BSR.B	.GetSer2		;got the port?
 	BEQ.B	.end			;yes
 	MOVE.L	4.W,A6			;no..try to flush serial.device:
@@ -21484,7 +21485,7 @@ MIDIInIntHandler
 gmiexit	MOVE.L	(SP)+,D2
 	MOVE.L	(SP)+,D1
 	RTS
-	
+
 ;----- MIDI Transmit Buffer Empty Interrupt (Output) -----
 
 MIDIOutIntHandler
@@ -21497,17 +21498,17 @@ MIDIOutInterrupt
 	dc.l 0,0
 	dc.b 2,0
 	dc.l MIDIOutName,buffptr,MIDIOutIntHandler
-	
+
 	CNOP 0,4
 MIDIInInterrupt
 	dc.l 0,0
 	dc.b 2,0
 	dc.l MIDIInName,MIDIinBuffer,MIDIInIntHandler
-	
+
 	CNOP 0,4
 buffptr		dc.l SerPortAlloc
 PrevTBE		dc.l 0
-PrevRBF		dc.l 0	
+PrevRBF		dc.l 0
 MiscResBase	dc.l 0
 SerPortAlloc	dc.b 0
 lastcmdbyte	dc.b 0
@@ -21517,7 +21518,7 @@ MIDIInName	dc.b 'PT MIDI In',0
 MiscResName	dc.b 'misc.resource',0
 SerDevName	dc.b 'serial.device',0
 	EVEN
-		
+
 ;----- read from input buffer -----
 
 MIDIin
@@ -21763,7 +21764,7 @@ MIDINote	dc.b 0
 MIDIVelocity	dc.b 0
 MIDITouch	dc.b 0
 MIDIController	dc.b 0
-MIDImsb		dc.b 0	
+MIDImsb		dc.b 0
 MIDIlsb		dc.b 0
 MIDIProgram	dc.b 0
 MIDIError	dc.b 0
@@ -21785,7 +21786,7 @@ SamplerScreen
 	MOVE.W	D0,6(A1)
 	SWAP	D0
 	MOVE.W	D0,2(A1)
-	
+
 	MOVEQ	#0,D0
 	MOVE.W	#270,D1
 	MOVEQ	#14,D2
@@ -21878,14 +21879,14 @@ SwapSamScreen
 bjasize=134*10
 Bjarne	LEA	SamScrPos,A0
 	MOVEQ	#2-1,D2
-BjaLop1	MOVE.W	#bjasize-1,D1 ; 134
+BjaLop1	MOVE.W	#bjasize-1,D1
 BjaLop2	MOVE.L	(A0),D0
 	MOVE.L	(A1),(A0)+
 	MOVE.L	D0,(A1)+
 	DBRA	D1,BjaLop2
 	LEA	10240-bjasize*4(A0),A0
 	DBRA	D2,BjaLop1
-	
+
 	LEA	CopListInsPos,A0
 	LEA	CopperList2,A1
 	MOVEQ	#30-1,D1
@@ -21928,10 +21929,10 @@ ClearSamArea
 	MOVEM.L	D0-D7,-(A0)
 	MOVEM.L	D0-D7,-(A0)
 	MOVEM.L	D0-D7,-(A0)
-	
+
 	TST.B	SampleLineFlag
 	BEQ.B	.L0
-	
+
 	; clear dotted center pattern (different bitplanes)
 	LEA	BitplaneData+6800+40,A0
 	LEA	BitplaneData+10240+6800+40,A1
@@ -21944,7 +21945,7 @@ ClearSamArea
 	MOVE.B	#%00000101,39(A0)
 	MOVE.B	#%00000011,39(A1)
 	MOVE.B	#%10100000,0(A0)
-	MOVE.B	#%01100000,0(A1)	
+	MOVE.B	#%01100000,0(A1)
 .L0
 
 	; clear sample view
@@ -22184,7 +22185,7 @@ zoomou3	MOVE.L	D2,SamOffset
 	CLR.W	MarkStart
 zoomouo	BSR.W	DisplaySample
 	JMP	WaitForButtonUp
-	
+
 ShowAll
 	CLR.L	SamOffset
 	MOVE.L	SamLength(PC),SamDisplay
@@ -22234,17 +22235,17 @@ SwapBuffer
 	LSL.W	#2,D1
 	LEA	SongDataPtr(PC),A0
 	LEA	(A0,D1.W),A0
-	
+
 	MOVE.L	CopyBufPtr(PC),D0
 	MOVE.L	(A0),CopyBufPtr
 	MOVE.L	D0,(A0)
 	MOVE.L	D0,A1
 	CLR.W	(A1)
-	
+
 	MOVE.L	CopyBufSize(PC),D0
 	MOVE.L	124(A0),CopyBufSize
 	MOVE.L	D0,124(A0)
-	
+
 	MOVE.L	SongDataPtr(PC),A0
 	MOVE.W	InsNum(PC),D1
 	MULU.W	#30,D1
@@ -22254,7 +22255,7 @@ SwapBuffer
 	MOVE.L	RepBuf(PC),D0
 	MOVE.L	4(A0),RepBuf
 	MOVE.L	D0,4(A0)
-	
+
 	MOVE.W	RepBuf2(PC),D0
 	MOVE.W	2(A0),RepBuf2
 	TST.B	D0
@@ -22313,10 +22314,10 @@ LoopToggle
 	MOVE.L	SongDataPtr(PC),A0
 	MULU.W	#30,D1
 	LEA	12(A0,D1.W),A0
-	
+
 	TST.W	(A0)		; sample length == 0?
 	BEQ.B	LTSmpEmpty	; yup, don't allow loop toggle...
-		
+
 	TST.W	LoopOnOffFlag
 	BEQ.B	loopton
 	MOVE.L	4(A0),SavSamInf
@@ -22343,7 +22344,7 @@ ShowLoopToggle
 sltskip	MOVEQ	#3,D0
 	MOVE.W	#9076,D1
 	BRA.W	ShowText3
-	
+
 	CNOP 0,4
 SavSamInf	dc.l 0
 LoopOnOffFlag	dc.w 0
@@ -22375,7 +22376,7 @@ ResamplingText	dc.b "Resampling...",0
 	; 128kB compatible and optimized by 8bitbubsy.
 	; Almost twice as fast as the original routine,
 	; and has slightly better resampling precision.
-Resample	
+Resample
 	LEA	ResampleText(PC),A0
 	JSR	AreYouSure
 	BNE.W	Return3
@@ -22402,20 +22403,20 @@ Resample
 	MOVE.W	LastInsNum(PC),D1
 rssmpok
 	MULU.W	#30,D1
-	MOVEQ	#0,D0		
+	MOVEQ	#0,D0
 	MOVE.B	12+2(A0,D1.W),D0 ; finetune
 	AND.B	#$0F,D0
 	LSL.B	#2,D0
 	LEA	ftunePerTab(PC),A0
 	MOVE.L	(A0,D0.W),A0
-	
+
 	MOVEQ	#0,D1
 	MOVE.W	ResampleNote(PC),D1
 	ADD.W	D1,D1
 	MOVE.W	(A0,D1.W),D1
 	BEQ.W	ERC2	; can't have a resample period of 0!
 	; D1.L = resample period (108..907)
-	
+
 	; get reference period from tuning note
 	LEA	PeriodTable(PC),A0
 	MOVEQ	#0,D5
@@ -22430,7 +22431,7 @@ rssmpok
 	SWAP	D0
 	CLR.W	D0
 	JSR	DIVU32
-	MOVE.L	D0,D4	
+	MOVE.L	D0,D4
 	; D4.L = 16.16fp resampling delta
 
 	; calculate new sample length (write length)
@@ -22456,10 +22457,10 @@ resamok
 	JSR	PTAllocMem
 	TST.L	D0
 	BEQ.W	SamMemError
-	
+
 	MOVE.L	D0,A1
 	MOVE.L	D0,A3
-	
+
 	; clear last byte (just in case)
 	CLR.B	-1(A1,D7.L)
 
@@ -22467,12 +22468,12 @@ resamok
 	MOVE.L	D6,A6	; old sample length
 	MOVE.L	A1,A5
 	ADD.L	D7,A5	; new end-of-sample address
-	
+
 	MOVEQ	#0,D1	; set frac to 0
 	MOVEQ	#0,D6	; set pos to 0
 	MOVE.W	D4,D3	; D3.W = delta lo (16-bit)
 	CLR.W	D4
-	SWAP	D4	; D4.L = delta hi (16-bit)	
+	SWAP	D4	; D4.L = delta hi (16-bit)
 
 	BSR.W	TurnOffVoices
 
@@ -22522,7 +22523,7 @@ resampledone
 	BSR.W	ShowSampleInfo
 	BSR.W	ShowAllRight
 	BRA.W	RedrawSample
-	
+
 ERC2
 	JMP	ErrorRestoreCol
 
@@ -22546,7 +22547,7 @@ samcut2	BSR.W	TurnOffVoices
 	MOVE.L	124(A0),D2
 	CMP.L	#2,D2
 	BLO.W	EmptySampleError
-	
+
 	MOVE.L	D0,A1
 	MOVE.L	D0,A2			; sample start
 	MOVE.L	D0,A3
@@ -22564,7 +22565,7 @@ samcut2	BSR.W	TurnOffVoices
 	SUBQ.L	#1,D0
 samsome	ADD.L	D0,A4		; mark end
 	ADD.L	D2,A5		; sample end
-	
+
 	MOVE.L	A3,D0
 	SUB.L	A2,D0
 	ADD.L	A5,D0
@@ -22580,7 +22581,7 @@ sacoklen
 	JSR	PTAllocMem
 	MOVE.L	D0,D4
 	BEQ.W	OutOfMemErr ; No memory
-	
+
 	MOVE.L	D0,A0
 	MOVE.L	A2,A1
 	MOVE.L	A3,D0
@@ -22601,14 +22602,14 @@ sacskp2
 
 sacfree	MOVE.L	D2,D0
 	JSR	PTFreeMem
-	
+
 	MOVE.W	InsNum(PC),D1
 	LSL.W	#2,D1
 	LEA	SongDataPtr(PC),A0
 	LEA	(A0,D1.W),A0
 	MOVE.L	D4,(A0)
 	MOVE.L	D3,124(A0)
-	
+
 	MOVE.L	D4,SamStart
 	MOVE.L	D3,SamLength
 	MOVE.L	SamOffset(PC),D4
@@ -22630,7 +22631,7 @@ samcuto	MOVE.L	SongDataPtr(PC),A0
 	MOVE.W	InsNum(PC),D1
 	MULU.W	#30,D1
 	LEA	12(A0,D1.W),A0
-	
+
 	MOVE.L	D3,D4
 	LSR.L	#1,D3
 	MOVE.W	D3,(A0)
@@ -22645,7 +22646,7 @@ samcuxx	ADD.W	6(A0),D0
 	BLS.B	samcuex
 	SUB.W	4(A0),D3
 	MOVE.W	D3,6(A0)
-	
+
 samcuex
 	MOVE.L	MarkStartOfs(PC),MarkEndOfs
 	BSR.W	ClearSamStarts
@@ -22729,7 +22730,7 @@ sepaskip
 	MOVE.L	D3,A3
 	MOVE.L	CopyBufSize(PC),D3
 	BEQ.W	BufIsEmptyError
-	
+
 	MOVE.L	D3,D4 ; copysize
 	ADD.L	D2,D4 ; + origsize
 	CMP.L	#$1FFFE,D4	; 128kb patch
@@ -22752,13 +22753,13 @@ sapask1	MOVE.L	D0,MarkStartOfs
 	MOVE.L	A4,A0
 	ADD.L	D4,A0
 
-; D0	= paste position
-; A0	= end of new sample
+; D0    = paste position
+; A0    = end of new sample
 ; A1/D1 = copy of A2/D2
 ; A2/D2 = original sample
 ; A3/D3 = copy buffer
 ; A4/D4 = new sample
-; A5	= copy of A4
+; A5    = copy of A4
 	BRA.B	sapask2
 sapalp1	MOVE.B	(A2)+,(A4)+ ; copy first part
 	CMP.L	A0,A4
@@ -22767,7 +22768,7 @@ sapalp1	MOVE.B	(A2)+,(A4)+ ; copy first part
 sapask2
 	SUBQ.L	#1,D0
 	BPL.B	sapalp1
-	
+
 	BRA.B	sapask3
 sapalp2	MOVE.B	(A3)+,(A4)+ ; copy from buffer
 	CMP.L	A0,A4
@@ -22783,7 +22784,7 @@ sapalp3	MOVE.B	(A2)+,(A4)+ ; copy last part
 	BHS.B	sapaski
 	SUBQ.L	#1,D2
 	BNE.B	sapalp3
-	
+
 sapaski	MOVE.L	D1,D0
 	BEQ.B	.skip
 	JSR	PTFreeMem
@@ -22793,14 +22794,14 @@ sapaski	MOVE.L	D1,D0
 	LEA	(A0,D1.W),A0
 	MOVE.L	A5,(A0)
 	MOVE.L	D4,124(A0)
-	
+
 	MOVE.L	SongDataPtr(PC),A0
 	MOVE.W	InsNum(PC),D1
 	MULU.W	#30,D1
 	LEA	12(A0,D1.W),A0
 	LSR.L	#1,D4
 	MOVE.W	D4,(A0)
-	
+
 	MOVE.L	MarkStartOfs(PC),MarkEndOfs
 	BSR.W	OffsetToMark
 	BSR.W	ClearSamStarts
@@ -23045,7 +23046,7 @@ drvskip	JSR	StorePtrCol
 	MOVEQ	#0,D5		; Rescale volume range (for DIV -> ASR)
 	MOVEQ	#0,D6
 	MOVE.W	Vol1(PC),D5
-	MOVE.W	Vol2(PC),D6	
+	MOVE.W	Vol2(PC),D6
 	LSL.L	#7,D5
 	LSL.L	#7,D6
         DIVU.W	#100,D5
@@ -23192,8 +23193,7 @@ TuningTone
 	JSR	WaitForPaulaLatch
 	BSET	#15,D0
 	MOVE.W	D0,$DFF096	; turn DMA on
-ttrts
-	RTS
+ttrts	RTS
 
 TToneOff
 	CLR.W	TToneFlag
@@ -23372,7 +23372,7 @@ lsdmsk2	MOVE.L	SamDisplay(PC),D0
 	MOVE.L	#314,D1
 	JSR	DIVU32
 	MOVE.L	D0,D1
-	
+
 	MOVE.L	SamOffset(PC),D0
 	ADD.L	D1,D0	; new repeat
 	BCLR	#0,D0	; even'ify
@@ -23459,17 +23459,17 @@ sdrskp1	MOVE.L	SamLength(PC),D1
 	JSR	DIVU32
 	BSR.B	dragchk
 	BRA.B	sdrlop1
-	
+
 draglo	MOVE.L	SamOffset(PC),D0
 
 	SUB.L	SamDisplay(PC),D0
 	BPL.B	draglo2
 	MOVEQ	#0,D0
 draglo2	CMP.L	SamOffset(PC),D0
-	BEQ.W	Return3		
+	BEQ.W	Return3
 	MOVE.L	D0,SamOffset
 	BRA.W	DisplaySampleNoTextUpdate
-	
+
 draghi	MOVE.L	SamOffset(PC),D0
 	ADD.L	SamDisplay(PC),D0
 dragchk	MOVE.L	D0,D1
@@ -23489,7 +23489,7 @@ MarkToOffset
 	MOVE.W	MarkStart(PC),D0
 	BEQ.W	Return3
 	SUBQ.W	#3,D0
-	MOVE.L	SamDisplay(PC),D1		
+	MOVE.L	SamDisplay(PC),D1
 	JSR	MULU32
 	MOVE.L	#314,D1
 	JSR	DIVU32
@@ -23504,10 +23504,10 @@ MarkToOffset
 	ADD.L	SamDisplay(PC),D0
 	BRA.B	mtoexit
 mtosome	SUBQ.W	#3,D0
-	MOVE.L	SamDisplay(PC),D1	
+	MOVE.L	SamDisplay(PC),D1
 	JSR	MULU32
 	MOVE.L	#314,D1
-	JSR	DIVU32	
+	JSR	DIVU32
 	ADD.L	SamOffset(PC),D0
 mtoexit	MOVE.L	D0,MarkEndOfs
 	RTS
@@ -23526,18 +23526,18 @@ OffsetToMark
 	MOVE.L	#314,D1
 	JSR	MULU32
 	MOVE.L	D2,D1
-	JSR	DIVU32	
+	JSR	DIVU32
 	CMP.W	#314,D0
 	BHI.B	otmout	; if start after display
 	ADD.W	D0,MarkStart
 otmskip	; ------------------------
 	MOVE.L	MarkEndOfs(PC),D0
 	SUB.L	SamOffset(PC),D0
-	BMI.B	otmout	; if end before offset	
+	BMI.B	otmout	; if end before offset
 	MOVE.L	#314,D1
 	JSR	MULU32
 	MOVE.L	D2,D1
-	JSR	DIVU32	
+	JSR	DIVU32
 	CMP.W	#313,D0
 	BLS.B	otmok
 	MOVE.W	#313,D0	; set to end if after display
@@ -23569,7 +23569,7 @@ DisplaySample
 	BMI.W	Return3
 	BSR.W	OffsetToMark
 	BRA.W	InvertRange
-	
+
 DisplaySampleNoTextUpdate
 	TST.W	SamScrEnable
 	BEQ.W	Return3
@@ -23614,12 +23614,12 @@ rdsskip	MOVE.L	SamDisplay(PC),D0
 	BNE.B	rdsslwo
 	MOVEQ	#0,D0
 rdsslwo	MOVE.W	#215*40+33,TextOffset
-	BSR.W	Print6DecDigits	
+	BSR.W	Print6DecDigits
 
 rdsdoit
 	BSR.W	ClearSamArea
 	BSR.W	SetDragBar
-	
+
 	; --PT2.3D change:
 	; Slightly optimized sample draw routine, which also supports
 	; 128kB samples. This one doesn't use DIVU & MULU per pixel.
@@ -23642,7 +23642,7 @@ rdsdoit
 
 	; If we're zoomed out, adjust sample start pos/frac so
 	; that the waveform doesn't "wiggle" while scrolling it.
-	;	
+	;
 	CMP.L	#314,D3		; SamDisplay (2..131070)
 	BLS.B	rdsskp3		; not zoomed out, no adjustment needed
 	TST.L	D2		; SamOffset (0..131068)
@@ -23653,29 +23653,29 @@ rdsdoit
 	MOVE.L	#314,D1
 	JSR	MULU32
 	MOVE.L	D3,D1
-	JSR	DIVU32	
+	JSR	DIVU32
 	MOVE.L	D0,D3
-	
+
 	MOVE.L	D7,D1
 	AND.L	#32767,D1	; D1.L = sample delta frac
-	JSR	MULU32	
+	JSR	MULU32
 	MOVE.L	D0,D6
-	
+
 	MOVEQ	#15,D2
 	MOVE.L	D7,D1
-	LSR.L	D2,D1		; D1.L = sample delta integer	
+	LSR.L	D2,D1		; D1.L = sample delta integer
 	MOVE.L	D3,D0
 	JSR	MULU32
 	LSL.L	D2,D0
 	ADD.L	D0,D6
 rdsskp3
-	
+
 	MOVE.L	D6,-(SP)
 	MOVE.L	D7,-(SP)
-	
+
 	MOVE.L	GfxBase(PC),A6
 	JSR	_LVOOwnBlitter(A6)
-	JSR	_LVOWaitBlit(A6)	
+	JSR	_LVOWaitBlit(A6)
 
 	BSR.W	DrawDragBar ; (also uses blitter, so do it now)
 
@@ -23692,23 +23692,23 @@ rdsloop	MOVE.L	D6,D0	; D0.L = current sample pos (17.15fp)
 	SUB.B	(A0,D0.L),D1
 	LSR.W	#2,D1
 	MOVE.W	D4,D0
-	ADDQ.W	#3,D0	
+	ADDQ.W	#3,D0
 	TST.W	D4
 	BNE.B	rdsdraw
 	BSR.W	MoveTo
 	BRA.B	rdsupdt
 rdsdraw	BSR.W	DrawTo
 rdsupdt	ADD.L	D7,D6
-	ADDQ.W	#1,D4	
+	ADDQ.W	#1,D4
 	CMP.W	#314,D4
 	BLO.B	rdsloop
 
 	JSR	_LVODisownBlitter(A6)
-	
+
 	TST.B	SampleLineFlag
 	BEQ.B	.L0
-	
-	; --PT2.3D change: dotted line in sampler screen	
+
+	; --PT2.3D change: dotted line in sampler screen
 	LEA	BitplaneData+6800,A0
 	LEA	BitplaneData+10240+6800,A1
 	LEA	TextBitplane+6800,A2
@@ -23725,10 +23725,10 @@ rdsupdt	ADD.L	D7,D6
 	; fix two trashed bits
 	LEA	-40(A1),A1
 	BCLR	#7,0(A1)
-	BCLR	#1,-1(A0)	
+	BCLR	#1,-1(A0)
 .L0
 	BRA.W	SetLoopSprites
-	
+
 	CNOP 0,4
 SamPosDelta	dc.l 0
 SamStart	dc.l 0
@@ -23763,18 +23763,18 @@ SetDragBar
 	MOVE.L	#311,D1
 	JSR	MULU32
 	MOVE.L	D3,D1
-	JSR	DIVU32	
-	ADDQ.W	#5,D0	
-	MOVE.W	D0,DragEnd	
+	JSR	DIVU32
+	ADDQ.W	#5,D0
+	MOVE.W	D0,DragEnd
 	; ------------------------
 	ST	DragBarShown
 .end	RTS
-	
+
 DrawDragBar
 	TST.B	DragBarShown
-	BEQ.B	.end	
+	BEQ.B	.end
 	MOVE.W	DragStart,D4
-	MOVE.W	DragEnd,D5	
+	MOVE.W	DragEnd,D5
 	MOVEQ	#68,D6
 	MOVEQ	#4-1,D7
 .loop	MOVE.W	D4,D0
@@ -23850,11 +23850,11 @@ dxdyneg	MOVEQ	#0,D5
 	MULU.W	#ScrWidth,D1
 	ADD.W	D5,D1
 	ADD.L	LineScreenPtr(PC),D1
-	
+
 blitrdy	BTST	#14-8,$DFF002
 	BNE.B	blitrdy
 
-	MOVE.W	#$4000,$DFF09A	
+	MOVE.W	#$4000,$DFF09A
 	MOVE.B	Octants(PC,D4),D4
 	ADD.W	D3,D3
 	MOVE.W	D3,$DFF062 		; BLTBMOD
@@ -23877,11 +23877,11 @@ dldspos	MOVE.L	D3,$DFF050 		; BLTAPTR
 	ADDQ.W	#2,D2
 	MOVE.W	D2,$DFF058 		; BLTSIZE
 	MOVE.W	#$C000,$DFF09A
-	
+
 	MOVE.L	(SP)+,D5
 	MOVE.L	(SP)+,D4
 dlrts	RTS
-	
+
 Octants		dc.b 3*4+1,2*4+1,1*4+1,0*4+1,7*4+1,5*4+1,6*4+1,4*4+1
 
 	CNOP 0,4
@@ -23934,7 +23934,7 @@ SetLoopSprites2
 	MULU.W	#314,D0
 	DIVU.W	D3,D0
 	MOVE.L	(SP)+,D3
-	
+
 	ADDQ.W	#3,D0
 	MOVE.W	D0,D6
 .l1	CMP.L	D2,D5
@@ -23942,7 +23942,7 @@ SetLoopSprites2
 	CMP.L	D4,D5
 	BHI.B	slsset
 	SUB.L	D2,D5
-	
+
 	MOVE.L	D3,-(SP)
 	LSR.L	#1,D3
 	LSR.L	#1,D5
@@ -23971,7 +23971,7 @@ slsset	MOVE.W	#139,D1
 	MOVE.W	D0,LoopEndPos
 	BSR.W	SetSpritePos
 	BRA.W	ShowLoopToggle
-	
+
 HideLoopSprites	; new PT2.3E routine
 	MOVEM.L	D0-D2/A0,-(SP)
 	MOVEQ	#0,D0
@@ -23983,7 +23983,7 @@ HideLoopSprites	; new PT2.3E routine
 	BSR	SetSpritePos
 	MOVEM.L	(SP)+,D0-D2/A0
 	RTS
-	
+
 ;---- Playroutine ----
 
 	CNOP 0,4
@@ -24011,8 +24011,7 @@ IntMusic
 	CMP.L	#'patt',D0
 	BEQ.B	.l1
 	MOVE.L	SongPosition(PC),CurrPos
-.l1
-	MOVE.L	SongDataPtr(PC),A0
+.l1	MOVE.L	SongDataPtr(PC),A0
 	TST.W	StepPlayEnable
 	BNE.B	.l2
 	ADDQ.L	#1,Counter
@@ -24050,7 +24049,7 @@ GetNewNote
 	MOVEQ	#0,D1
 	MOVE.L	SongPosition(PC),D0
 	MOVE.B	(A2,D0.W),D1
-	
+
 	CMP.L	#'patt',RunMode
 	BNE.B	.l1
 	MOVE.L	PatternNumber(PC),D1
@@ -24104,13 +24103,13 @@ GetNewNote
 	MOVE.B	D0,n_volumeout(A6)	; set quadrascope volume
 .l5
 	BRA.W	SetDMA
-	
+
 SetVUMeterHeight			; - PT2.3D change: perfect VU-meters (never buggy at high BPMs)
 	TST.B	RealVUMetersFlag	; real VU-meters mode?
 	BNE.B	vuend			; yes, don't use this routine
 	; -------------------------
 	TST.B	n_muted(A6)		; is this channel muted?
-	BNE.B	vuend			; yes, don't set VU-meter height for this channel		
+	BNE.B	vuend			; yes, don't set VU-meter height for this channel
 	MOVEQ	#0,D0
 	MOVE.B	n_dmabit+1(A6),D0	; check temp dmacon to find out what channel we're on
 	AND.B   #$0F,D0
@@ -24146,16 +24145,16 @@ vuskip4	MOVE.B	(VUmeterHeights,PC,D0.W),(A0)
 	MOVE.L	(SP)+,A0
 vuend	RTS
 	; ------------------
-	
+
 	; This table is also used for the "real" VU meter mode.
 	;
 	; for (i = 0 to 64) x = 233 - round[i * (47/64)]
 VUmeterHeights
-        dc.b 233,232,232,231,230,229,229,228,227,226,226,225,224,223,223,222
-        dc.b 221,221,220,219,218,218,217,216,215,215,214,213,212,212,211,210
-        dc.b 209,209,208,207,207,206,205,204,204,203,202,201,201,200,199,198
-        dc.b 198,197,196,196,195,194,193,193,192,191,190,190,189,188,187,187
-        dc.b 186
+	dc.b 233,232,232,231,230,229,229,228,227,226,226,225,224,223,223,222
+	dc.b 221,221,220,219,218,218,217,216,215,215,214,213,212,212,211,210
+	dc.b 209,209,208,207,207,206,205,204,204,203,202,201,201,200,199,198
+	dc.b 198,197,196,196,195,194,193,193,192,191,190,190,189,188,187,187
+	dc.b 186
 	EVEN
 
 CheckMetronome
@@ -24203,7 +24202,7 @@ plvskip	MOVE.L	(A0,D1.L),(A6)	; Read note from pattern
 	AND.B	#31,D2		; PT2.3D bugfix: mask instrument
 	TST.B	D2
 	BEQ.W	SetRegisters	; Instrument was zero
-	
+
 	MOVEQ	#0,D3
 	LEA	SampleStarts(PC),A1
 	MOVE.W	D2,D4
@@ -24214,7 +24213,7 @@ plvskip	MOVE.L	(A0,D1.L),(A6)	; Read note from pattern
 	MOVE.L	(A1,D2.L),n_start(A6)
 	MOVE.L	n_start(A6),n_oldstart(A6)	; for quadrascope
 	MOVE.W	(A3,D4.L),n_length(A6)
-	
+
 	MOVEQ	#0,D0
 	MOVE.B	2(A3,D4.L),D0
 	AND.B	#$0F,D0
@@ -24224,7 +24223,7 @@ plvskip	MOVE.L	(A0,D1.L),(A6)	; Read note from pattern
 	LEA	ftunePerTab(PC),A4
 	MOVE.L	(A4,D0.W),n_peroffset(A6)
 	; ----------------------------------	
-	
+
 	AND.B	#$0F,n_finetune(A6)		; --PT2.3D bug fix: mask finetune...
 	MOVE.B	3(A3,D4.L),n_volume(A6)
 	MOVE.W	4(A3,D4.L),D3			; Get repeat
@@ -24294,12 +24293,12 @@ ftufound
 	MOVE.L	n_peroffset(A6),A1
 	MOVE.W	(A1,D0.W),n_period(A6)
 	MOVEM.L	(SP)+,D0/D1/A0/A1
-	
+
 	MOVE.W	2(A6),D0
 	AND.W	#$FF0,D0
 	CMP.W	#$ED0,D0 ; Notedelay
 	BEQ.W	CheckMoreEffects
-	
+
 	MOVE.W	n_dmabit(A6),$DFF096
 	BTST	#2,n_wavecontrol(A6)
 	BNE.B	vibnoc
@@ -24333,7 +24332,7 @@ SetDMA
 	OR.W	#$8000,D0	; Set DMA bits
 	MOVE.W	D0,$DFF096
 	JSR	WaitForPaulaLatch
-	
+
 	LEA	$DFF000,A5
 	LEA	audchan4temp(PC),A6
 	MOVE.L	n_loopstart(A6),$D0(A5)
@@ -24347,7 +24346,7 @@ SetDMA
 	LEA	audchan1temp(PC),A6
 	MOVE.L	n_loopstart(A6),$A0(A5)
 	MOVE.W	n_replen(A6),$A4(A5)
-	
+
 dskip	TST.L	RunMode
 	BEQ.B	dskipx
 	JSR	SetPatternPos
@@ -24399,7 +24398,7 @@ NextPosition
 	CMP.B	sd_numofpatt(A0),D1
 	BLO.B	NoNewPositionYet
 	CLR.L	SongPosition
-	
+
 	TST.W	StepPlayEnable
 	BEQ.B	NoNewPositionYet
 	JSR	DoStopIt
@@ -24407,7 +24406,7 @@ NextPosition
 	MOVE.L	PatternPosition(PC),D0
 	LSR.L	#4,D0
 	MOVE.W	D0,ScrPattPos
-	
+
 NoNewPositionYet
 	TST.B	PosJumpAssert
 	BNE.B	NextPosition
@@ -24455,7 +24454,7 @@ chkefx2
 	LSL.B	#2,D1
 	MOVE.L	JumpList1(PC,D1.W),A4
 	JMP	(A4) ; every efx has RTS at the end, this is safe
-	
+
 SetBack	MOVE.W	n_period(A6),6(A5)
 	MOVE.W	n_period(A6),n_periodout(A6)	; Set scope period
 	CMP.B	#7,D0
@@ -24479,17 +24478,17 @@ Arpeggio
 Arpeggio0
 	MOVE.W	n_period(A6),D2
 	BRA.W	ArpeggioSet
-	
+
 	; DIV -> LUT optimization. DIVU is up to 140+ cycles on a 68000.
 ArpTab
-        dc.b 0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1
-        dc.b 2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
-        dc.b 1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2
-        dc.b 0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1
-        dc.b 2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
-        dc.b 1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2
-        dc.b 0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1
-        dc.b 2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
+	dc.b 0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1
+	dc.b 2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
+	dc.b 1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2
+	dc.b 0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1
+	dc.b 2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
+	dc.b 1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2
+	dc.b 0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1
+	dc.b 2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0
 	EVEN
 
 Arpeggio1
@@ -24511,7 +24510,7 @@ arploop	CMP.W	(A0)+,D1
 	BHS.B	ArpeggioFound
 	DBRA	D7,arploop
 	RTS
-	
+
 ArpeggioFound
 	MOVE.W	-2(A0,D0.W),D2
 ArpeggioSet
@@ -24622,7 +24621,7 @@ TonePortaUp
 	BLT.B	TonePortaSetPer
 	MOVE.W	n_wantedperiod(A6),n_period(A6)
 	CLR.W	n_wantedperiod(A6)
-	
+
 TonePortaSetPer
 	MOVE.W	n_period(A6),D2
 	MOVE.B	n_glissfunk(A6),D0
@@ -24774,7 +24773,7 @@ TremoloSkip
 	BLS.B	TremoloOk
 	MOVE.W	#$40,D0
 TremoloOk
-	; --PT2.3D bug fix: instant muting	
+	; --PT2.3D bug fix: instant muting
 	TST.B	n_muted(A6)
 	BNE.B	TremoloSkip2
 	MOVE.W	D0,8(A5)
@@ -24890,7 +24889,7 @@ SpeedNull
 	JSR	SetWaitPtrCol	; we're editing, set edit pointer color
 .end	; ----------------------------------------------------------------
 	RTS
-	
+
 	CNOP 0,4
 JumpList2
 	dc.l PerNop		; 0 - not used
@@ -24917,7 +24916,7 @@ CheckMoreEffects
 	LSL.B	#2,D0
 	MOVE.L	JumpList2(PC,D0.W),A4
 	JMP	(A4) ; every efx has RTS at the end, this is safe
-	
+
 	CNOP 0,4
 E_JumpList
 	dc.l FilterOnOff	; E0x (Set LED Filter)
@@ -25118,7 +25117,7 @@ UpdateFunk
 	ADD.B	D0,n_funkoffset(A6)
 	BTST	#7,n_funkoffset(A6)
 	BEQ.B	funkend
-	CLR.B	n_funkoffset(A6)	
+	CLR.B	n_funkoffset(A6)
 	; --PT2.3D bug fix: EFx null pointer--
 	MOVE.L	n_wavestart(A6),A0
 	CMP.L	#0,A0
@@ -25148,8 +25147,8 @@ funkend	MOVE.L	(SP)+,A0
 ; -----------------------------------------------------------------------------
 
 FunkTable	dc.b 0,5,6,7,8,10,11,13,16,19,22,26,32,43,64,128
-	
-VibratoTable	
+
+VibratoTable
 	dc.b   0, 24, 49, 74, 97,120,141,161
 	dc.b 180,197,212,224,235,244,250,253
 	dc.b 255,253,250,244,235,224,212,197
@@ -25284,7 +25283,7 @@ SongDumpText
 		dc.b	'Songname:  '
 CRLF_Text	dc.b	13,10
 FF_Text		dc.b	12,0
-	
+
 	CNOP 0,2
 PatternNumText	dc.b	9,9,9,'Pattern: '
 PattNumText1	dc.b	'0'
@@ -25310,7 +25309,7 @@ PatternsText	dc.b	'Patterns',0
 SamplesText	dc.b	'Samples',0
 		dc.b	'DF0:',0
 		dc.b	'.'
-	
+
 	CNOP 0,2
 STText1		dc.b	'ST'
 STText1Num	dc.b	'-'
@@ -25321,10 +25320,10 @@ STText2Number	dc.b	0,0,':'
 STText3		dc.b	'ST'
 STText3Num	dc.b	'-'
 STText3Number	dc.b	0,0,':'
-	
+
 EmptyLineText	dc.b	'                       ',0
 	EVEN
-	
+
 FastHexTable
 	dc.b	'000102030405060708090A0B0C0D0E0F'
 	dc.b	'101112131415161718191A1B1C1D1E1F'
@@ -25354,8 +25353,8 @@ RawKeyScaleTable
 	dc.b	49,33,50,34,51,52,36,53,37,54,38,55,56,40,57
 	dc.b	41,58,16,2,17,3,18,19,5,20,6,21,7,22,23,9,24,10
 	dc.b	25,26,12,27,70,70,0
-	
-KbdTransTable1	
+
+KbdTransTable1
 	dc.b	 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16
 	dc.b	12,13,14,15,16,17,18,19,20,21,22,23
 	dc.b	24,25,26,27,28,29,30,31,36,36
@@ -25473,7 +25472,7 @@ ftuneF
 	; ------------------------------------------------------
 	dc.w 774,1800,2314,3087,4113,4627,5400,6426,6940,7713
 	dc.w 8739,9253,24625,12851,13365
-	
+
 CursorPosTable
 	dc.b	3,6,7,8,9,10,12
 	dc.b	15,16,17,18,19,21
@@ -25516,7 +25515,7 @@ Ch3SpritePtr	dc.l	0
 Ch4SpritePtr	dc.l	0
 CursorPosPtr	dc.l	0
 NoSpritePtr	dc.l	0
-	
+
 ; -----------------------------------------------------------------------------
 ;                               GENERAL VARIABLES
 ; -----------------------------------------------------------------------------
@@ -25740,7 +25739,7 @@ DefCol	dc.w	$000,$BBB,$888,$555,$FD0,$D04,$000,$34F
 	dc.b	0 ; SamplePackFlag
 	dc.b	0 ; RealVUMetersFlag
 	dcb.b	229  ; Pad to 1024 bytes
-	
+
 ; -----------------------------------------------------------------------------
 ;                               SAMPLER ROUTINES
 ; -----------------------------------------------------------------------------
@@ -25837,16 +25836,16 @@ monilop3
 	DBRA	D4,monilop3
 	ADDQ	#1,A2
 	DBRA	D5,monilop4
-	
+
 	LEA	-23(A2),A2
 	LEA	-368(A1),A1
 	BTST	D6,-$0100(A3)
 	BEQ.W	sampexit
 	BTST	D3,-8(A4)
 	BNE.B	monilop2
-	
+
 ;-- start sampling --
-	
+
 	MOVE.W	InsNum(PC),D1
 	BEQ.W	sampexit
 	LSL.W	#2,D1
@@ -25877,7 +25876,7 @@ samalcok
 	LEA	SamplePtrs(PC),A0
 	MOVE.L	D0,(A0,D1.W)
 	MOVE.L	D6,124(A0,D1.W)
-	
+
 	MOVE.W	$DFF002,SamDMASave
 	MOVE.W	#$03FF,$DFF096		; _custom+dmacon
 	BSR.W	GetSampleInfo
@@ -25889,7 +25888,7 @@ samalcok
 	LEA	$BFE101,A3		; parallel port
 	LEA	$DFF01E,A4		; _custom+intreqr
 	LEA	$DFF0BA,A6
-	
+
 	MOVE.W	#$0180,D7
 	MOVEQ	#6,D6
 	MOVEQ	#0,D5
@@ -25910,11 +25909,11 @@ samploop
 sampend	MOVE.W	SamDMASave(PC),D0
 	OR.W	#$8000,D0
 	MOVE.W	D0,$DFF096
-	
+
 	MOVE.L	A1,D0
 	SUB.L	SamInfoPtr(PC),D0
 	MOVE.L	D0,SamInfoLen
-	
+
 	MOVE.L	SongDataPtr(PC),A0
 	MOVE.W	InsNum(PC),D1
 	MULU.W	#30,D1
@@ -25929,7 +25928,7 @@ sampend	MOVE.W	SamDMASave(PC),D0
 	; If we didn't fill up the whole sampling buffer,
 	; free the memory we didn't use (this is hackish)
 	;
-	; XXX: THIS IS NOT SAFE !!
+	; XXX: Is this even safe?
 	;
 	MOVE.L	SamInfoLen(PC),D1
 	NEG.L	D1
@@ -26146,7 +26145,7 @@ ToggleONdata	INCBIN "raw/pttoggleon.raw"
 ToggleOFFdata	INCBIN "raw/pttoggleoff.raw"
 	CNOP 0,4
 S_BoxData	INCBIN "raw/ptletters.raw"
-	
+
 A_BoxData	EQU	S_BoxData+22
 T_BoxData	EQU	S_BoxData+44
 P_BoxData	EQU	S_BoxData+66
@@ -26156,54 +26155,55 @@ N_BoxData	EQU	S_BoxData+132
 O_BoxData	EQU	S_BoxData+154
 
 	; Converts pattern-period to LUT index for NotesNames1/NoteNames2 (dword)
+	; during pattern data drawing (speed-up).
 Period2Note:
-        dc.b 140,148,148,148,148,148,148,136,148,148,148,148,148,148,132,148
-        dc.b 148,148,148,148,148,148,128,148,148,148,148,148,148,148,124,148
-        dc.b 148,148,148,148,148,148,120,148,148,148,148,148,148,148,148,116
-        dc.b 148,148,148,148,148,148,148,148,148,112,148,148,148,148,148,148
-        dc.b 148,148,148,108,148,148,148,148,148,148,148,148,148,104,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,100,148,148,148,148,148,148
-        dc.b 148,148,148,148,148, 96,148,148,148,148,148,148,148,148,148,148
-        dc.b 148, 92,148,148,148,148,148,148,148,148,148,148,148,148,148, 88
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148, 84,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148, 80,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148, 76,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148, 72,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148, 68
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148, 64,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148, 60,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148, 56,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148, 52,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148, 48,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148, 44,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148, 40
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148, 36,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148, 32,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148, 28,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148, 24,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148, 20
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148, 16,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148, 12
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,  8,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,  4,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
-        dc.b 148,148,148,148,148,148,148,  0
+	dc.b 140,148,148,148,148,148,148,136,148,148,148,148,148,148,132,148
+	dc.b 148,148,148,148,148,148,128,148,148,148,148,148,148,148,124,148
+	dc.b 148,148,148,148,148,148,120,148,148,148,148,148,148,148,148,116
+	dc.b 148,148,148,148,148,148,148,148,148,112,148,148,148,148,148,148
+	dc.b 148,148,148,108,148,148,148,148,148,148,148,148,148,104,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,100,148,148,148,148,148,148
+	dc.b 148,148,148,148,148, 96,148,148,148,148,148,148,148,148,148,148
+	dc.b 148, 92,148,148,148,148,148,148,148,148,148,148,148,148,148, 88
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148, 84,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148, 80,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148, 76,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148, 72,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148, 68
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148, 64,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148, 60,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148, 56,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148, 52,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148, 48,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148, 44,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148, 40
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148, 36,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148, 32,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148, 28,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148, 24,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148, 20
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148, 16,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148, 12
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,  8,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,  4,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,148,148,148,148,148,148,148,148,148
+	dc.b 148,148,148,148,148,148,148,  0
 	EVEN
 
 ; -----------------------------------------------------------------------------
@@ -26211,10 +26211,10 @@ Period2Note:
 ; -----------------------------------------------------------------------------
 
 	SECTION ptdata,DATA_C
-	
+
 	CNOP 0,4
 BitplaneData	INCBIN "raw/ptmainscreen.raw"
-	
+
 TopMenusPos	EQU	BitplaneData+55
 Setup2Menus	EQU	BitplaneData+506
 SpectrumAnaPos	EQU	BitplaneData+1815
@@ -26466,7 +26466,7 @@ CopListMark2
 	dc.w	$0200
 	dc.w	$FFFF	; Wait for line $FF, pos $FF
 	dc.w	$FFFE	; End of copperlist
-	
+
 CopperList2
 	dc.w	$B607	; Wait for line $B6, pos $07
 	dc.w	$FFFE
@@ -26499,7 +26499,7 @@ CopList2Bpl4Ptr
 	dc.w	$0200
 	dc.w	$FFFF	; Wait for line $FF, pos $FF
 	dc.w	$FFFE	; End of copperlist
-	
+
 PointerSpriteData
 	dc.w	0,0
 	dc.w	$FFFF,$FFFF,$8002,$FFFE,$BFF4,$C00C,$BFE8,$C018
@@ -26572,7 +26572,7 @@ PlayPosSpriteData
 ; -----------------------------------------------------------------------------
 
 	SECTION ptbssc,BSS_C
-	
+
 	CNOP 0,4
 TextBitplane	ds.b (320*685)/8 ; 685 scanlines (exactly enough!)
 
