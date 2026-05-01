@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;     22nd of April, 2026
+;      1st of May, 2026
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -17802,7 +17802,7 @@ LoadModule3
 .L0	MOVE.B	#127,sd_numofpatt+1(A0) ; Set repeatstart to 127
 
 	CMP.L	#'M!K!',sd_magicid(A0)
-	BNE.W	DoStartModLoad
+	BNE.W	lm64Patts
 
 	; 100 patterns MOD (M!K!)
 	TST.W	OutOfMemoryFlag
@@ -17841,6 +17841,8 @@ LoadModule3
 lm64Patts
 	CMP.L	#'M.K.',sd_magicid(A0)
 	BEQ.B	DoStartModLoad
+	
+	; 15-sample format (STK)
 	BSR.W	NotMKFormat
 	BNE.B	DoStartModLoad
 	MOVE.L	FileHandle(PC),D1
