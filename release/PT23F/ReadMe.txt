@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          =============================
-                1st of May, 2026
+                9th of May, 2026
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -19,6 +19,15 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+
+ == Update 09.05.2026 ===============================================
+ - Fixed: The 'SPREAD' VU-meter palette edit function (in SETUP #2)
+          was broken.
+ - Fixed: The code for decompressing graphics could accidentally
+          write several bytes outside of an allocated memory region.
+          More specifically, the code for decompressing the
+          quadrascope graphics didn't allocate enough memory.
+ ====================================================================
  
  == Update 01.05.2026 ===============================================
  - Fixed problem when loading 15-sample .MODs from version 22.04.2026
