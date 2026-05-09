@@ -470,7 +470,8 @@ Main
 	BSR.W	StorePtrCol
 	BSR.W	RedrawToggles
 	BSR.W	DoShowFreeMem
-	BSR.W	SetTempo
+	BSR.W	SetCIATempo
+	BSR.W	DrawTempo
 	BSR.W	SetInputHandler
 	BSR.W	PTScreenToFront
 	BSR.W	CheckInitError
@@ -684,10 +685,10 @@ cieskp3
 	BRA.W	StorePtrCol
 
 CheckPatternRedraw
-	TST.B	UpdateTempo
+	TST.B	DrawTempoFlag
 	BEQ.B	chkredr
-	CLR.B	UpdateTempo
-	BSR.W	SetTempo
+	CLR.B	DrawTempoFlag
+	BSR.W	DrawTempo
 chkredr	CMP.L	#'patp',RunMode
 	BNE.W	Return1
 	JSR	ShowPosition
@@ -1084,7 +1085,7 @@ vbiskip
 	BNE.B	vbiskip2
 	TST.W	BlockMarkFlag
 	BNE.B	vbiskip2
-	TST.B	UpdateTempo
+	TST.B	DrawTempoFlag
 	BNE.B	vbiskip2
 	TST.W	KeyBufPos
 	BEQ.B	vbiskip3
@@ -1121,8 +1122,7 @@ vbiend	; ------------------------------
 	TST.B	ShowRasterbar
 	BEQ.B	.skip2
 	MOVE.W	#0,$DFF180 	; rasterbars to measure frame time left
-.skip2
-	RTS
+.skip2	RTS
 
 	CNOP 0,4
 VBIntServer
@@ -1273,7 +1273,7 @@ PTScreenStruct
 ;---- Music Interrupt ----
 
 SetMusicInt
-	TST.B	IntMode
+	TST.B	UseCIATiming
 	BNE.B	SetCIAInt
 	MOVEQ	#5,D0
 	LEA	MusicIntServer(PC),A1
@@ -1282,7 +1282,7 @@ SetMusicInt
 	RTS
 
 ResetMusicInt
-	TST.B	IntMode
+	TST.B	UseCIATiming
 	BNE.W	ResetCIAInt
 	MOVEQ	#5,D0
 	LEA	MusicIntServer(PC),A1
@@ -1310,18 +1310,18 @@ ciacra	= $E00
 ciacrb	= $F00
 
 SetCIAInt
-	MOVEQ	#2,D6
+	MOVEQ	#2,D6	; try two CIA chips
 	LEA	$BFD000,A5
-	MOVE.B	#'b',CIAAname+3
+	MOVE.B	#'b',CIAname+3
 SetCIALoop
 	MOVEQ	#0,D0
-	LEA	CIAAname(PC),A1
+	LEA	CIAname(PC),A1
 	MOVE.L	4.W,A6
 	JSR	_LVOOpenResource(A6)
-	MOVE.L	D0,CIAAbase
+	MOVE.L	D0,CIAbase
 	BEQ.W	Return1
-
 	MOVE.L	D0,A6
+
 	MOVE.L	GfxBase,A0
 	MOVE.W	206(A0),D0	; DisplayFlags
 	BTST	#2,D0		; PAL?
@@ -1331,50 +1331,52 @@ SetCIALoop
 WasNTSC	MOVE.L	#1789773,D7 ; NTSC (= round[715909.09090 * (125/50)])
 sciask	MOVE.L	D7,TimerValue
 	DIVU.W	#125,D7 ; Default to normal 50 Hz timer
+	; -- fall-through --
 
 TryTimerB
 	LEA	MusicIntServer(PC),A1
 	MOVEQ	#1,D0	; Bit 1: Timer B
 	JSR	_AddICRVector(A6)
-	MOVE.L	#1,TimerFlag
+	ST	TimerBFlag
 	TST.L	D0
 	BNE.B	TryTimerA
-	MOVE.L	A5,CIAAaddr
+	MOVE.L	A5,CIAaddr
 	MOVE.B	D7,ciatblo(A5)
 	LSR.W	#8,D7
 	MOVE.B	D7,ciatbhi(A5)
 	BSET	#0,ciacrb(A5)
-	BRA.W	SetTempo
+	RTS
 
 TryTimerA
 	LEA	MusicIntServer(PC),A1
 	MOVEQ	#0,D0	; Bit 0: Timer A
 	JSR	_AddICRVector(A6)
-	CLR.L	TimerFlag
+	SF	TimerBFlag
 	TST.L	D0
 	BNE.B	CIAError
-	MOVE.L	A5,CIAAaddr
+	MOVE.L	A5,CIAaddr
 	MOVE.B	D7,ciatalo(A5)
 	LSR.W	#8,D7
 	MOVE.B	D7,ciatahi(A5)
 	BSET	#0,ciacra(A5)
-	BRA.W	SetTempo
+	RTS
 
 CIAError
-	MOVE.B	#'a',CIAAname+3
+	MOVE.B	#'a',CIAname+3
 	LEA	$BFE001,A5
 	SUBQ.W	#1,D6
-	BNE.W	SetCIALoop
-	CLR.L	CIAAbase
+	BNE.W	SetCIALoop	; try again
+	; CIA couldn't be opened, clear CIA base
+	CLR.L	CIAbase
 	RTS
 
 ResetCIAInt
-	MOVE.L	CIAAbase(PC),D0
+	MOVE.L	CIAbase(PC),D0
 	BEQ.W	Return1
-	CLR.L	CIAAbase
+	CLR.L	CIAbase
 	MOVE.L	D0,A6
-	MOVE.L	CIAAaddr(PC),A5
-	TST.L	TimerFlag
+	MOVE.L	CIAaddr(PC),A5
+	TST.B	TimerBFlag
 	BEQ.B	ResTimerA
 
 	BCLR	#0,ciacrb(A5)
@@ -1389,116 +1391,115 @@ RemInt	LEA	MusicIntServer(PC),A1
 	RTS
 
 	CNOP 0,4
-CIAAbase	dc.l	0
-TimerFlag	dc.l	0
+CIAbase		dc.l	0
 TimerValue	dc.l	0
-CIAAname	dc.b	'ciaa.resource',0
+TimerBFlag	dc.b	0
+CIAname		dc.b	'ciaa.resource',0
 	EVEN
 
 ;---- Tempo ----
 
 TempoGadg
 	CMP.W	#60,D0
-	BHS	Return1
+	BHS.W	Return1
 	CMP.W	#44,D0
 	BHS.B	TemDown
 TemUp	MOVE.W	RealTempo(PC),D0
 	ADDQ.W	#1,D0
 	BTST	#2,$DFF016	; right mouse button
 	BNE.B	teupsk
-	ADDQ.W	#8,D0
-	ADDQ.W	#1,D0
+	ADD.W	#9,D0
 teupsk	CMP.W	#255,D0
 	BLS.B	teposk
 	MOVE.W	#255,D0
 teposk	MOVE.W	D0,RealTempo
-	BSR	SetTempo
+	BSR.B	DrawTempo
+	BSR.W	SetCIATempo
 	JMP	Wait_4000
+
+DrawTempo
+	TST.W	SamScrEnable
+	BNE.B	.end
+	MOVE.W	#4964,TextOffset
+	MOVE.W	RealTempo(PC),WordNumber
+	TST.L	CIAbase		; CIA in use?
+	BNE.B	.L1		; yep! Draw tempo now.
+	MOVE.W	#125,WordNumber	; Vblank timing mode, always show 125
+.L1	JMP	Print3DecDigits
+.end	RTS
 
 TemDown	MOVE.W	RealTempo(PC),D0
 	SUBQ.W	#1,D0
 	BTST	#2,$DFF016	; right mouse button
 	BNE.B	tednsk
-	SUBQ.W	#8,D0
-	SUBQ.W	#1,D0
+	SUB.W	#9,D0
 tednsk	CMP.W	#32,D0
 	BHS.B	teposk
 	MOVE.W	#32,D0
 	BRA.B	teposk
 
-ChangeTempo
-	CMP.W	#97,D0
-	BHS.B	TempoDown
-	CMP.W	#86,D0
-	BHS.B	TempoUp
-	RTS
+DrawSetupScreenTempo
+	MOVE.W	#607,TextOffset
+	MOVE.W	RealTempo(PC),WordNumber
+	JMP	Print3DecDigits
 
-TempoUp	MOVE.W	Tempo,D0
+SetupScreenTempoUp
+	MOVE.W	Tempo,D0
 	ADDQ.W	#1,D0
 	BTST	#2,$DFF016	; right mouse button
 	BNE.B	temupsk
-	ADDQ.W	#8,D0
-	ADDQ.W	#1,D0
+	ADD.W	#9,D0
 temupsk	CMP.W	#255,D0
 	BLS.B	temposk
 	MOVE.W	#255,D0
 temposk	MOVE.W	D0,Tempo
 	MOVE.W	D0,RealTempo
-	BSR.B	ShowTempo
-	BSR.B	SetTempo
+	BSR.W	DrawTempo
+	BSR.B	DrawSetupScreenTempo
+	BSR.B	SetCIATempo
 	JMP	Wait_4000
 
-TempoDown
+SetupScreenTempoDown
 	MOVE.W	Tempo,D0
 	SUBQ.W	#1,D0
 	BTST	#2,$DFF016	; right mouse button
 	BNE.B	temdnsk
-	SUBQ.W	#8,D0
-	SUBQ.W	#1,D0
+	SUB.W	#9,D0
 temdnsk	CMP.W	#32,D0
 	BHS.B	temposk
 	MOVE.W	#32,D0
 	BRA.B	temposk
 
-ShowTempo
-	MOVE.W	#607,TextOffset
-	MOVE.W	RealTempo(PC),WordNumber
-	JMP	Print3DecDigits
-
-SetTempo
-	MOVEQ	#125,D0
-	MOVE.L	CIAAbase(PC),D1
-	BEQ.B	setesk3
-	MOVE.W	RealTempo(PC),D0
-	CMP.W	#32,D0
-	BHS.B	setemsk
-	MOVEQ	#32,D0
-setemsk	MOVE.W	D0,RealTempo
-setesk3	TST.W	SamScrEnable
-	BNE.B	setesk2
-	MOVE.W	#4964,TextOffset
-	MOVE.W	D0,WordNumber
-	JSR	Print3DecDigits
-setesk2	MOVE.L	CIAAbase(PC),D0
-	BEQ.W	Return1
-	MOVE.W	RealTempo(PC),D0
-	MOVE.L	TimerValue(PC),D1
-	DIVU.W	D0,D1
-	MOVE.L	CIAAaddr(PC),A5
-	MOVE.L	TimerFlag(PC),D0
-	BEQ.B	SetTemA
-	MOVE.B	D1,ciatblo(A5)	;and set the CIA timer
-	LSR.W	#8,D1
-	MOVE.B	D1,ciatbhi(A5)
+SetupScreenChangeTempo
+	CMP.W	#97,D0
+	BHS.B	SetupScreenTempoDown
+	CMP.W	#86,D0
+	BHS.B	SetupScreenTempoUp
 	RTS
 
-SetTemA	MOVE.B	D1,ciatalo(A5)
-	LSR.W	#8,D1
-	MOVE.B	D1,ciatahi(A5)
+	; Trashes D0 and A4 (D0/A4 are free in replayer efx call)
+	; Expects that RealTempo is within 32..255.
+SetCIATempo
+	TST.L	CIAbase	; CIA open?
+	BEQ.B	.end	; nope
+	MOVE.L	TimerValue(PC),D0
+	DIVU.W	RealTempo(PC),D0
+	MOVE.L	CIAaddr(PC),A4
+	TST.B	TimerBFlag
+	BEQ.B	.timerA
+	; cia-B
+	MOVE.B	D0,ciatblo(A4)
+	LSR.W	#8,D0
+	MOVE.B	D0,ciatbhi(A4)
+.end	RTS
+.timerA	; cia-A
+	MOVE.B	D0,ciatalo(A4)
+	LSR.W	#8,D0
+	MOVE.B	D0,ciatahi(A4)
 	RTS
 
 	CNOP 0,4
-CIAAaddr	dc.l 0
+CIAaddr		dc.l 0
 RealTempo	dc.w 125
 
 ;---- Input Event Handler ----
@@ -4458,7 +4459,7 @@ DirPathGadg
 	MOVE.L	D0,-(SP)
 	MOVE.W	DirPathNum(PC),D0
 	BSR.W	ChangePath
-	BSR	ClearFileNames
+	BSR.W	ClearFileNames
 	MOVE.L	A5,-(SP)
 	LEA	FileNamesPtr(PC),A5
 	BSR.W	ClearDirTotal
@@ -5077,7 +5078,7 @@ AbortDir
 	LEA	DirAbortedText(PC),A0
 	JSR	ShowStatusText
 	BSR.B	DirDiskUnlock
-	BSR	WaitALittle
+	BSR.W	WaitALittle
 	JSR	ShowAllRight
 	MOVEQ	#0,D0
 	RTS
@@ -5085,7 +5086,7 @@ AbortDir
 DirDiskUnlock
 	MOVE.L	FileLock,D1
 	JSR	_LVOUnLock(A6)
-	BSR	RestorePtrCol
+	BSR.W	RestorePtrCol
 	MOVEQ	#0,D0
 	RTS
 
@@ -9362,7 +9363,8 @@ caloop	MOVE.W	D0,(A1)+
 	MOVE.W	DefaultSpeed,D0
 	MOVE.L	D0,CurrSpeed
 	MOVE.W	Tempo,RealTempo
-	BSR.W	SetTempo
+	BSR.W	SetCIATempo
+	BSR.W	DrawTempo
 	BSR.W	RestoreEffects2
 	BSR.W	RestoreFKeyPos2
 	BSR.B	UnmuteAll
@@ -9467,7 +9469,8 @@ RestoreEffects
 	MOVE.W	DefaultSpeed,D0
 	MOVE.L	D0,CurrSpeed
 	MOVE.W	Tempo,RealTempo
-	BSR.W	SetTempo
+	BSR.W	SetCIATempo
+	BSR.W	DrawTempo
 	BSR.B	RestoreEffects2
 	CLR.B	RawKeyCode
 	LEA	EfxRestoredText(PC),A0
@@ -10030,7 +10033,7 @@ ShowAccidental
 shacskp	MOVEQ	#1,D0
 	MOVE.W	#2824,D1
 	JSR	ShowText3
-	BRA	RedrawPattern
+	BRA.W	RedrawPattern
 
 AccidentalText	dc.b '#¡'
 	EVEN
@@ -10106,9 +10109,9 @@ cfgoskip
 ConfigErr
 	BSET	#2,InitError
 	LEA	FileNotFoundText(PC),A0
-cferr	BSR	ShowStatusText
+cferr	BSR.W	ShowStatusText
 	MOVE.W	#ERR_WAIT_TIME,WaitTime
-	BRA	ErrorRestoreCol
+	BRA.W	ErrorRestoreCol
 
 cfgerr2	BSR.B	ConfigErr2
 	BRA.B	lcfgend
@@ -11000,8 +11003,8 @@ Setup2	BSR.W	WaitForButtonUp
 set2skp	BSR.W	DecompactSetup2
 	BSR.W	SetScreenColors
 refrsh2	BSR.W	ShowIntMode
-	JSR	ShowTempo
-	BSR.W	ShowSpeed
+	JSR	DrawSetupScreenTempo
+	BSR.W	DrawSetupScreenSpeed
 	BSR.W	ShowColEdit
 	BSR.W	ShowRainbow
 	BSR.W	GetColPos
@@ -11026,7 +11029,7 @@ CheckSetup2Gadgs
 	CMP.W	#11,D1
 	BLS.W	ToggleIntMode
 	CMP.W	#22,D1
-	BLS.B	xChangeTempo
+	BLS.B	xSetupScreenChangeTempo
 	CMP.W	#33,D1
 	BLS.W	ChangeSpeed
 	CMP.W	#44,D1
@@ -11043,7 +11046,7 @@ CheckSetup2Gadgs
 	BLS.W	ColorGadgets2
 	RTS
 
-xChangeTempo	JMP	ChangeTempo
+xSetupScreenChangeTempo	JMP	SetupScreenChangeTempo
 
 Setup2Menu2
 	CMP.W	#11,D1
@@ -11177,13 +11180,14 @@ SetDefaultsText	dc.b	'Set defaults?',0
 
 ToggleIntMode
 	JSR	ResetMusicInt
-	EOR.B	#1,IntMode
+	EOR.B	#1,UseCIATiming
 	JSR	SetMusicInt
-	JSR	SetTempo
+	JSR	SetCIATempo
+	JSR	DrawTempo
 	BSR.W	WaitForButtonUp
 ShowIntMode
 	LEA	VBlankText(PC),A0
-	TST.B	IntMode
+	TST.B	UseCIATiming
 	BEQ.B	simskip
 	LEA	CIAText(PC),A0
 simskip	MOVEQ	#6,D0
@@ -11209,10 +11213,10 @@ SpeedUp	MOVE.W	DefaultSpeed,D1
 	MOVE.W	#$FF,D1
 spedup2	MOVE.W	D1,DefaultSpeed
 	MOVE.L	D1,CurrSpeed
-	BSR.B	ShowSpeed
+	BSR.B	DrawSetupScreenSpeed
 	BSR.W	Wait_4000
 	BRA.W	Wait_4000
-ShowSpeed
+DrawSetupScreenSpeed
 	MOVE.W	#608+440,TextOffset
 	MOVE.W	DefaultSpeed,WordNumber
 	BRA.W	PrintHexByte
@@ -11865,7 +11869,8 @@ Decompact
 	MOVE.L	D0,CompLen
 	BSR.B	FreeDecompMem
 	MOVE.L	CompPtr(PC),A0
-	MOVE.L	(A0),D0
+	MOVE.L	0(A0),D0	; D0 = uncompressed size
+	ADDQ.L	#8,D0		; some padding needed for buggy code
 	MOVE.L	D0,DecompMemSize
 	MOVEQ	#MEMF_PUBLIC,D1
 	JSR	PTAllocMem
@@ -16090,7 +16095,7 @@ Boost
 	BMI.B	.neg
 	ASR.W	#2,D1
 	ADD.W	D1,D2
-	BRA	.L1
+	BRA.B	.L1
 .neg	NEG.W	D1
 	ASR.W	#2,D1
 	SUB.W	D1,D2
@@ -19422,7 +19427,7 @@ p6ddskip
 	MOVE.B	#' ',(A1)+
 	BRA.B	.loop
 p6ddok	MOVE.W	#6,TextLength
-	BRA	ShowText2
+	BRA.W	ShowText2
 
 toobig	; number is >999999. divide by 1000, then display space + 4 digits + 'K' at end
 	CMP.L	#9999999,D0
@@ -19433,7 +19438,7 @@ toobig	; number is >999999. divide by 1000, then display space + 4 digits + 'K' 
 	MOVE.L	(SP)+,D0
 	DIVU.W	#1000,D0
 	MOVE.W	D0,WordNumber
-	BSR	Print4DecDigits
+	BSR.W	Print4DecDigits
 	MOVE.B	#'K',D0
 printch	LEA	NumberText(PC),A0
 	MOVE.B	D0,(A0)
@@ -19444,7 +19449,7 @@ toobigoverflow
 	MOVE.B	#'>',D0
 	BSR.B	printch
 	MOVE.W	#9999,WordNumber
-	BSR	Print4DecDigits
+	BSR.W	Print4DecDigits
 	MOVE.B	#'K',D0
 	BRA.B	printch
 
@@ -21836,7 +21841,7 @@ exisam2	JSR	SetDefSpritePtrs
 	BSR.W	SetScrPatternPos
 	BSR.W	ClearSamScr
 	JSR	UpdateCursorPos
-	JSR	SetTempo
+	JSR	DrawTempo
 	BRA.W	RedrawPattern
 
 FreeDecompMem2
@@ -23991,9 +23996,9 @@ HideLoopSprites	; new PT2.3E routine
 	MOVE.W	#270,D1
 	MOVEQ	#64,D2
 	LEA	LoopSpriteData1,A0
-	BSR	SetSpritePos
+	BSR.W	SetSpritePos
 	LEA	LoopSpriteData2,A0
-	BSR	SetSpritePos
+	BSR.W	SetSpritePos
 	MOVEM.L	(SP)+,D0-D2/A0
 	RTS
 
@@ -24873,35 +24878,33 @@ PatternBreak
 	RTS
 
 SetSpeed
+	MOVEQ	#0,D0
 	MOVE.B	3(A6),D0
-	AND.W	#$FF,D0
-	BEQ.B	SpeedNull
-	TST.B	IntMode
-	BEQ.B	normspd
+	BEQ.B	.speed0
+	TST.B	UseCIATiming
+	BEQ.B	.speed
 	CMP.W	#32,D0
-	BLO.B	normspd
+	BLO.B	.speed
+	; -------------------------
+	; set tempo (BPM)
+	; -------------------------
 	MOVE.W	D0,RealTempo
-	MOVEM.L	D0-D7/A0-A6,-(SP)
-	MOVE.W	SamScrEnable(PC),-(SP)
-	ST	SamScrEnable
-	ST	UpdateTempo
-	JSR	SetTempo
-	MOVE.W	(SP)+,SamScrEnable
-	MOVEM.L	(SP)+,D0-D7/A0-A6
-	RTS
-normspd	CLR.L	Counter
+	ST	DrawTempoFlag	; redraw BPM number in main thread
+	JMP	SetCIATempo	; (trashes D0 and A4, which is safe here)
+
+.speed	; -------------------------
+	; set speed (ticks per row)
+	; -------------------------
+	CLR.L	Counter
 	MOVE.W	D0,CurrSpeed+2
 	RTS
-SpeedNull
-	CLR.L	RunMode
+.speed0	CLR.L	RunMode
 	JSR	SetNormalPtrCol
-	; PT2.3D fix: fixes for F00 while in string/number edit mode
 	JSR	StorePtrCol	; store idle pointer color in backup
-	TST.W	LineCurX	; are we editing a number or string?
+	TST.W	LineCurX	; are we editing a number or text string?
 	BEQ.B	.end
-	JSR	SetWaitPtrCol	; we're editing, set edit pointer color
-.end	; ----------------------------------------------------------------
-	RTS
+	JMP	SetWaitPtrCol	; we're editing, set edit pointer color
+.end	RTS
 
 	CNOP 0,4
 JumpList2
@@ -25643,7 +25646,7 @@ LEDStatus	dc.b	0
 PattDelayTime	dc.b	0
 PattDelayTime2	dc.b	0
 GetDecTemp	dc.b	0
-UpdateTempo	dc.b	0
+DrawTempoFlag	dc.b	0
 SaveScope	dc.b	0
 SetSignalFlag	dc.b	0
 DisableAnalyzer	dc.b	0
@@ -25710,7 +25713,7 @@ DefCol	dc.w	$000,$BBB,$888,$555,$FD0,$D04,$000,$34F
 	dc.b	2,3,4,1	; Multi Mode Next
 	dc.w	$102,$202,$037,$047,$304, $F06,$C10,$C20,$E93,$A0F	; EFX Macros
 	dc.b	0 ; RAW/IFF/PAK Save, 0=RAW, 1=IFF, 2=PAK
-	dc.b	1 ; IntMode, 0=VBLANK, 1=CIA
+	dc.b	1 ; UseCIATiming (0 = vblank timing)
 	dc.b	0 ; Override
 	dc.b	0 ; Nosamples
 	dc.b	0 ; BlankZero
@@ -26671,7 +26674,7 @@ MaxPLSTEntries	ds.w	1
 MultiModeNext	ds.b	4
 EffectMacros	ds.w	10
 RawIFFPakMode	ds.b	1
-IntMode		ds.b	1
+UseCIATiming	ds.b	1
 OverrideFlag	ds.b	1
 NosamplesFlag	ds.b	1
 BlankZeroFlag	ds.b	1
