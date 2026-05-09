@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;      1st of May, 2026
+;      9th of May, 2026
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -11754,12 +11754,14 @@ ChkSpread
 	BEQ.W	Return2
 	CLR.W	SpreadFlag
 	BSR.W	GetColPos
+	MOVEQ	#0,D0
 	MOVE.W	SpreadFrom(PC),D0
+	MOVEQ	#0,D1
 	MOVE.W	RainbowPos(PC),D1
 	CMP.W	D1,D0
 	BLO.B	chkspr2
 	EXG	D0,D1
-chkspr2	MOVE.W	D1,D4
+chkspr2	MOVE.L	D1,D4
 	SUB.W	D0,D4
 	CMP.W	#1,D4
 	BLS.W	Return2
