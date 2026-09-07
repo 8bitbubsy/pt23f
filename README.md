@@ -4,8 +4,8 @@ Download: https://16-bits.org/PT23F.LHA \
 Bootable ADF: https://16-bits.org/PT23F.ADF \
 \
 Some new changes worthy of a mention:
-1) It has been fully bugfixed to work as expected on really fast Amigas (a ton of CPU-wait-routines have been replaced with scanline-wait and other safe delay routines)
-2) It has been modified to fully support 128kB samples (all the old >64kB (>$FFFE) limits/bugs are gone, both in the player and GUI)
+1) It has been bugfixed to play modules correctly on fast Amigas (a ton of CPU-wait-routines have been replaced with scanline-wait and other safe delay routines)
+2) It has been modified to fully support 128kB samples (the >64kB (>$FFFE) limits/bugs are gone, both in the player and GUI)
 3) A ton of other bugs have been fixed
 
 The asm syntax is AsmOne/AsmPro, and it may not be compatible with other assemblers.
