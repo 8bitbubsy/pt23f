@@ -24134,7 +24134,6 @@ SetVUMeterHeight			; - PT2.3D change: perfect VU-meters (never buggy at high BPM
 	BEQ.B   vuend			; no active channel...
 	; -------------------------
 	MOVE.L	A0,-(SP)
-	MOVE.L	D1,-(SP)
 	BTST	#0,D0			; are we on channel #1?
 	BEQ.B	notch1			; no
 	LEA	VUSpriteData1,A0	; yes, get current sprite
@@ -24159,7 +24158,6 @@ vuskip3	CMP.B	#64,D0			; higher than $40?
 	BLS.B	vuskip4			; no, safe for use!
 	MOVEQ	#64,D0			; yes, set to $40
 vuskip4	MOVE.B	(VUmeterHeights,PC,D0.W),(A0)
-	MOVE.L	(SP)+,D1
 	MOVE.L	(SP)+,A0
 vuend	RTS
 	; ------------------
