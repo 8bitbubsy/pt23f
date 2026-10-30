@@ -1790,14 +1790,14 @@ RepDown
 ; 8bitbubsy: less code overhead and improved tick accuracy (less drifting)
 
 ; ------------ PAL Amiga video -------------
-; Horizontal clock: 15625.088105727Hz (3546895.0 / 227.0)         
+; Horizontal clock: 15625.088105727Hz (3546895.0 / 227.0)
 ; Lines: 313
 ; Frame rate = 49.9204092835Hz (HorizontalClock / Lines)
 PDELTA_PAL EQU 86036300 ; round[2^32 / FrameRate]
 ; ------------------------------------------
 
 ; ------------ NTSC Amiga video ------------
-; Horizontal clock: 15734.265734266Hz (3579545.4545454 (recurring) / 227.5)               
+; Horizontal clock: 15734.265734266Hz (3579545.4545454 (recurring) / 227.5)
 ; Lines: 263
 ; Frame rate = 59.8261054535Hz (HorizontalClock / Lines)
 PDELTA_NTSC EQU 71790856 ; round[2^32 / FrameRate]
@@ -15574,11 +15574,11 @@ DoChangeVol
 	MOVE.W	SampleVol(PC),D0
 	MOVEQ	#11,D6		; max bits for 0..999 range
 	LSL.L	D6,D0		; rescale volume range (for DIV -> bitshift)
-        DIVU.W	#100,D0		; vol 0..999/100 --> 0..20459
-        LEA	SmpConvLUT,A0
-        MOVEQ	#127,D4		; clip values
-        MOVEQ	#-128,D5	;
-        MOVEQ	#0,D2
+	DIVU.W	#100,D0		; vol 0..999/100 --> 0..20459
+	LEA	SmpConvLUT,A0
+	MOVEQ	#127,D4		; clip values
+	MOVEQ	#-128,D5	;
+	MOVEQ	#0,D2
 dcvll	MOVE.B	D2,D1
 	EXT.W	D1
 	MULS.W	D0,D1
@@ -17859,7 +17859,7 @@ lm64Patts
 	; -- fall-through --
 
 DoStartModLoad
-        LEA	LoadingModuleText(PC),A0
+	LEA	LoadingModuleText(PC),A0
 	BSR.W	ShowStatusText
 	MOVEQ	#0,D4
 	MOVE.L	SongDataPtr(PC),A0
@@ -19307,19 +19307,19 @@ Print2DecDigits ; 8bb: optimized
 
 	; (("00" .. "99" (split into two bytes)) - 32) * 8
 FastTwoDecTable
-        dc.w $8080,$8088,$8090,$8098,$80A0,$80A8,$80B0,$80B8
-        dc.w $80C0,$80C8,$8880,$8888,$8890,$8898,$88A0,$88A8
-        dc.w $88B0,$88B8,$88C0,$88C8,$9080,$9088,$9090,$9098
-        dc.w $90A0,$90A8,$90B0,$90B8,$90C0,$90C8,$9880,$9888
-        dc.w $9890,$9898,$98A0,$98A8,$98B0,$98B8,$98C0,$98C8
-        dc.w $A080,$A088,$A090,$A098,$A0A0,$A0A8,$A0B0,$A0B8
-        dc.w $A0C0,$A0C8,$A880,$A888,$A890,$A898,$A8A0,$A8A8
-        dc.w $A8B0,$A8B8,$A8C0,$A8C8,$B080,$B088,$B090,$B098
-        dc.w $B0A0,$B0A8,$B0B0,$B0B8,$B0C0,$B0C8,$B880,$B888
-        dc.w $B890,$B898,$B8A0,$B8A8,$B8B0,$B8B8,$B8C0,$B8C8
-        dc.w $C080,$C088,$C090,$C098,$C0A0,$C0A8,$C0B0,$C0B8
-        dc.w $C0C0,$C0C8,$C880,$C888,$C890,$C898,$C8A0,$C8A8
-        dc.w $C8B0,$C8B8,$C8C0,$C8C8
+	dc.w $8080,$8088,$8090,$8098,$80A0,$80A8,$80B0,$80B8
+	dc.w $80C0,$80C8,$8880,$8888,$8890,$8898,$88A0,$88A8
+	dc.w $88B0,$88B8,$88C0,$88C8,$9080,$9088,$9090,$9098
+	dc.w $90A0,$90A8,$90B0,$90B8,$90C0,$90C8,$9880,$9888
+	dc.w $9890,$9898,$98A0,$98A8,$98B0,$98B8,$98C0,$98C8
+	dc.w $A080,$A088,$A090,$A098,$A0A0,$A0A8,$A0B0,$A0B8
+	dc.w $A0C0,$A0C8,$A880,$A888,$A890,$A898,$A8A0,$A8A8
+	dc.w $A8B0,$A8B8,$A8C0,$A8C8,$B080,$B088,$B090,$B098
+	dc.w $B0A0,$B0A8,$B0B0,$B0B8,$B0C0,$B0C8,$B880,$B888
+	dc.w $B890,$B898,$B8A0,$B8A8,$B8B0,$B8B8,$B8C0,$B8C8
+	dc.w $C080,$C088,$C090,$C098,$C0A0,$C0A8,$C0B0,$C0B8
+	dc.w $C0C0,$C0C8,$C880,$C888,$C890,$C898,$C8A0,$C8A8
+	dc.w $C8B0,$C8B8,$C8C0,$C8C8
 
 Print3DecDigits
 	MOVE.W	#3,TextLength
@@ -23067,7 +23067,7 @@ drvskip	JSR	StorePtrCol
 	MOVE.W	Vol2(PC),D6
 	LSL.L	#7,D5
 	LSL.L	#7,D6
-        DIVU.W	#100,D5
+	DIVU.W	#100,D5
 	DIVU.W	#100,D6
 	AND.L	#$FFFF,D5	; D5.L = Vol1 (0..256)
 	AND.L	#$FFFF,D6	; D6.L = Vol2 (0..256)
