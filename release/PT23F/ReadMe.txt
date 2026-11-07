@@ -1,6 +1,6 @@
                 ProTracker v2.3F 
          =============================
-                9th of May, 2026
+             7th of November, 2026
 
  If you find any bugs, please email me at the email/Discord found on
  the website 16-bits.org.
@@ -19,6 +19,10 @@
  - Olav "8bitbubsy" Sorensen
 
  -- PT2.3F changelog: --
+
+ == Update 07.11.2026 ===============================================
+ - Fixed quadrascope timing error/drifting on real NTSC (60Hz)
+ ====================================================================
 
  == Update 09.05.2026 ===============================================
  - Fixed: The 'SPREAD' VU-meter palette edit function (in SETUP #2)

@@ -1,6 +1,6 @@
 ; ProTracker v2.3F source code
 ; ============================
-;      9th of May, 2026
+;    7th of November, 2026
 ;
 ;    (tab width = 8 spaces)
 ;
@@ -24,6 +24,8 @@ SCREEN_W		EQU 320
 SCREEN_H		EQU 256
 SONG_SIZE_100PAT	EQU 1084+(1024*100)
 SONG_SIZE_64PAT		EQU 1084+(1024*64)
+
+SCOPE_FRAC_BITS EQU 6 ; max bits for period 113 w/ DIVU.W
 
 PaulaDMAWaitScanlines_000	EQU 5-1
 PaulaDMAWaitScanlines_020	EQU 7-1
@@ -799,11 +801,12 @@ OpenLotsOfThings
 	MOVE.W	D0,$DFF0D8		; clear voice #4 volume
 	MOVE.L	4.W,A6
 	; -------------------------------
-	; set song playback counter delta
+	; set song playback counter & scope pitch delta
 	; -------------------------------
 	CMP.B	#60,$0212(A6) 		; 50=PAL, 60=NTSC
 	BEQ.B	.NTSC
 	MOVE.L	#PDELTA_PAL,PlaybackSecsDelta
+	MOVE.L	#PSCOPEDIV_PAL,ScopePitchDividend
 	BRA.B	.L1
 .NTSC	MOVE.W	$DFF004,D0
 	LSR.W	#8,D0
@@ -811,8 +814,10 @@ OpenLotsOfThings
 	CMP.B	#20,D0			; Agnus is ECS or AGA?
 	BLO.B	.L0			; nope
 	MOVE.L	#PDELTA_PAL_ON_NTSC,PlaybackSecsDelta
+	MOVE.L	#PSCOPEDIV_PAL_ON_NTSC,ScopePitchDividend
 	BRA.B	.L1
 .L0	MOVE.L	#PDELTA_NTSC,PlaybackSecsDelta
+	MOVE.L	#PSCOPEDIV_NTSC,ScopePitchDividend
 .L1	; -------------------------------
 	LEA	DOSname(PC),A1		; Open DOS library
 	MOVEQ	#0,D0
@@ -1785,30 +1790,33 @@ RepDown
 	JSR	_LVOSignal(A6)
 	RTS
 
-;---- Song Playback Counter ----
-
-; 8bitbubsy: less code overhead and improved tick accuracy (less drifting)
-
 ; ------------ PAL Amiga video -------------
 ; Horizontal clock: 15625.088105727Hz (3546895.0 / 227.0)
 ; Lines: 313
 ; Frame rate = 49.9204092835Hz (HorizontalClock / Lines)
-PDELTA_PAL EQU 86036300 ; round[2^32 / FrameRate]
+PDELTA_PAL	EQU 86036300 ; round[2^32 / FrameRate]
+PSCOPEDIV_PAL	EQU 4547264 ; round[2^SCOPE_FRAC_BITS * (PaulaClock / FrameRate)]
 ; ------------------------------------------
 
 ; ------------ NTSC Amiga video ------------
 ; Horizontal clock: 15734.265734266Hz (3579545.4545454 (recurring) / 227.5)
 ; Lines: 263
 ; Frame rate = 59.8261054535Hz (HorizontalClock / Lines)
-PDELTA_NTSC EQU 71790856 ; round[2^32 / FrameRate]
+PDELTA_NTSC	EQU 71790856 ; round[2^32 / FrameRate]
+PSCOPEDIV_NTSC	EQU 3829280 ; round[2^SCOPE_FRAC_BITS * (PaulaClock / FrameRate)]
 ; ------------------------------------------
 
 ; --- PAL-on-NTSC Amiga video (ECS/AGA) ----
 ; Horizontal clock: 15768.922707249Hz (3579545.4545454 (recurring) / 227.0)
 ; Lines: 313
 ; Frame rate = 50.3799447516Hz (HorizontalClock / Lines)
-PDELTA_PAL_ON_NTSC EQU 85251529 ; round[2^32 / FrameRate]
+PDELTA_PAL_ON_NTSC	EQU 85251529 ; round[2^32 / FrameRate]
+PSCOPEDIV_PAL_ON_NTSC	EQU 4547264 ; round[2^SCOPE_FRAC_BITS * (PaulaClock / FrameRate)]
 ; ------------------------------------------
+
+;---- Song Playback Counter ----
+
+; 8bitbubsy: less code overhead and improved tick accuracy (less drifting)
 
 DrawPlaybackCounter
 	MOVE.L	PlaybackSecs(PC),D0
@@ -1884,6 +1892,7 @@ DDPCEnd	RTS
 PlaybackSecsFrac	dc.l 0
 PlaybackSecsDelta	dc.l 0
 PlaybackSecs		dc.l 0
+ScopePitchDividend	dc.l 0
 
 ;---- Spectrum Analyzer ----
 
@@ -2127,11 +2136,11 @@ FRAC_BITS EQU 6				; max bits for period 113 w/ DIVU.W
 	CMP.W	#113,D1			; min. Paula period in normal video modes
 	BHS.B	ScoOk			; (clamp also needed for DIVU.W)
 	MOVEQ	#113,D1
-ScoOk	MOVE.L	#71051*(1<<FRAC_BITS),D2 ; PaulaClk / VBlankHz = 71051.0 (exact)
+ScoOk	MOVE.L	ScopePitchDividend(PC),D2
 	DIVU.W	D1,D2
 	MOVEQ	#0,D1
 	MOVE.W	D2,D1
-	ROR.L	#FRAC_BITS,D1
+	ROR.L	#SCOPE_FRAC_BITS,D1
 	SWAP	D1			; D1.L is now laid out as 16.16fp
 	ADD.W	D1,ns_posfrac(A2)	; add delta fraction
 	CLR.W	D1
